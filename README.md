@@ -1,60 +1,61 @@
 # Quantum Primer
 
-An interactive, Duolingo-inspired math tutor that builds the prerequisite skills for quantum mechanics — optimized for Apple Pencil on iPad.
+A Duolingo-style quantum computing learning app built for iPad with Apple Pencil support. Takes students from basic algebra through quantum circuits with interactive lessons, practice problems, and quizzes.
 
-## Tech Stack
+## Curriculum
 
-- **Backend**: Python · FastAPI · Anthropic Claude (optional vision feedback)
-- **Frontend**: Vanilla ES modules · HTML5 Canvas (Pointer Events API)
-- **Fonts**: Nunito 800 · Fira Code 500
+### Phase 1 — Math Foundations
+| Ch | Title | Topics |
+|----|-------|--------|
+| 1 | Algebra Refresher | Linear equations, substitution, square roots, exponents |
+| 2 | Vectors in 2D | Vector addition, scalar multiplication, magnitude |
+| 3 | Unit Vectors | Normalization, unit vector checks, quantum probability |
+| 4 | Complex Numbers | Addition, multiplication, conjugate, magnitude |
+| 5 | Matrices | Matrix-vector multiply, matrix-matrix multiply, identity |
 
-## Quick Start
-
-```bash
-git clone https://github.com/your-username/quantum-primer.git
-cd quantum-primer
-pip install -r requirements.txt
-cp .env.example .env          # add your ANTHROPIC_API_KEY (optional)
-python app.py                 # http://localhost:8000
-```
-
-iPad access (on the same network):
-
-```
-http://192.168.254.34:8000
-```
+### Phase 2 — Quantum Computing
+| Ch | Title | Topics |
+|----|-------|--------|
+| 6 | Dirac Notation | Bra-ket formalism, inner products, orthogonality, probability |
+| 7 | Quantum Gates | Pauli X/Y/Z, Hadamard, gate composition |
+| 8 | Measurement | Born rule, state collapse, expected counts |
+| 9 | Tensor Products | Two-qubit basis, tensor products, separability |
+| 10 | Entanglement | CNOT gate, Bell states, entangled measurement |
+| 11 | Quantum Circuits | Circuit tracing, output probabilities, equivalence |
 
 ## Features
 
-- **5 progressive chapters** — Algebra → Vectors → Unit Vectors → Complex Numbers → 2×2 Matrices
-- **Duolingo-style skill tree** — chapters unlock as you pass quizzes (8/10 to pass)
-- **Apple Pencil canvas** — Bézier smoothing, pressure-sensitive line width, stroke-level undo
-- **Deterministic grading** — works fully offline with no API key
-- **AI tutor feedback** — optional Claude vision reviews your handwritten work (enable Tutor Mode)
+- **41 problem generators** with deterministic grading (no AI required)
+- **Worked examples** in every lesson before practice problems
+- **Worked solutions** shown on incorrect answers
+- **Apple Pencil notepad** for working out problems by hand
+- **Optional AI tutor** — vision-based feedback on handwritten work via Claude API
+- **Progress tracking** — localStorage persistence, sequential chapter unlocking
+- **Quiz gates** — pass the quiz to unlock the next chapter
 
-## Project Structure
+## Running
 
-| File | Responsibility |
-|------|----------------|
-| `app.py` | FastAPI server — SPA fallback + `/api/review-work` vision endpoint |
-| `static/app.js` | SPA router, screen renderers, quiz logic, vision wiring |
-| `static/problems.js` | 17 problem generators + deterministic answer checking |
-| `static/chapters.js` | Curriculum — 5 chapters, lesson HTML, quiz thresholds |
-| `static/canvas.js` | Apple Pencil drawing engine — Bézier smoothing, undo, DPR scaling |
-| `static/style.css` | Duolingo-inspired design system (dark theme, 3D buttons, animations) |
-| `static/index.html` | SPA shell |
+```bash
+pip install fastapi uvicorn anthropic python-dotenv
+python app.py          # serves at http://0.0.0.0:8000
+```
 
-## Architecture Notes
+The app is fully functional without an API key. Set `ANTHROPIC_API_KEY` in `.env` for the optional AI tutor feature.
 
-- Grading is **always deterministic** (browser-only, no API calls). Vision is an optional enhancement layer that never affects pass/fail.
-- Progress persists in `localStorage` under key `qp`.
-- Hash-based routing (`#/`, `#/lesson/N`, `#/practice/N`, `#/quiz/N`) — full SPA with no server-side routing.
-- Canvas uses `setTransform(d,0,0,d,0,0)` instead of `scale()` to prevent cumulative DPR transform stacking on resize.
+## Architecture
 
-## Phase 2 (planned)
+- `app.py` — FastAPI server + `/api/review-work` (optional AI feedback)
+- `static/app.js` — SPA router, state machine, all screen renderers
+- `static/problems.js` — 41 problem generators + answer checker (numeric, vector, vector4, complex, matrix, yesno)
+- `static/chapters.js` — 11 chapters of curriculum with lesson HTML
+- `static/canvas.js` — Apple Pencil drawing engine with palm rejection
+- `static/style.css` — Duolingo-inspired dark theme design system
 
-Dirac notation · Pauli matrices · Bloch sphere visualization · Qubit state simulation
+All grading runs in the browser. The server only handles static files and the optional AI review endpoint.
 
----
+## Tech Stack
 
-*Screenshot placeholder — add after first run on iPad.*
+- **Frontend:** Vanilla JS (ES modules), HTML5 Canvas
+- **Backend:** Python, FastAPI
+- **AI (optional):** Anthropic Claude API for vision-based work review
+- **Target device:** iPad with Apple Pencil (also works on desktop)
