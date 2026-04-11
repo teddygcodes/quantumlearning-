@@ -75,50 +75,147 @@ document.addEventListener('DOMContentLoaded', route);
 // ── Home — skill tree ──────────────────────────────────────────────────────
 
 function renderHome() {
+  // Count progress
+  const totalChapters = CHAPTERS.length;
+  const completedCount = CHAPTERS.filter(ch => state.chapters[ch.id]?.completed).length;
+  const totalPractice = CHAPTERS.reduce((s, ch) => s + (state.chapters[ch.id]?.practiceCount || 0), 0);
+
+  // Chapter icons
+  const chapterIcons = ['🧮','📐','📏','💫','🔢','⚛️','🔮','📡','🔗','🌀','⚡'];
+
+  const pathOffsets = [0, -1, -2, -1, 0, 1, 2, 1, 0, -1, -2];
+
   const nodes = CHAPTERS.map((ch, i) => {
     const cs  = state.chapters[ch.id];
     const cls = cs.completed ? 'completed' : cs.unlocked ? 'unlocked' : 'locked';
-    const connector = i < CHAPTERS.length - 1
-      ? `<div class="tree-connector" style="background: repeating-linear-gradient(to bottom, var(--ch${ch.id}-border,var(--border)) 0, var(--ch${ch.id}-border,var(--border)) 6px, transparent 6px, transparent 12px);"></div>`
-      : '';
-    const icon = cs.completed ? '★' : cs.unlocked ? ch.id : '🔒';
+    const icon = cs.completed ? '✓' : cs.unlocked ? chapterIcons[i] : '🔒';
+    const offset = pathOffsets[i] * 52;
     const badge = cs.bestScore !== null
-      ? `<span style="position:absolute;top:-6px;right:-6px;background:var(--gold);color:#000;font-size:11px;font-weight:800;border-radius:8px;padding:2px 6px;">${cs.bestScore}/${ch.quizCount}</span>`
+      ? `<div class="node-badge">${cs.bestScore}/${ch.quizCount}</div>`
       : '';
+
+    // Progress ring for unlocked (show practice progress)
+    const progressPct = cs.completed ? 100 : cs.unlocked ? Math.min((cs.practiceCount || 0) / 10 * 100, 95) : 0;
+    const circumference = 2 * Math.PI * 54;
+    const strokeOffset = circumference - (progressPct / 100) * circumference;
+
+    // Phase divider before chapter 6
+    const phaseDivider = i === 5 ? `
+      <div class="phase-divider" style="animation-delay:${i * 0.06}s;">
+        <div class="phase-line"></div>
+        <div class="phase-label">Quantum Computing</div>
+        <div class="phase-line"></div>
+      </div>` : '';
+
+    // Connector to next node
+    const connector = i < CHAPTERS.length - 1 ? (() => {
+      const nextOffset = pathOffsets[i + 1] * 52;
+      return `<div class="path-connector" style="--from:${offset}px;--to:${nextOffset}px;"></div>`;
+    })() : '';
+
     return `
-      <div class="chapter-node ${cls}" data-ch="${ch.id}"
-           style="--ch-color:var(--ch${ch.id});--ch-dk:var(--ch${ch.id}-dk);${cs.unlocked || cs.completed ? 'cursor:pointer' : ''}"
-           onclick="window.__chapterTap(${ch.id})">
-        <span style="font-size:28px;font-weight:800;color:${cs.completed ? '#fff' : cs.unlocked ? 'var(--ch'+ch.id+')' : 'var(--text-muted)'};">${icon}</span>
-        <span style="font-size:11px;font-weight:800;color:${cs.completed ? '#fff' : 'var(--text-muted)'};margin-top:2px;">${ch.title.split(' ').slice(0,2).join(' ')}</span>
-        ${badge}
+      ${phaseDivider}
+      <div class="path-row" style="--offset:${offset}px;animation-delay:${i * 0.06}s;">
+        <div class="chapter-node ${cls}" data-ch="${ch.id}"
+             style="--ch-color:var(--ch${ch.id});--ch-dk:var(--ch${ch.id}-dk);--i:${i}"
+             onclick="window.__chapterTap(${ch.id})">
+          <svg class="progress-ring" viewBox="0 0 120 120">
+            <circle class="progress-ring-bg" cx="60" cy="60" r="54" />
+            ${progressPct > 0 ? `<circle class="progress-ring-fill" cx="60" cy="60" r="54"
+              style="stroke:var(--ch${ch.id});stroke-dasharray:${circumference};stroke-dashoffset:${strokeOffset};" />` : ''}
+          </svg>
+          <div class="node-inner">
+            <span class="node-icon">${icon}</span>
+          </div>
+          ${badge}
+        </div>
+        <div class="node-info ${cls}">
+          <span class="node-chapter-num">Chapter ${ch.id}</span>
+          <span class="node-title">${ch.title}</span>
+          ${cs.completed ? '<span class="node-status completed-status">Complete ✓</span>' :
+            cs.unlocked ? '<span class="node-status unlocked-status">In Progress</span>' :
+            '<span class="node-status locked-status">Locked</span>'}
+        </div>
       </div>
       ${connector}`;
   }).join('');
 
-  const tutorToggleLabel = state.tutorMode ? 'Tutor ON' : 'Tutor OFF';
+  const tutorToggleLabel = state.tutorMode ? 'ON' : 'OFF';
   const tutorToggleColor = state.tutorMode ? 'var(--green)' : 'var(--text-muted)';
 
   setContent(`
-    <div class="skill-tree">
-      <div style="width:100%;display:flex;justify-content:space-between;align-items:center;padding:0 8px;margin-bottom:24px;">
-        <div>
-          <div style="font-size:22px;font-weight:800;color:var(--text);">Quantum Primer</div>
-          <div style="font-size:13px;color:var(--text-muted);">Master the math. Understand the physics.</div>
+    <div class="home-bg">
+      <div class="home-particles" id="home-particles"></div>
+      <div class="skill-tree">
+
+        <div class="home-header">
+          <div class="home-brand">
+            <div class="home-logo">⚛</div>
+            <div>
+              <div class="home-title">Quantum Primer</div>
+              <div class="home-subtitle">Master the math. Understand the physics.</div>
+            </div>
+          </div>
+          <div class="home-actions">
+            <button class="home-btn ${state.tutorMode ? 'active' : ''}" onclick="window.__toggleTutor()">
+              <span class="home-btn-icon">✏️</span> Tutor ${tutorToggleLabel}
+            </button>
+            <button class="home-btn" onclick="window.__resetConfirm()">⚙️</button>
+          </div>
         </div>
-        <div style="display:flex;gap:12px;align-items:center;">
-          <button class="btn btn-ghost" style="font-size:12px;padding:8px 14px;color:${tutorToggleColor};border-color:${tutorToggleColor};"
-                  onclick="window.__toggleTutor()">✏️ ${tutorToggleLabel}</button>
-          <button class="btn btn-ghost" style="font-size:12px;padding:8px 14px;" onclick="window.__resetConfirm()">⚙️</button>
+
+        <div class="stats-bar">
+          <div class="stat-pill">
+            <span class="stat-icon">🏆</span>
+            <span class="stat-value">${completedCount}</span>
+            <span class="stat-label">/ ${totalChapters}</span>
+          </div>
+          <div class="stat-pill">
+            <span class="stat-icon">✏️</span>
+            <span class="stat-value">${totalPractice}</span>
+            <span class="stat-label">solved</span>
+          </div>
+          <div class="stat-pill progress-pill">
+            <div class="stat-progress-track">
+              <div class="stat-progress-fill" style="width:${(completedCount / totalChapters * 100).toFixed(0)}%"></div>
+            </div>
+            <span class="stat-label">${(completedCount / totalChapters * 100).toFixed(0)}%</span>
+          </div>
         </div>
+
+        <div class="phase-divider first-phase">
+          <div class="phase-line"></div>
+          <div class="phase-label">Math Foundations</div>
+          <div class="phase-line"></div>
+        </div>
+
+        <div class="path-container">
+          ${nodes}
+        </div>
+
       </div>
-      ${nodes}
     </div>
 
     <div class="chapter-modal-overlay" id="chapter-modal-overlay" onclick="window.__closeModal(event)">
       <div class="chapter-modal" id="chapter-modal"></div>
     </div>
   `);
+
+  // Spawn floating particles
+  requestAnimationFrame(() => {
+    const container = document.getElementById('home-particles');
+    if (!container) return;
+    for (let i = 0; i < 20; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      p.style.left = Math.random() * 100 + '%';
+      p.style.animationDelay = Math.random() * 8 + 's';
+      p.style.animationDuration = (6 + Math.random() * 10) + 's';
+      p.style.width = p.style.height = (2 + Math.random() * 4) + 'px';
+      p.style.opacity = 0.15 + Math.random() * 0.25;
+      container.appendChild(p);
+    }
+  });
 
   window.__chapterTap = (id) => {
     const ch = CHAPTERS.find(c => c.id === id);
