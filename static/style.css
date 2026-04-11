@@ -243,12 +243,13 @@ code { font-family: var(--mono); font-size: 14px; background: var(--border); pad
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 20px 24px;
-  padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  max-height: 60vh;
+  padding: 16px 24px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   border-top: 3px solid;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   transform: translateY(100%);
   transition: transform 0.3s ease-out;
   z-index: 200;
@@ -262,6 +263,7 @@ code { font-family: var(--mono); font-size: 14px; background: var(--border); pad
 .result-banner .result-buttons {
   display: flex;
   gap: 10px;
+  flex-shrink: 0;
 }
 .result-banner .result-buttons .btn {
   flex: 1;
@@ -279,6 +281,62 @@ code { font-family: var(--mono); font-size: 14px; background: var(--border); pad
 .result-title { font-size: 18px; font-weight: 800; }
 .result-hint  { font-size: 14px; color: var(--text-muted); margin-top: 2px; }
 .result-hint strong { color: var(--text); }
+
+/* ── Ask Tutor ── */
+.ask-tutor-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 1;
+  min-height: 0;
+}
+.ask-tutor-input-row {
+  display: flex;
+  gap: 8px;
+}
+.ask-tutor-input {
+  flex: 1;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 10px;
+  color: #fff;
+  font-size: 14px;
+  padding: 8px 12px;
+  outline: none;
+  font-family: inherit;
+}
+.ask-tutor-input::placeholder {
+  color: rgba(255,255,255,0.45);
+}
+.ask-tutor-input:focus {
+  border-color: rgba(255,255,255,0.5);
+}
+.btn-ask {
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-ask:active {
+  background: rgba(255,255,255,0.25);
+}
+.ask-tutor-response {
+  font-size: 13px;
+  color: rgba(255,255,255,0.9);
+  line-height: 1.45;
+  padding: 0 2px;
+  max-height: 80px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.ask-tutor-response:empty {
+  display: none;
+}
 
 /* ── Result Actions ── */
 .result-actions {

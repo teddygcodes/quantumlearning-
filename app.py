@@ -28,6 +28,16 @@ app = FastAPI()
 _review_in_flight = False
 
 
+class AskQuestionRequest(BaseModel):
+    question: str        # student's follow-up question
+    lesson_title: str    # e.g. "Bras and Inner Products"
+    lesson_html: str     # lesson concept card content (plain text)
+    problem_text: str    # the Try It problem text
+    student_answer: str  # what the student entered
+    correct_answer: str  # the correct answer
+    was_correct: bool
+
+
 class ReadAnswerRequest(BaseModel):
     image: str   # base64 PNG of the handwritten answer
     problem: dict  # { question, answerType }
@@ -38,6 +48,45 @@ class ReviewRequest(BaseModel):
     problem: dict
     student_answer: str
     was_correct: bool
+
+
+@app.post("/api/ask")
+async def ask_question(req: AskQuestionRequest):
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY not set")
+
+    prompt = (
+        "You are a friendly, patient quantum computing tutor for a beginner student. "
+        "The student just finished a practice problem and has a follow-up question.\n\n"
+        f"Lesson: {req.lesson_title}\n"
+        f"Concept taught: {req.lesson_html}\n"
+        f"Problem: {req.problem_text}\n"
+        f"Student answered: {req.student_answer} ({'correct' if req.was_correct else 'incorrect'})\n"
+        f"Correct answer: {req.correct_answer}\n\n"
+        f"Student's question: {req.question}\n\n"
+        "Rules:\n"
+        "- Answer in 2-3 sentences max, plain English, no jargon\n"
+        "- Relate your answer to the specific problem they just solved\n"
+        "- If they ask about physical meaning, connect to real-world quantum computing\n"
+        "- Be encouraging and conversational\n"
+        "- Do NOT use markdown formatting, LaTeX, or code blocks\n"
+        "- Use simple notation like |0> instead of complex formatting"
+    )
+
+    try:
+        client = anthropic.Anthropic(api_key=api_key)
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=200,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return JSONResponse(content={"answer": response.content[0].text.strip()})
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"answer": "Sorry, I couldn't process that question right now.", "error": str(e)},
+        )
 
 
 @app.post("/api/read-answer")

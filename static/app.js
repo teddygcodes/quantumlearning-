@@ -301,6 +301,16 @@ function renderLesson(chapterId) {
           </div>
         </div>
         <div id="result-why" style="font-size:13px;color:rgba(255,255,255,0.85);padding:0 4px;line-height:1.4;"></div>
+        <div class="ask-tutor-wrap" id="ask-tutor-wrap">
+          <div id="ask-tutor-response" class="ask-tutor-response"></div>
+          <div class="ask-tutor-input-row">
+            <input class="ask-tutor-input" id="ask-tutor-input" type="text"
+                   placeholder="Ask about what you just learned…"
+                   autocomplete="off" autocorrect="off" spellcheck="false"
+                   onkeydown="if(event.key==='Enter')window.__askTutor();" />
+            <button class="btn btn-ask" onclick="window.__askTutor();">Ask</button>
+          </div>
+        </div>
         <div class="result-buttons">
           <button class="btn btn-ghost" id="lesson-retry" onclick="window.__lessonRetry();">
             Try Again
@@ -372,6 +382,44 @@ function renderLesson(chapterId) {
       if (check) check.style.display = '';
       const inp = document.getElementById('lesson-ans');
       if (inp) { inp.value = ''; inp.focus(); }
+      // Clear ask tutor state
+      const resp = document.getElementById('ask-tutor-response');
+      if (resp) resp.textContent = '';
+      const askInp = document.getElementById('ask-tutor-input');
+      if (askInp) askInp.value = '';
+    };
+
+    window.__askTutor = async () => {
+      const inp = document.getElementById('ask-tutor-input');
+      const resp = document.getElementById('ask-tutor-response');
+      const q = inp?.value?.trim();
+      if (!q) return;
+
+      resp.textContent = 'Thinking…';
+      inp.disabled = true;
+
+      try {
+        const res = await fetch('/api/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            question: q,
+            lesson_title: step.title,
+            lesson_html: step.html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 600),
+            problem_text: problem.question,
+            student_answer: document.getElementById('lesson-ans')?.value || '',
+            correct_answer: problem.answerDisplay || String(problem.answer),
+            was_correct: answered && document.getElementById('result-banner')?.classList.contains('correct'),
+          }),
+        });
+        const data = await res.json();
+        resp.textContent = data.answer || 'Sorry, I couldn\'t answer that.';
+      } catch {
+        resp.textContent = 'Couldn\'t reach the tutor right now.';
+      }
+      inp.disabled = false;
+      inp.value = '';
+      inp.focus();
     };
 
     // Canvas tools
@@ -523,6 +571,16 @@ function renderProblemScreen(chapterId, isQuiz) {
           <div id="result-detail" style="font-size:15px;color:#fff;margin-top:4px;"></div>
         </div>
       </div>
+      ${!isQuiz ? `<div class="ask-tutor-wrap" id="ask-tutor-wrap">
+        <div id="ask-tutor-response" class="ask-tutor-response"></div>
+        <div class="ask-tutor-input-row">
+          <input class="ask-tutor-input" id="ask-tutor-input" type="text"
+                 placeholder="Ask about this problem…"
+                 autocomplete="off" autocorrect="off" spellcheck="false"
+                 onkeydown="if(event.key==='Enter')window.__askPracticeTutor();" />
+          <button class="btn btn-ask" onclick="window.__askPracticeTutor();">Ask</button>
+        </div>
+      </div>` : ''}
       <div class="result-buttons">
         ${!isQuiz ? '<button class="btn btn-ghost" onclick="window.__trySimilar();">Try Again</button>' : ''}
         <button class="btn btn-green" onclick="window.__next();">
@@ -821,6 +879,39 @@ function renderProblemScreen(chapterId, isQuiz) {
     // Reset so user can try the same problem again
     answered = false;
     newProblem(problem.type);
+  };
+
+  window.__askPracticeTutor = async () => {
+    const inp = document.getElementById('ask-tutor-input');
+    const resp = document.getElementById('ask-tutor-response');
+    const q = inp?.value?.trim();
+    if (!q) return;
+
+    resp.textContent = 'Thinking…';
+    inp.disabled = true;
+
+    try {
+      const res = await fetch('/api/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: q,
+          lesson_title: chapter.title + ' Practice',
+          lesson_html: problem.question,
+          problem_text: problem.question,
+          student_answer: document.getElementById('answer-input')?.value || '',
+          correct_answer: problem.answerDisplay || String(problem.answer),
+          was_correct: lastWasCorrect,
+        }),
+      });
+      const data = await res.json();
+      resp.textContent = data.answer || 'Sorry, I couldn\'t answer that.';
+    } catch {
+      resp.textContent = 'Couldn\'t reach the tutor right now.';
+    }
+    inp.disabled = false;
+    inp.value = '';
+    inp.focus();
   };
 
   window.__clearAnswer = () => {
