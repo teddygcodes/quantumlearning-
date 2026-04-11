@@ -64,3 +64,7 @@ All grading runs in the browser. The server handles static files and the optiona
 - **Backend:** Python, FastAPI
 - **AI (optional):** Anthropic Claude API (Sonnet) for tutoring chat and vision-based work review
 - **Target device:** iPad with Apple Pencil (also works on desktop)
+
+## Screenshot
+
+![Quantum Primer home screen](screenshot.png)
