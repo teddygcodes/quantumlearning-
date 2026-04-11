@@ -571,24 +571,23 @@ export const CHAPTERS = [
         problemType: 'dirac_probability',
       },
       {
-        title: 'Outer Products Preview',
+        title: 'Putting It All Together',
         html: `
-          <p>An outer product |ψ⟩⟨φ| produces a <strong>matrix</strong>, not a number. This is how we build projection operators and density matrices.</p>
+          <p>You now have all the tools: kets as vectors, inner products, and the Born rule. Let's practice the full workflow of finding a measurement probability from a quantum state.</p>
           <div class="concept-card">
-            |0⟩⟨0| = (1,0) × (1,0)ᵀ = [[1,0],[0,0]]<br>
-            |1⟩⟨1| = (0,1) × (0,1)ᵀ = [[0,0],[0,1]]<br><br>
-            |0⟩⟨0| + |1⟩⟨1| = I (the identity matrix)
+            Given |ψ⟩ = α|0⟩ + β|1⟩:<br>
+            P(|0⟩) = |⟨0|ψ⟩|² = |α|² = α²<br>
+            P(|1⟩) = |⟨1|ψ⟩|² = |β|² = β²<br><br>
+            The two probabilities always sum to 1.
           </div>
           <div class="worked-example">
             <div class="worked-example-label">Worked Example</div>
-            Compute |0⟩⟨0| applied to |ψ⟩ = (0.6, 0.8).<br>
-            Step 1 — |0⟩⟨0| = [[1,0],[0,0]]<br>
-            Step 2 — [[1,0],[0,0]] × (0.6, 0.8)<br>
-            Row 1: 1×0.6 + 0×0.8 = 0.6<br>
-            Row 2: 0×0.6 + 0×0.8 = 0<br>
-            Answer: (0.6, 0) — projects onto the |0⟩ component
+            |ψ⟩ = 0.8|0⟩ + 0.6|1⟩. Find P(|1⟩).<br>
+            Step 1 — identify β: β = 0.6<br>
+            Step 2 — square it: P(|1⟩) = 0.6² = 0.36<br>
+            Answer: 0.36
           </div>
-          <p style="color:var(--text-muted);font-size:13px;">Outer products build the gates and measurements of quantum computing.</p>
+          <p style="color:var(--text-muted);font-size:13px;">Enter a decimal (e.g. 0.36).</p>
         `,
         problemType: 'dirac_probability',
       },
@@ -648,23 +647,24 @@ export const CHAPTERS = [
         problemType: 'pauli_gate_apply',
       },
       {
-        title: 'Pauli Y Gate',
+        title: 'Pauli Z — Phase Flip',
         html: `
-          <p>The Pauli Y gate combines a bit flip and a phase flip, using the imaginary unit i.</p>
+          <p>The Pauli Z gate leaves |0⟩ alone but <strong>negates</strong> the |1⟩ component. It flips the phase, not the bit.</p>
           <div class="concept-card">
-            Y = [[0, −i], [i, 0]]<br><br>
-            Y|0⟩ = i|1⟩ &nbsp;&nbsp; Y|1⟩ = −i|0⟩<br>
-            Y produces complex outputs — we won't test this one directly.
+            Z = [[1, 0], [0, −1]]<br><br>
+            Z|0⟩ = |0⟩ &nbsp;&nbsp; Z|1⟩ = −|1⟩<br>
+            Row 1: 1×a + 0×b = a<br>
+            Row 2: 0×a + (−1)×b = −b
           </div>
           <div class="worked-example">
             <div class="worked-example-label">Worked Example</div>
-            Apply Y to |0⟩ = (1, 0).<br>
-            Row 1: 0×1 + (−i)×0 = 0<br>
-            Row 2: i×1 + 0×0 = i<br>
-            Result: (0, i) = i|1⟩<br>
-            Note: the output is complex — that's why Y problems are not in the quiz.
+            Apply Z to (0.6, 0.8).<br>
+            Step 1 — Z = [[1,0],[0,−1]]<br>
+            Step 2 — Row 1: 1×0.6 + 0×0.8 = 0.6<br>
+            Step 3 — Row 2: 0×0.6 + (−1)×0.8 = −0.8<br>
+            Answer: (0.6, −0.8)
           </div>
-          <p style="color:var(--text-muted);font-size:13px;">Y = iXZ. All three Pauli gates square to the identity: X²=Y²=Z²=I.</p>
+          <p style="color:var(--text-muted);font-size:13px;">Z is a phase gate — it changes the sign of the |1⟩ amplitude but keeps probabilities the same.</p>
         `,
         problemType: 'pauli_gate_apply',
       },
@@ -786,23 +786,22 @@ export const CHAPTERS = [
         problemType: 'valid_state_check',
       },
       {
-        title: 'State Collapse',
+        title: 'From Probability to Expected Counts',
         html: `
-          <p>After measurement the qubit <strong>collapses</strong> to the observed basis state. All superposition is destroyed.</p>
+          <p>If you prepare the same quantum state many times and measure each copy, you can predict how many times you'll see each outcome.</p>
           <div class="concept-card">
-            Before: |ψ⟩ = α|0⟩ + β|1⟩<br>
-            Measure → get |0⟩ with probability |α|²<br>
-            After: state is exactly |0⟩ = (1, 0)<br><br>
-            A second measurement always gives the same result.
+            Expected count of |0⟩ = N × P(|0⟩) = N × |α|²<br>
+            Expected count of |1⟩ = N × P(|1⟩) = N × |β|²<br><br>
+            N = total number of copies measured.
           </div>
           <div class="worked-example">
             <div class="worked-example-label">Worked Example</div>
-            |ψ⟩ = 0.6|0⟩ + 0.8|1⟩. You measure and get |1⟩.<br>
-            Step 1 — state collapses to |1⟩ = (0, 1)<br>
-            Step 2 — measure again: P(|1⟩) = 1² = 1 (100%)<br>
-            The superposition is gone — the qubit is now definitely |1⟩.
+            |ψ⟩ = 0.8|0⟩ + 0.6|1⟩. Measure 200 copies. Expected |0⟩ count?<br>
+            Step 1 — P(|0⟩) = 0.8² = 0.64<br>
+            Step 2 — Expected count = 200 × 0.64 = 128<br>
+            Answer: 128
           </div>
-          <p style="color:var(--text-muted);font-size:13px;">Measurement is irreversible — you cannot recover the original state.</p>
+          <p style="color:var(--text-muted);font-size:13px;">Enter a number (e.g. 128).</p>
         `,
         problemType: 'expected_counts',
       },
@@ -910,27 +909,24 @@ export const CHAPTERS = [
         problemType: 'tensor_product',
       },
       {
-        title: 'What the 4-Vector Means',
+        title: 'Building a Joint State',
         html: `
-          <p>Each component of a two-qubit state vector is the amplitude for one of the four basis states. Squaring the amplitude gives the probability of measuring that outcome.</p>
+          <p>When two independent qubits each have their own state, you combine them into a joint two-qubit state using the tensor product: A ⊗ B.</p>
           <div class="concept-card">
-            State (a, b, c, d) means:<br>
-            a = amplitude of |00⟩ &nbsp;→&nbsp; P(|00⟩) = a²<br>
-            b = amplitude of |01⟩ &nbsp;→&nbsp; P(|01⟩) = b²<br>
-            c = amplitude of |10⟩ &nbsp;→&nbsp; P(|10⟩) = c²<br>
-            d = amplitude of |11⟩ &nbsp;→&nbsp; P(|11⟩) = d²<br><br>
-            a² + b² + c² + d² = 1 &nbsp;(unit vector condition)
+            Qubit A = (α, β), Qubit B = (γ, δ)<br>
+            A ⊗ B = (αγ, αδ, βγ, βδ)<br><br>
+            Multiply each component of A by each component of B, in order.
           </div>
           <div class="worked-example">
             <div class="worked-example-label">Worked Example</div>
-            State = (0.5, 0.5, 0.5, 0.5)<br>
-            P(|00⟩) = 0.5² = 0.25 &nbsp;(25%)<br>
-            P(|01⟩) = 0.5² = 0.25 &nbsp;(25%)<br>
-            P(|10⟩) = 0.5² = 0.25 &nbsp;(25%)<br>
-            P(|11⟩) = 0.5² = 0.25 &nbsp;(25%)<br>
-            Total: 0.25 × 4 = 1.00 ✓
+            Qubit A = (0.8, 0.6), Qubit B = (0, 1). Find A ⊗ B.<br>
+            Step 1 — αγ = 0.8 × 0 = 0<br>
+            Step 2 — αδ = 0.8 × 1 = 0.8<br>
+            Step 3 — βγ = 0.6 × 0 = 0<br>
+            Step 4 — βδ = 0.6 × 1 = 0.6<br>
+            Answer: (0, 0.8, 0, 0.6)
           </div>
-          <p style="color:var(--text-muted);font-size:13px;">Just like single qubits — amplitudes squared give probabilities, and they must sum to 1.</p>
+          <p style="color:var(--text-muted);font-size:13px;">Enter four values separated by commas (e.g. 0, 0.8, 0, 0.6).</p>
         `,
         problemType: 'two_qubit_state',
       },
@@ -954,22 +950,23 @@ export const CHAPTERS = [
         problemType: 'two_qubit_state',
       },
       {
-        title: 'Tensor Product of Gates',
+        title: 'More Tensor Products',
         html: `
-          <p>Gates on individual qubits can be combined with ⊗ too. If you apply gate U to qubit A and gate V to qubit B, the combined gate is U ⊗ V, a 4×4 matrix.</p>
+          <p>Let's practice the tensor product with non-basis states. The formula is the same — multiply every component of the first vector by every component of the second.</p>
           <div class="concept-card">
-            X ⊗ I means: apply X to qubit A, do nothing to qubit B.<br>
-            I ⊗ X means: do nothing to qubit A, apply X to qubit B.<br><br>
-            The result is always a 4×4 matrix acting on the 4-vector.
+            (a, b) ⊗ (c, d) = (ac, ad, bc, bd)<br><br>
+            Works for any two 2-vectors, not just quantum states.
           </div>
           <div class="worked-example">
             <div class="worked-example-label">Worked Example</div>
-            Apply X ⊗ I to |00⟩:<br>
-            X flips qubit A: |0⟩ → |1⟩<br>
-            I leaves qubit B: |0⟩ → |0⟩<br>
-            Result: |10⟩ = (0, 0, 1, 0)
+            (1, 1) ⊗ (0, 1) = ?<br>
+            Step 1 — 1×0 = 0<br>
+            Step 2 — 1×1 = 1<br>
+            Step 3 — 1×0 = 0<br>
+            Step 4 — 1×1 = 1<br>
+            Answer: (0, 1, 0, 1)
           </div>
-          <p style="color:var(--text-muted);font-size:13px;">For now, think of tensor product of gates as "this gate on this qubit, that gate on that qubit."</p>
+          <p style="color:var(--text-muted);font-size:13px;">Enter four values separated by commas.</p>
         `,
         problemType: 'tensor_product',
       },
