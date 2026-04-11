@@ -15,7 +15,7 @@ import { CanvasManager } from './canvas.js';
 
 const DEFAULT_STATE = {
   chapters: Object.fromEntries(
-    [1, 2, 3, 4, 5].map(id => [
+    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(id => [
       id,
       { unlocked: id === 1, completed: false, quizScore: null, bestScore: null, practiceCount: 0 },
     ])
@@ -285,16 +285,18 @@ function renderLesson(chapterId) {
       </div>
 
       <div class="result-banner" id="result-banner">
-        <div id="result-icon" style="font-size:32px;flex-shrink:0;"></div>
-        <div style="flex:1;min-width:0;">
-          <div id="result-title" style="font-size:18px;font-weight:800;"></div>
-          <div id="result-detail" style="font-size:15px;color:#fff;margin-top:4px;"></div>
+        <div class="result-top">
+          <div id="result-icon" style="font-size:32px;"></div>
+          <div>
+            <div id="result-title" style="font-size:18px;font-weight:800;"></div>
+            <div id="result-detail" style="font-size:15px;color:#fff;margin-top:4px;"></div>
+          </div>
         </div>
-        <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
-          <button class="btn btn-ghost" id="lesson-retry" style="display:none;font-size:13px;padding:10px 16px;" onclick="window.__lessonRetry();">
+        <div class="result-buttons">
+          <button class="btn btn-ghost" id="lesson-retry" onclick="window.__lessonRetry();">
             Try Again
           </button>
-          <button class="btn btn-green" id="lesson-next" style="display:none;font-size:13px;padding:10px 16px;white-space:nowrap;" onclick="window.__lessonNext();">
+          <button class="btn btn-green" id="lesson-next" onclick="window.__lessonNext();">
             ${isLast ? 'Finish →' : 'Next →'}
           </button>
         </div>
@@ -334,12 +336,9 @@ function renderLesson(chapterId) {
           const inp = document.getElementById('answer-input');
           if (inp) { inp.classList.add('shake'); setTimeout(() => inp.classList.remove('shake'), 450); }
         }
-        const retry = document.getElementById('lesson-retry');
-        if (retry) retry.style.display = '';
       }
 
       document.getElementById('lesson-check').style.display = 'none';
-      document.getElementById('lesson-next').style.display  = '';
     };
 
     window.__lessonNext = () => {
@@ -356,10 +355,6 @@ function renderLesson(chapterId) {
       answered = false;
       const banner = document.getElementById('result-banner');
       if (banner) banner.classList.remove('visible', 'correct', 'incorrect');
-      const retry = document.getElementById('lesson-retry');
-      if (retry) retry.style.display = 'none';
-      const next = document.getElementById('lesson-next');
-      if (next) next.style.display = 'none';
       const check = document.getElementById('lesson-check');
       if (check) check.style.display = '';
       const inp = document.getElementById('lesson-ans');
@@ -508,14 +503,16 @@ function renderProblemScreen(chapterId, isQuiz) {
     </div>
 
     <div class="result-banner" id="result-banner">
-      <div id="result-icon" style="font-size:32px;flex-shrink:0;"></div>
-      <div style="flex:1;min-width:0;">
-        <div id="result-title" style="font-size:18px;font-weight:800;"></div>
-        <div id="result-detail" style="font-size:15px;color:#fff;margin-top:4px;"></div>
+      <div class="result-top">
+        <div id="result-icon" style="font-size:32px;"></div>
+        <div>
+          <div id="result-title" style="font-size:18px;font-weight:800;"></div>
+          <div id="result-detail" style="font-size:15px;color:#fff;margin-top:4px;"></div>
+        </div>
       </div>
-      <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
-        ${!isQuiz ? '<button class="btn btn-ghost" id="btn-similar" style="display:none;font-size:13px;padding:10px 16px;" onclick="window.__trySimilar();">Try Again</button>' : ''}
-        <button class="btn btn-green" id="btn-next" style="display:none;font-size:13px;padding:10px 16px;white-space:nowrap;" onclick="window.__next();">
+      <div class="result-buttons">
+        ${!isQuiz ? '<button class="btn btn-ghost" onclick="window.__trySimilar();">Try Again</button>' : ''}
+        <button class="btn btn-green" onclick="window.__next();">
           Next →
         </button>
       </div>
@@ -588,11 +585,6 @@ function renderProblemScreen(chapterId, isQuiz) {
 
     const banner = document.getElementById('result-banner');
     if (banner) { banner.classList.remove('visible', 'correct', 'incorrect'); }
-
-    const btnNext    = document.getElementById('btn-next');
-    const btnSimilar = document.getElementById('btn-similar');
-    if (btnNext)    btnNext.style.display    = 'none';
-    if (btnSimilar) btnSimilar.style.display = 'none';
 
     const fc = document.getElementById('tutor-feedback-card');
     if (fc) fc.style.display = 'none';
@@ -703,12 +695,6 @@ function renderProblemScreen(chapterId, isQuiz) {
         if (inp2) { inp2.classList.add('shake'); setTimeout(() => inp2.classList.remove('shake'), 450); }
       }
     }
-
-    // Show action buttons in banner
-    const btnNext2    = document.getElementById('btn-next');
-    const btnSimilar2 = document.getElementById('btn-similar');
-    if (btnNext2)    btnNext2.style.display    = '';
-    if (btnSimilar2) btnSimilar2.style.display = '';
 
     const submit = document.getElementById('btn-submit');
     if (submit) submit.style.display = 'none';

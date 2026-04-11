@@ -481,4 +481,770 @@ export const CHAPTERS = [
       },
     ],
   },
+
+  {
+    id: 6,
+    title: 'Dirac Notation',
+    color: 'var(--ch6)',
+    darkColor: 'var(--ch6-dk)',
+    problemTypes: ['ket_to_vector', 'inner_product', 'orthogonality_check', 'dirac_probability'],
+    quizCount: 10,
+    quizPass: 8,
+    description: 'Kets, bras, and inner products — the language physicists use for quantum states.',
+    lessonSteps: [
+      {
+        title: 'Kets Are Vectors',
+        html: `
+          <p>In Dirac notation a quantum state is written as a <strong>ket</strong> |ψ⟩. The two basis kets map directly to column vectors:</p>
+          <div class="concept-card">
+            |0⟩ = (1, 0) &nbsp;&nbsp; |1⟩ = (0, 1)<br><br>
+            Any qubit state: α|0⟩ + β|1⟩ = (α, β)
+          </div>
+          <div class="worked-example">
+            <div class="worked-example-label">Worked Example</div>
+            Write 3|0⟩ + 4|1⟩ as a vector.<br>
+            Step 1 — α = 3, β = 4<br>
+            Step 2 — the vector is (α, β) = (3, 4)<br>
+            Answer: (3, 4)
+          </div>
+          <p style="color:var(--text-muted);font-size:13px;">Format: x, y</p>
+        `,
+        problemType: 'ket_to_vector',
+      },
+      {
+        title: 'Bras and Inner Products',
+        html: `
+          <p>The <strong>bra</strong> ⟨ψ| is the conjugate transpose of the ket. The inner product ⟨ψ|φ⟩ is a dot product — multiply matching components and add.</p>
+          <div class="concept-card">
+            ⟨ψ|φ⟩ = ψ₁*φ₁ + ψ₂*φ₂ &nbsp; (dot product)<br><br>
+            For real vectors: ⟨ψ|φ⟩ = ψ₁φ₁ + ψ₂φ₂
+          </div>
+          <div class="worked-example">
+            <div class="worked-example-label">Worked Example</div>
+            Find ⟨ψ|φ⟩ where |ψ⟩ = (3, 4) and |φ⟩ = (2, 5).<br>
+            Step 1 — multiply component-wise: 3×2 = 6, &nbsp; 4×5 = 20<br>
+            Step 2 — add: 6 + 20 = 26<br>
+            Answer: 26
+          </div>
+          <p style="color:var(--text-muted);font-size:13px;">The inner product gives a single number, not a vector.</p>
+        `,
+        problemType: 'inner_product',
+      },
+      {
+        title: 'Orthogonality',
+        html: `
+          <p>Two states are <strong>orthogonal</strong> when their inner product is zero — they are completely distinguishable.</p>
+          <div class="concept-card">
+            ⟨ψ|φ⟩ = 0 &nbsp;→&nbsp; orthogonal (perpendicular)<br><br>
+            Key fact: ⟨0|1⟩ = (1)(0) + (0)(1) = 0<br>
+            The computational basis states are always orthogonal.
+          </div>
+          <div class="worked-example">
+            <div class="worked-example-label">Worked Example</div>
+            Are |ψ⟩ = (3, 4) and |φ⟩ = (4, −3) orthogonal?<br>
+            Step 1 — compute ⟨ψ|φ⟩: 3×4 + 4×(−3) = 12 − 12 = 0<br>
+            Step 2 — inner product = 0 → orthogonal ✓<br>
+            Answer: yes
+          </div>
+          <p style="color:var(--text-muted);font-size:13px;">Answer yes or no.</p>
+        `,
+        problemType: 'orthogonality_check',
+      },
+      {
+        title: 'Probability via Inner Product',
+        html: `
+          <p>The probability of measuring a basis state is the squared magnitude of the inner product with that state.</p>
+          <div class="concept-card">
+            P(|0⟩) = |⟨0|ψ⟩|²<br><br>
+            Since ⟨0| = (1, 0), we get ⟨0|ψ⟩ = α, so P = α².<br>
+            This is the Born rule in Dirac notation.
+          </div>
+          <div class="worked-example">
+            <div class="worked-example-label">Worked Example</div>
+            |ψ⟩ = 0.6|0⟩ + 0.8|1⟩. Find P(|0⟩).<br>
+            Step 1 — ⟨0|ψ⟩ = 0.6<br>
+            Step 2 — P = |0.6|² = 0.36<br>
+            Answer: 0.36
+          </div>
+          <p style="color:var(--text-muted);font-size:13px;">Enter a decimal (e.g. 0.36).</p>
+        `,
+        problemType: 'dirac_probability',
+      },
+      {
+        title: 'Outer Products Preview',
+        html: `
+          <p>An outer product |ψ⟩⟨φ| produces a <strong>matrix</strong>, not a number. This is how we build projection operators and density matrices.</p>
+          <div class="concept-card">
+            |0⟩⟨0| = (1,0) × (1,0)ᵀ = [[1,0],[0,0]]<br>
+            |1⟩⟨1| = (0,1) × (0,1)ᵀ = [[0,0],[0,1]]<br><br>
+            |0⟩⟨0| + |1⟩⟨1| = I (the identity matrix)
+          </div>
+          <div class="worked-example">
+            <div class="worked-example-label">Worked Example</div>
+            Compute |0⟩⟨0| applied to |ψ⟩ = (0.6, 0.8).<br>
+            Step 1 — |0⟩⟨0| = [[1,0],[0,0]]<br>
+            Step 2 — [[1,0],[0,0]] × (0.6, 0.8)<br>
+            Row 1: 1×0.6 + 0×0.8 = 0.6<br>
+            Row 2: 0×0.6 + 0×0.8 = 0<br>
+            Answer: (0.6, 0) — projects onto the |0⟩ component
+          </div>
+          <p style="color:var(--text-muted);font-size:13px;">Outer products build the gates and measurements of quantum computing.</p>
+        `,
+        problemType: 'dirac_probability',
+      },
+    ],
+  },
+
+  {
+    id: 7,
+    title: 'Quantum Gates',
+    color: 'var(--ch7)',
+    darkColor: 'var(--ch7-dk)',
+    problemTypes: ['pauli_gate_apply', 'hadamard_apply', 'gate_then_measure', 'two_gate_compose'],
+    quizCount: 10,
+    quizPass: 8,
+    description: 'Pauli gates, Hadamard, and gate composition — the building blocks of quantum circuits.',
+    lessonSteps: [
+      {
+        title: 'Pauli X — The NOT Gate',
+        html: `
+          <p>The Pauli X gate swaps |0⟩ and |1⟩ — it is the quantum NOT gate.</p>
+          <div class="concept-card">
+            X = [[0, 1], [1, 0]]<br><br>
+            X|0⟩ = |1⟩ &nbsp;&nbsp; X|1⟩ = |0⟩<br>
+            X flips the two amplitudes: X(α, β) = (β, α)
+          </div>
+          <div class="worked-example">
+            <div class="worked-example-label">Worked Example</div>
+            Apply X to |ψ⟩ = (3, 5).<br>
+            X = [[0,1],[1,0]]<br>
+            Row 1: 0×3 + 1×5 = 5<br>
+            Row 2: 1×3 + 0×5 = 3<br>
+            Answer: (5, 3)
+          </div>
+          <p style="color:var(--text-muted);font-size:13px;">Format: x, y</p>
+        `,
+        problemType: 'pauli_gate_apply',
+      },
+      {
+        title: 'Pauli Z — Phase Flip',
+        html: `
+          <p>The Pauli Z gate leaves |0⟩ alone but flips the sign of |1⟩. It changes the <em>phase</em> without changing probabilities.</p>
+          <div class="concept-card">
+            Z = [[1, 0], [0, −1]]<br><br>
+            Z|0⟩ = |0⟩ &nbsp;&nbsp; Z|1⟩ = −|1⟩<br>
+            Z(α, β) = (α, −β)
+          </div>
+          <div class="worked-example">
+            <div class="worked-example-label">Worked Example</div>
+            Apply Z to |ψ⟩ = (3, 5).<br>
+            Z = [[1,0],[0,−1]]<br>
+            Row 1: 1×3 + 0×5 = 3<br>
+            Row 2: 0×3 + (−1)×5 = −5<br>
+            Answer: (3, −5)
+          </div>
+          <p style="color:var(--text-muted);font-size:13px;">Z only affects the second component's sign.</p>
+        `,
+        problemType: 'pauli_gate_apply',
+      },
+      {
+        title: 'Pauli Y Gate',
+        html: `
+          <p>The Pauli Y gate combines a bit flip and a phase flip, using the imaginary unit i.</p>
+          <div class="concept-card">
+            Y = [[0, −i], [i, 0]]<br><br>
+            Y|0⟩ = i|1⟩ &nbsp;&nbsp; Y|1⟩ = −i|0⟩<br>
+            Y produces complex outputs — we won't test this one directly.
+          </div>
+          <div class="worked-example">
+            <div class="worked-example-label">Worked Example</div>
+            Apply Y to |0⟩ = (1, 0).<br>
+            Row 1: 0×1 + (−i)×0 = 0<br>
+            Row 2: i×1 + 0×0 = i<br>
+            Result: (0, i) = i|1⟩<br>
+            Note: the output is complex — that's why Y problems are not in the quiz.
+          </div>
+          <p style="color:var(--text-muted);font-size:13px;">Y = iXZ. All three Pauli gates square to the identity: X²=Y²=Z²=I.</p>
+        `,
+        problemType: 'pauli_gate_apply',
+      },
+      {
+        title: 'The Hadamard Gate',
+        html: `
+          <p>The Hadamard gate creates superposition — it maps basis states to equal mixtures of |0⟩ and |1⟩.</p>
+          <div class="concept-card">
+            H = (1/√2) [[1, 1], [1, −1]]<br><br>
+            H|0⟩ = (1/√2)(|0⟩+|1⟩) = (0.71, 0.71)<br>
+            H|1⟩ = (1/√2)(|0⟩−|1⟩) = (0.71, −0.71)
+          </div>
+          <div class="worked-example">
+            <div class="worked-example-label">Worked Example</div>
+            Apply H to |0⟩ = (1, 0).<br>
+            H = (1/√2)[[1,1],[1,−1]] ≈ [[0.71, 0.71],[0.71, −0.71]]<br>
+            Row 1: 0.71×1 + 0.71×0 = 0.71<br>
+            Row 2: 0.71×1 + (−0.71)×0 = 0.71<br>
+            Answer: (0.71, 0.71)
+          </div>
+          <p style="color:var(--text-muted);font-size:13px;">Format: x, y (rounded to 2 decimal places)</p>
+        `,
+        problemType: 'hadamard_apply',
+      },
+      {
+        title: 'Gate Then Measure',
+        html: `
+          <p>Apply a gate to a state, then compute the probability of measuring |0⟩ from the output state.</p>
+          <div class="concept-card">
+            Recipe:<br>
+            1. Apply gate: |ψ'⟩ = G|ψ⟩<br>
+            2. Read off the first component α'<br>
+            3. P(|0⟩) = |α'|²
+          </div>
+          <div class="worked-example">
+            <div class="worked-example-label">Worked Example</div>
+            Apply H to |0⟩, then find P(|0⟩).<br>
+            Step 1 — H|0⟩ = (0.71, 0.71)<br>
+            Step 2 — α' = 0.71<br>
+            Step 3 — P(|0⟩) = 0.71² ≈ 0.50<br>
+            Answer: 0.50
+          </div>
+          <p style="color:var(--text-muted);font-size:13px;">This is the Hadamard gate's signature: equal 50/50 superposition.</p>
+        `,
+        problemType: 'gate_then_measure',
+      },
+      {
+        title: 'Composing Two Gates',
+        html: `
+          <p>Applying gate B then gate A is the same as multiplying the matrices: result = A × B × |ψ⟩. Apply B first, then A to the result.</p>
+          <div class="concept-card">
+            Two-gate circuit: |ψ⟩ → B → A → |ψ'⟩<br>
+            |ψ'⟩ = A(B|ψ⟩)<br><br>
+            Apply the gates left to right through the circuit,<br>
+            but right to left in the math.
+          </div>
+          <div class="worked-example">
+            <div class="worked-example-label">Worked Example</div>
+            Apply X then Z to |ψ⟩ = (3, 4).<br>
+            Step 1 — apply X first: X(3, 4) = (4, 3)<br>
+            Step 2 — apply Z to result: Z(4, 3) = (4, −3)<br>
+            Answer: (4, −3)
+          </div>
+          <p style="color:var(--text-muted);font-size:13px;">Format: x, y</p>
+        `,
+        problemType: 'two_gate_compose',
+      },
+    ],
+  },
+
+  {
+    id: 8,
+    title: 'Measurement',
+    color: 'var(--ch8)',
+    darkColor: 'var(--ch8-dk)',
+    problemTypes: ['born_rule_complex', 'valid_state_check', 'expected_counts', 'missing_amplitude'],
+    quizCount: 8,
+    quizPass: 6,
+    description: 'The Born rule, state collapse, and what happens when you look at a qubit.',
+    lessonSteps: [
+      {
+        title: 'Born Rule with Complex Amplitudes',
+        html: `
+          <p>When amplitudes are complex, probability uses the conjugate: P = |α|² = α*α = a² + b² where α = a + bi.</p>
+          <div class="concept-card">
+            If α = a + bi, then |α|² = a² + b²<br><br>
+            This is the complex magnitude squared — same as Chapter 4.
+          </div>
+          <div class="worked-example">
+            <div class="worked-example-label">Worked Example</div>
+            |ψ⟩ = (3 + 4i)|0⟩ (unnormalized). Find |α|².<br>
+            Step 1 — α = 3 + 4i<br>
+            Step 2 — |α|² = 3² + 4² = 9 + 16 = 25<br>
+            Answer: 25
+          </div>
+          <p style="color:var(--text-muted);font-size:13px;">Enter a number.</p>
+        `,
+        problemType: 'born_rule_complex',
+      },
+      {
+        title: 'Valid Quantum States',
+        html: `
+          <p>A valid quantum state must satisfy the normalization condition: |α|² + |β|² = 1.</p>
+          <div class="concept-card">
+            Check: |α|² + |β|² = 1?<br><br>
+            If yes → valid quantum state<br>
+            If no → not a valid quantum state
+          </div>
+          <div class="worked-example">
+            <div class="worked-example-label">Worked Example</div>
+            Is (0.6, 0.8) a valid quantum state?<br>
+            Step 1 — |0.6|² = 0.36<br>
+            Step 2 — |0.8|² = 0.64<br>
+            Step 3 — 0.36 + 0.64 = 1.00 ✓<br>
+            Answer: yes
+          </div>
+          <p style="color:var(--text-muted);font-size:13px;">Answer yes or no.</p>
+        `,
+        problemType: 'valid_state_check',
+      },
+      {
+        title: 'State Collapse',
+        html: `
+          <p>After measurement the qubit <strong>collapses</strong> to the observed basis state. All superposition is destroyed.</p>
+          <div class="concept-card">
+            Before: |ψ⟩ = α|0⟩ + β|1⟩<br>
+            Measure → get |0⟩ with probability |α|²<br>
+            After: state is exactly |0⟩ = (1, 0)<br><br>
+            A second measurement always gives the same result.
+          </div>
+          <div class="worked-example">
+            <div class="worked-example-label">Worked Example</div>
+            |ψ⟩ = 0.6|0⟩ + 0.8|1⟩. You measure and get |1⟩.<br>
+            Step 1 — state collapses to |1⟩ = (0, 1)<br>
+            Step 2 — measure again: P(|1⟩) = 1² = 1 (100%)<br>
+            The superposition is gone — the qubit is now definitely |1⟩.
+          </div>
+          <p style="color:var(--text-muted);font-size:13px;">Measurement is irreversible — you cannot recover the original state.</p>
+        `,
+        problemType: 'expected_counts',
+      },
+      {
+        title: 'Expected Counts',
+        html: `
+          <p>If you prepare the same state N times and measure each copy, the expected count for |0⟩ is N × P(|0⟩).</p>
+          <div class="concept-card">
+            Expected count = N × |α|²<br><br>
+            This is a prediction — actual results fluctuate,<br>
+            but the average converges as N grows.
+          </div>
+          <div class="worked-example">
+            <div class="worked-example-label">Worked Example</div>
+            |ψ⟩ = 0.6|0⟩ + 0.8|1⟩. Measure 100 copies. Expected |0⟩ count?<br>
+            Step 1 — P(|0⟩) = 0.6² = 0.36<br>
+            Step 2 — Expected count = 100 × 0.36 = 36<br>
+            Answer: 36
+          </div>
+          <p style="color:var(--text-muted);font-size:13px;">Enter a number.</p>
+        `,
+        problemType: 'expected_counts',
+      },
+      {
+        title: 'Finding a Missing Amplitude',
+        html: `
+          <p>If you know one amplitude and the state is valid, you can find the other using |α|² + |β|² = 1.</p>
+          <div class="concept-card">
+            Given α, find β:<br>
+            |β|² = 1 − |α|²<br>
+            β = √(1 − |α|²)
+          </div>
+          <div class="worked-example">
+            <div class="worked-example-label">Worked Example</div>
+            |ψ⟩ = 0.6|0⟩ + β|1⟩. Find β (positive).<br>
+            Step 1 — |α|² = 0.6² = 0.36<br>
+            Step 2 — |β|² = 1 − 0.36 = 0.64<br>
+            Step 3 — β = √0.64 = 0.8<br>
+            Answer: 0.8
+          </div>
+          <p style="color:var(--text-muted);font-size:13px;">Enter a positive decimal.</p>
+        `,
+        problemType: 'missing_amplitude',
+      },
+    ],
+  },
+
+  // ── Chapter 9: Two-Qubit Systems (Tensor Products) ─────────────────────────
+
+  {
+    id: 9,
+    title: 'Tensor Products',
+    color: 'var(--ch9)',
+    darkColor: 'var(--ch9-dk)',
+    problemTypes: ['two_qubit_basis', 'tensor_product', 'two_qubit_state', 'separable_check'],
+    quizCount: 10,
+    quizPass: 8,
+    description: 'Two-qubit systems use tensor products to combine individual qubit states into joint states.',
+    lessonSteps: [
+      {
+        title: 'Two-Qubit Basis States',
+        html: `
+          <p>A single qubit lives in a 2D space with basis |0⟩ and |1⟩. Two qubits together live in a 4D space with basis states |00⟩, |01⟩, |10⟩, and |11⟩.</p>
+          <div class="concept-card">
+            |00⟩ = (1, 0, 0, 0)<br>
+            |01⟩ = (0, 1, 0, 0)<br>
+            |10⟩ = (0, 0, 1, 0)<br>
+            |11⟩ = (0, 0, 0, 1)<br><br>
+            The first digit is qubit A, the second is qubit B.
+          </div>
+          <div class="worked-example">
+            <div class="worked-example-label">Worked Example</div>
+            Write |10⟩ as a 4-vector.<br>
+            |10⟩ means qubit A = |1⟩, qubit B = |0⟩.<br>
+            It is the 3rd basis state (counting from |00⟩).<br>
+            Answer: (0, 0, 1, 0)
+          </div>
+          <p style="color:var(--text-muted);font-size:13px;">Format: a, b, c, d — four numbers separated by commas.</p>
+        `,
+        problemType: 'two_qubit_basis',
+      },
+      {
+        title: 'The Tensor Product',
+        html: `
+          <p>The tensor product ⊗ combines two 2-vectors into one 4-vector. It describes the joint state of two independent qubits.</p>
+          <div class="concept-card">
+            (a, b) ⊗ (c, d) = (ac, ad, bc, bd)<br><br>
+            Multiply each element of the first vector by the entire second vector, then lay the results end to end.
+          </div>
+          <div class="worked-example">
+            <div class="worked-example-label">Worked Example 1</div>
+            |1⟩ ⊗ |0⟩ = (0, 1) ⊗ (1, 0)<br>
+            = (0×1, 0×0, 1×1, 1×0)<br>
+            = (0, 0, 1, 0) = |10⟩ ✓
+          </div>
+          <div class="worked-example">
+            <div class="worked-example-label">Worked Example 2</div>
+            (0.71, 0.71) ⊗ (1, 0)<br>
+            = (0.71×1, 0.71×0, 0.71×1, 0.71×0)<br>
+            = (0.71, 0, 0.71, 0)<br>
+            This is (|0⟩+|1⟩)/√2 tensored with |0⟩.
+          </div>
+          <p style="color:var(--text-muted);font-size:13px;">The tensor product is NOT the same as a dot product or cross product.</p>
+        `,
+        problemType: 'tensor_product',
+      },
+      {
+        title: 'What the 4-Vector Means',
+        html: `
+          <p>Each component of a two-qubit state vector is the amplitude for one of the four basis states. Squaring the amplitude gives the probability of measuring that outcome.</p>
+          <div class="concept-card">
+            State (a, b, c, d) means:<br>
+            a = amplitude of |00⟩ &nbsp;→&nbsp; P(|00⟩) = a²<br>
+            b = amplitude of |01⟩ &nbsp;→&nbsp; P(|01⟩) = b²<br>
+            c = amplitude of |10⟩ &nbsp;→&nbsp; P(|10⟩) = c²<br>
+            d = amplitude of |11⟩ &nbsp;→&nbsp; P(|11⟩) = d²<br><br>
+            a² + b² + c² + d² = 1 &nbsp;(unit vector condition)
+          </div>
+          <div class="worked-example">
+            <div class="worked-example-label">Worked Example</div>
+            State = (0.5, 0.5, 0.5, 0.5)<br>
+            P(|00⟩) = 0.5² = 0.25 &nbsp;(25%)<br>
+            P(|01⟩) = 0.5² = 0.25 &nbsp;(25%)<br>
+            P(|10⟩) = 0.5² = 0.25 &nbsp;(25%)<br>
+            P(|11⟩) = 0.5² = 0.25 &nbsp;(25%)<br>
+            Total: 0.25 × 4 = 1.00 ✓
+          </div>
+          <p style="color:var(--text-muted);font-size:13px;">Just like single qubits — amplitudes squared give probabilities, and they must sum to 1.</p>
+        `,
+        problemType: 'two_qubit_state',
+      },
+      {
+        title: 'Building Joint States',
+        html: `
+          <p>When two qubits are independent, their joint state is the tensor product of the individual states. This is how you go from knowing each qubit separately to describing them together.</p>
+          <div class="concept-card">
+            If qubit A = (α, β) and qubit B = (γ, δ), then:<br>
+            Joint state = A ⊗ B = (αγ, αδ, βγ, βδ)
+          </div>
+          <div class="worked-example">
+            <div class="worked-example-label">Worked Example</div>
+            Qubit A = (0.6, 0.8), Qubit B = (1, 0)<br>
+            A ⊗ B = (0.6×1, 0.6×0, 0.8×1, 0.8×0)<br>
+            = (0.6, 0, 0.8, 0)<br>
+            This means: 60% amplitude on |00⟩, 80% on |10⟩.
+          </div>
+          <p style="color:var(--text-muted);font-size:13px;">If you can write a two-qubit state as a tensor product, the qubits are "independent" (separable).</p>
+        `,
+        problemType: 'two_qubit_state',
+      },
+      {
+        title: 'Tensor Product of Gates',
+        html: `
+          <p>Gates on individual qubits can be combined with ⊗ too. If you apply gate U to qubit A and gate V to qubit B, the combined gate is U ⊗ V, a 4×4 matrix.</p>
+          <div class="concept-card">
+            X ⊗ I means: apply X to qubit A, do nothing to qubit B.<br>
+            I ⊗ X means: do nothing to qubit A, apply X to qubit B.<br><br>
+            The result is always a 4×4 matrix acting on the 4-vector.
+          </div>
+          <div class="worked-example">
+            <div class="worked-example-label">Worked Example</div>
+            Apply X ⊗ I to |00⟩:<br>
+            X flips qubit A: |0⟩ → |1⟩<br>
+            I leaves qubit B: |0⟩ → |0⟩<br>
+            Result: |10⟩ = (0, 0, 1, 0)
+          </div>
+          <p style="color:var(--text-muted);font-size:13px;">For now, think of tensor product of gates as "this gate on this qubit, that gate on that qubit."</p>
+        `,
+        problemType: 'tensor_product',
+      },
+      {
+        title: 'Separable vs Entangled (Preview)',
+        html: `
+          <p>Some two-qubit states CAN be written as a tensor product — these are <strong>separable</strong>. Others CANNOT — those are <strong>entangled</strong>. Entanglement is what makes quantum computing powerful.</p>
+          <div class="concept-card">
+            Test: state (a, b, c, d) is separable if a×d = b×c.<br><br>
+            Separable: (1, 0, 0, 0) → 1×0 = 0×0 ✓<br>
+            Entangled: (0.71, 0, 0, 0.71) → 0.71×0.71 ≠ 0×0 ✗
+          </div>
+          <div class="worked-example">
+            <div class="worked-example-label">Worked Example</div>
+            Is (0.5, 0.5, 0.5, 0.5) separable?<br>
+            Check: a×d = 0.5 × 0.5 = 0.25<br>
+            Check: b×c = 0.5 × 0.5 = 0.25<br>
+            0.25 = 0.25 ✓ → Yes, separable!<br>
+            It equals (0.71, 0.71) ⊗ (0.71, 0.71).
+          </div>
+          <p style="color:var(--text-muted);font-size:13px;">Entangled states are the subject of the next chapter.</p>
+        `,
+        problemType: 'separable_check',
+      },
+    ],
+  },
+
+  // ── Chapter 10: Entanglement & Bell States ─────────────────────────────────
+
+  {
+    id: 10,
+    title: 'Entanglement',
+    color: 'var(--ch10)',
+    darkColor: 'var(--ch10-dk)',
+    problemTypes: ['entanglement_check', 'cnot_apply', 'build_bell_state', 'entangled_measurement'],
+    quizCount: 8,
+    quizPass: 6,
+    description: 'Entangled qubits share correlations that no classical system can replicate.',
+    lessonSteps: [
+      {
+        title: 'What Is Entanglement?',
+        html: `
+          <p>An entangled state is a two-qubit state that CANNOT be written as a tensor product of two individual qubit states. The qubits are correlated in a way that has no classical explanation.</p>
+          <div class="concept-card">
+            Separable: can be factored as A ⊗ B.<br>
+            Entangled: CANNOT be factored — the qubits are linked.<br><br>
+            Test: (a, b, c, d) is entangled if a×d ≠ b×c.
+          </div>
+          <div class="worked-example">
+            <div class="worked-example-label">Worked Example</div>
+            Is (0.71, 0, 0, 0.71) entangled?<br>
+            a×d = 0.71 × 0.71 = 0.50<br>
+            b×c = 0 × 0 = 0<br>
+            0.50 ≠ 0 → Yes, this state is entangled!<br>
+            There is no way to write it as (x, y) ⊗ (z, w).
+          </div>
+          <p style="color:var(--text-muted);font-size:13px;">Einstein called entanglement "spooky action at a distance."</p>
+        `,
+        problemType: 'entanglement_check',
+      },
+      {
+        title: 'The CNOT Gate',
+        html: `
+          <p>CNOT (Controlled-NOT) is the key two-qubit gate. It flips the second qubit (target) only when the first qubit (control) is |1⟩.</p>
+          <div class="concept-card">
+            CNOT truth table:<br>
+            |00⟩ → |00⟩ &nbsp;(control=0, no flip)<br>
+            |01⟩ → |01⟩ &nbsp;(control=0, no flip)<br>
+            |10⟩ → |11⟩ &nbsp;(control=1, flip!)<br>
+            |11⟩ → |10⟩ &nbsp;(control=1, flip!)<br><br>
+            Matrix: [[1,0,0,0],[0,1,0,0],[0,0,0,1],[0,0,1,0]]
+          </div>
+          <div class="worked-example">
+            <div class="worked-example-label">Worked Example</div>
+            Apply CNOT to |10⟩:<br>
+            Control qubit = |1⟩ → target gets flipped.<br>
+            Target qubit |0⟩ → |1⟩.<br>
+            Result: |11⟩ = (0, 0, 0, 1)
+          </div>
+          <p style="color:var(--text-muted);font-size:13px;">CNOT + H together can create entanglement from scratch.</p>
+        `,
+        problemType: 'cnot_apply',
+      },
+      {
+        title: 'Building Bell States',
+        html: `
+          <p>Bell states are the simplest entangled states. Build one by applying H to the first qubit (H⊗I), then CNOT.</p>
+          <div class="concept-card">
+            Recipe: |00⟩ → H⊗I → (0.71, 0, 0.71, 0) → CNOT → (0.71, 0, 0, 0.71)<br><br>
+            The H creates a superposition, the CNOT entangles the qubits.
+          </div>
+          <div class="worked-example">
+            <div class="worked-example-label">Worked Example</div>
+            Build a Bell state from |00⟩:<br>
+            Step 1 — H on qubit 1: (1,0) → (0.71, 0.71)<br>
+            Tensor with qubit 2: (0.71, 0.71) ⊗ (1, 0) = (0.71, 0, 0.71, 0)<br>
+            Step 2 — CNOT: |00⟩ stays, |10⟩ → |11⟩<br>
+            0.71|00⟩ + 0.71|10⟩ → 0.71|00⟩ + 0.71|11⟩<br>
+            Result: (0.71, 0, 0, 0.71) = |Φ+⟩
+          </div>
+          <p style="color:var(--text-muted);font-size:13px;">This is the circuit used in quantum teleportation and superdense coding.</p>
+        `,
+        problemType: 'build_bell_state',
+      },
+      {
+        title: 'The Four Bell States',
+        html: `
+          <p>There are exactly four maximally entangled two-qubit states, called the Bell states. Each is built from a different basis state input.</p>
+          <div class="concept-card">
+            |Φ+⟩ = (0.71, 0, 0, 0.71) &nbsp; from |00⟩<br>
+            |Ψ+⟩ = (0, 0.71, 0.71, 0) &nbsp; from |01⟩<br>
+            |Φ-⟩ = (0.71, 0, 0, -0.71) &nbsp; from |10⟩<br>
+            |Ψ-⟩ = (0, 0.71, -0.71, 0) &nbsp; from |11⟩
+          </div>
+          <div class="worked-example">
+            <div class="worked-example-label">Worked Example</div>
+            Build |Ψ+⟩ from |01⟩:<br>
+            Step 1 — H⊗I on |01⟩:<br>
+            H on qubit 1: |0⟩ → (0.71, 0.71)<br>
+            Tensor with |1⟩: (0.71, 0.71) ⊗ (0, 1) = (0, 0.71, 0, 0.71)<br>
+            Step 2 — CNOT:<br>
+            0.71|01⟩ → 0.71|01⟩, 0.71|11⟩ → 0.71|10⟩<br>
+            Result: (0, 0.71, 0.71, 0) = |Ψ+⟩
+          </div>
+          <p style="color:var(--text-muted);font-size:13px;">The four Bell states form a basis for the two-qubit space.</p>
+        `,
+        problemType: 'build_bell_state',
+      },
+      {
+        title: 'Measuring Entangled States',
+        html: `
+          <p>When you measure one qubit of an entangled pair, the other qubit's state is instantly determined. This is the "spooky" part of entanglement.</p>
+          <div class="concept-card">
+            For |Φ+⟩ = (0.71, 0, 0, 0.71):<br>
+            If qubit 1 = |0⟩ → qubit 2 = |0⟩ (50% chance)<br>
+            If qubit 1 = |1⟩ → qubit 2 = |1⟩ (50% chance)<br><br>
+            The outcomes are perfectly correlated.
+          </div>
+          <div class="worked-example">
+            <div class="worked-example-label">Worked Example</div>
+            State: |Ψ+⟩ = (0, 0.71, 0.71, 0)<br>
+            This is 0.71|01⟩ + 0.71|10⟩.<br>
+            Measure qubit 1 and get |0⟩:<br>
+            Only |01⟩ has qubit 1 = |0⟩, so qubit 2 must be |1⟩.<br>
+            Answer: qubit 2 = (0, 1)
+          </div>
+          <p style="color:var(--text-muted);font-size:13px;">This correlation holds no matter how far apart the qubits are.</p>
+        `,
+        problemType: 'entangled_measurement',
+      },
+    ],
+  },
+
+  // ── Chapter 11: Quantum Circuits ───────────────────────────────────────────
+
+  {
+    id: 11,
+    title: 'Quantum Circuits',
+    color: 'var(--ch11)',
+    darkColor: 'var(--ch11-dk)',
+    problemTypes: ['trace_single_qubit', 'trace_two_qubit', 'circuit_probabilities', 'circuit_equivalence'],
+    quizCount: 8,
+    quizPass: 6,
+    description: 'Quantum circuits are the programs of a quantum computer — wires carry qubits, boxes apply gates.',
+    lessonSteps: [
+      {
+        title: 'Reading a Quantum Circuit',
+        html: `
+          <p>A quantum circuit is read left to right. Each horizontal wire represents a qubit. Boxes on the wires are gates applied in sequence.</p>
+          <div class="concept-card">
+            Wire = qubit<br>
+            Box = gate (X, Z, H, etc.)<br>
+            Left → Right = time order<br><br>
+            The input is on the left, the output (or measurement) is on the right.
+          </div>
+          <div class="worked-example">
+            <div class="worked-example-label">Worked Example</div>
+            Circuit: |0⟩ —[H]—[X]— output<br>
+            Read left to right:<br>
+            1. Start with |0⟩ = (1, 0)<br>
+            2. Apply H: (0.71, 0.71)<br>
+            3. Apply X: (0.71, 0.71) → swap → (0.71, 0.71)<br>
+            Output: (0.71, 0.71)
+          </div>
+          <p style="color:var(--text-muted);font-size:13px;">Gates are applied in reading order — left gate first, right gate second.</p>
+        `,
+        problemType: 'trace_single_qubit',
+      },
+      {
+        title: 'Tracing Single-Qubit Circuits',
+        html: `
+          <p>To trace a single-qubit circuit, apply each gate to the state vector one at a time, left to right.</p>
+          <div class="concept-card">
+            Key gates:<br>
+            X (NOT): swaps |0⟩ and |1⟩ → (a, b) → (b, a)<br>
+            Z (Phase): flips sign of |1⟩ → (a, b) → (a, -b)<br>
+            H (Hadamard): → (a, b) → ((a+b)/√2, (a-b)/√2)
+          </div>
+          <div class="worked-example">
+            <div class="worked-example-label">Worked Example</div>
+            Circuit: |0⟩ —[X]—[Z]—<br>
+            Start: (1, 0)<br>
+            After X: swap → (0, 1)<br>
+            After Z: flip sign of |1⟩ → (0, -1)<br>
+            Output: (0, -1)
+          </div>
+          <p style="color:var(--text-muted);font-size:13px;">When using H, multiply by 1/√2 ≈ 0.71.</p>
+        `,
+        problemType: 'trace_single_qubit',
+      },
+      {
+        title: 'Tracing Two-Qubit Circuits',
+        html: `
+          <p>Two-qubit circuits have two wires. Single-qubit gates act on one wire (using tensor product with I on the other). Two-qubit gates like CNOT act on both wires.</p>
+          <div class="concept-card">
+            X on qubit 1 only → apply X⊗I:<br>
+            |00⟩→|10⟩, |01⟩→|11⟩, |10⟩→|00⟩, |11⟩→|01⟩<br><br>
+            CNOT (control=qubit 1, target=qubit 2):<br>
+            |00⟩→|00⟩, |01⟩→|01⟩, |10⟩→|11⟩, |11⟩→|10⟩
+          </div>
+          <div class="worked-example">
+            <div class="worked-example-label">Worked Example</div>
+            Apply X⊗I to |01⟩:<br>
+            X flips qubit 1: |0⟩ → |1⟩<br>
+            I leaves qubit 2: |1⟩ → |1⟩<br>
+            Result: |11⟩ = (0, 0, 0, 1)
+          </div>
+          <p style="color:var(--text-muted);font-size:13px;">Think of each gate as acting on the relevant qubit(s) independently.</p>
+        `,
+        problemType: 'trace_two_qubit',
+      },
+      {
+        title: 'Circuit Output Probabilities',
+        html: `
+          <p>After tracing a circuit, the output state vector tells you the probability of each measurement outcome. Square each amplitude to get the probability.</p>
+          <div class="concept-card">
+            Output state (a, b) → P(|0⟩) = a², P(|1⟩) = b²<br><br>
+            Common outputs:<br>
+            (1, 0) → P(|0⟩) = 1 (certain)<br>
+            (0.71, 0.71) → P(|0⟩) = 0.5 (coin flip)
+          </div>
+          <div class="worked-example">
+            <div class="worked-example-label">Worked Example</div>
+            Circuit: |0⟩ —[H]— measure<br>
+            H|0⟩ = (0.71, 0.71)<br>
+            P(|0⟩) = 0.71² = 0.50<br>
+            P(|1⟩) = 0.71² = 0.50<br>
+            Total: 0.50 + 0.50 = 1.00 ✓
+          </div>
+          <p style="color:var(--text-muted);font-size:13px;">This is the Born rule — the fundamental law connecting quantum states to experimental outcomes.</p>
+        `,
+        problemType: 'circuit_probabilities',
+      },
+      {
+        title: 'Circuit Equivalence',
+        html: `
+          <p>Two circuits are equivalent if they produce the same output state for every possible input. Some useful identities to know:</p>
+          <div class="concept-card">
+            HZH = X &nbsp;&nbsp; (conjugating Z by H gives X)<br>
+            HXH = Z &nbsp;&nbsp; (conjugating X by H gives Z)<br>
+            XX = I &nbsp;&nbsp;&nbsp; (two NOTs cancel out)<br>
+            ZZ = I &nbsp;&nbsp;&nbsp; (two phase flips cancel)<br>
+            HH = I &nbsp;&nbsp;&nbsp; (two Hadamards cancel)
+          </div>
+          <div class="worked-example">
+            <div class="worked-example-label">Worked Example</div>
+            Are HZH and X equivalent?<br>
+            Test on |0⟩: HZH|0⟩ = HZ(0.71, 0.71) = H(0.71, -0.71) = (0, 1) = X|0⟩ ✓<br>
+            Test on |1⟩: HZH|1⟩ = HZ(0.71, -0.71) = H(0.71, 0.71) = (1, 0) = X|1⟩ ✓<br>
+            Same output on both inputs → equivalent!
+          </div>
+          <p style="color:var(--text-muted);font-size:13px;">These identities let you simplify circuits before running them on a quantum computer.</p>
+        `,
+        problemType: 'circuit_equivalence',
+      },
+    ],
+  },
 ];
