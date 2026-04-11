@@ -35,7 +35,7 @@ class AskQuestionRequest(BaseModel):
     problem_text: str    # the Try It problem text
     student_answer: str  # what the student entered
     correct_answer: str  # the correct answer
-    was_correct: bool
+    was_correct: bool | None = None  # None if student hasn't answered yet
 
 
 class ReadAnswerRequest(BaseModel):
@@ -56,19 +56,28 @@ async def ask_question(req: AskQuestionRequest):
     if not api_key:
         raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY not set")
 
+    has_answered = req.was_correct is not None and req.correct_answer != '(not yet answered)'
+    if has_answered:
+        answer_context = (
+            f"Student answered: {req.student_answer} ({'correct' if req.was_correct else 'incorrect'})\n"
+            f"Correct answer: {req.correct_answer}\n"
+        )
+    else:
+        answer_context = "The student has NOT answered yet — they are still working on the problem.\n"
+
     prompt = (
         "You are a friendly, patient quantum computing tutor for a beginner student. "
-        "The student just finished a practice problem and has a follow-up question.\n\n"
+        "The student is working on a practice problem and has a question.\n\n"
         f"Lesson: {req.lesson_title}\n"
         f"Concept taught: {req.lesson_html}\n"
         f"Problem: {req.problem_text}\n"
-        f"Student answered: {req.student_answer} ({'correct' if req.was_correct else 'incorrect'})\n"
-        f"Correct answer: {req.correct_answer}\n\n"
+        f"{answer_context}\n"
         f"Student's question: {req.question}\n\n"
         "Rules:\n"
         "- Answer in 2-3 sentences max, plain English, no jargon\n"
-        "- Relate your answer to the specific problem they just solved\n"
+        "- Relate your answer to the specific problem they are working on\n"
         "- If they ask about physical meaning, connect to real-world quantum computing\n"
+        "- If they haven't answered yet, give hints and guidance WITHOUT giving away the answer\n"
         "- Be encouraging and conversational\n"
         "- Do NOT use markdown formatting, LaTeX, or code blocks\n"
         "- Use simple notation like |0> instead of complex formatting"

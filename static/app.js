@@ -270,6 +270,17 @@ function renderLesson(chapterId) {
           <button class="btn btn-green btn-full" id="lesson-check" onclick="window.__lessonSubmit();">
             Check Answer
           </button>
+
+          <div class="ask-tutor-inline" id="ask-tutor-inline">
+            <div id="ask-inline-response" class="ask-tutor-response"></div>
+            <div class="ask-tutor-input-row">
+              <input class="ask-tutor-input" id="ask-inline-input" type="text"
+                     placeholder="Ask the tutor a question…"
+                     autocomplete="off" autocorrect="off" spellcheck="false"
+                     onkeydown="if(event.key==='Enter')window.__askTutor();" />
+              <button class="btn btn-ask" onclick="window.__askTutor();">Ask</button>
+            </div>
+          </div>
         </div>
 
         <div class="problem-right">
@@ -390,8 +401,14 @@ function renderLesson(chapterId) {
     };
 
     window.__askTutor = async () => {
-      const inp = document.getElementById('ask-tutor-input');
-      const resp = document.getElementById('ask-tutor-response');
+      // Use banner input if banner is visible, otherwise inline input
+      const bannerVisible = document.getElementById('result-banner')?.classList.contains('visible');
+      const inp = bannerVisible
+        ? document.getElementById('ask-tutor-input')
+        : document.getElementById('ask-inline-input');
+      const resp = bannerVisible
+        ? document.getElementById('ask-tutor-response')
+        : document.getElementById('ask-inline-response');
       const q = inp?.value?.trim();
       if (!q) return;
 
@@ -408,8 +425,8 @@ function renderLesson(chapterId) {
             lesson_html: step.html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 600),
             problem_text: problem.question,
             student_answer: document.getElementById('lesson-ans')?.value || '',
-            correct_answer: problem.answerDisplay || String(problem.answer),
-            was_correct: answered && document.getElementById('result-banner')?.classList.contains('correct'),
+            correct_answer: answered ? (problem.answerDisplay || String(problem.answer)) : '(not yet answered)',
+            was_correct: answered ? document.getElementById('result-banner')?.classList.contains('correct') : null,
           }),
         });
         const data = await res.json();
@@ -530,6 +547,17 @@ function renderProblemScreen(chapterId, isQuiz) {
         <button class="btn btn-green btn-full" id="btn-submit" onclick="window.__submit();">
           Check Answer
         </button>
+
+        <div class="ask-tutor-inline" id="ask-tutor-inline">
+          <div id="ask-inline-response" class="ask-tutor-response"></div>
+          <div class="ask-tutor-input-row">
+            <input class="ask-tutor-input" id="ask-inline-input" type="text"
+                   placeholder="Ask the tutor a question…"
+                   autocomplete="off" autocorrect="off" spellcheck="false"
+                   onkeydown="if(event.key==='Enter')window.__askPracticeTutor();" />
+            <button class="btn btn-ask" onclick="window.__askPracticeTutor();">Ask</button>
+          </div>
+        </div>
 
         <div id="worked-solution" style="display:none;background:var(--surface);border:2px solid var(--border);border-left:4px solid var(--red);border-radius:var(--radius);padding:16px 18px;">
           <div style="font-size:12px;font-weight:800;color:var(--red);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">How to solve it</div>
@@ -661,6 +689,16 @@ function renderProblemScreen(chapterId, isQuiz) {
     if (fc) fc.style.display = 'none';
     const ws = document.getElementById('worked-solution');
     if (ws) ws.style.display = 'none';
+
+    // Clear ask tutor state
+    const askResp = document.getElementById('ask-inline-response');
+    if (askResp) askResp.textContent = '';
+    const askInp = document.getElementById('ask-inline-input');
+    if (askInp) askInp.value = '';
+    const askBannerResp = document.getElementById('ask-tutor-response');
+    if (askBannerResp) askBannerResp.textContent = '';
+    const askBannerInp = document.getElementById('ask-tutor-input');
+    if (askBannerInp) askBannerInp.value = '';
 
     const submit = document.getElementById('btn-submit');
     if (submit) submit.style.display = '';
@@ -882,8 +920,13 @@ function renderProblemScreen(chapterId, isQuiz) {
   };
 
   window.__askPracticeTutor = async () => {
-    const inp = document.getElementById('ask-tutor-input');
-    const resp = document.getElementById('ask-tutor-response');
+    const bannerVisible = document.getElementById('result-banner')?.classList.contains('visible');
+    const inp = bannerVisible
+      ? document.getElementById('ask-tutor-input')
+      : document.getElementById('ask-inline-input');
+    const resp = bannerVisible
+      ? document.getElementById('ask-tutor-response')
+      : document.getElementById('ask-inline-response');
     const q = inp?.value?.trim();
     if (!q) return;
 
@@ -900,8 +943,8 @@ function renderProblemScreen(chapterId, isQuiz) {
           lesson_html: problem.question,
           problem_text: problem.question,
           student_answer: document.getElementById('answer-input')?.value || '',
-          correct_answer: problem.answerDisplay || String(problem.answer),
-          was_correct: lastWasCorrect,
+          correct_answer: answered ? (problem.answerDisplay || String(problem.answer)) : '(not yet answered)',
+          was_correct: answered ? lastWasCorrect : null,
         }),
       });
       const data = await res.json();

@@ -283,6 +283,38 @@ code { font-family: var(--mono); font-size: 14px; background: var(--border); pad
 .result-hint strong { color: var(--text); }
 
 /* ── Ask Tutor ── */
+.ask-tutor-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+.ask-tutor-inline .ask-tutor-input {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.ask-tutor-inline .ask-tutor-input::placeholder {
+  color: var(--text-muted);
+}
+.ask-tutor-inline .ask-tutor-input:focus {
+  border-color: var(--ch-color, var(--green));
+}
+.ask-tutor-inline .btn-ask {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.ask-tutor-inline .btn-ask:active {
+  background: var(--border);
+}
+.ask-tutor-inline .ask-tutor-response {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: var(--text);
+}
 .ask-tutor-wrap {
   display: flex;
   flex-direction: column;
