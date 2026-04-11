@@ -7,8 +7,8 @@
  * never injected into the DOM. If user-generated content is ever rendered in
  * the future, add DOMPurify first.
  */
-import { CHAPTERS } from './chapters.js';
-import { generateRandomProblem, generateProblem, checkAnswer } from './problems.js';
+import { CHAPTERS } from './chapters.js?v=3';
+import { generateRandomProblem, generateProblem, checkAnswer } from './problems.js?v=3';
 import { CanvasManager } from './canvas.js';
 
 // ── State ──────────────────────────────────────────────────────────────────
@@ -17,7 +17,7 @@ const DEFAULT_STATE = {
   chapters: Object.fromEntries(
     [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(id => [
       id,
-      { unlocked: id === 1, completed: false, quizScore: null, bestScore: null, practiceCount: 0 },
+      { unlocked: id === 1, completed: false, quizScore: null, bestScore: null, practiceCount: 0, lessonProgress: null },
     ])
   ),
   tutorMode: false,
@@ -304,16 +304,29 @@ function renderLesson(chapterId) {
   const ch = CHAPTERS.find(c => c.id === chapterId);
   if (!ch) { navigate('/'); return; }
 
-  let stepIdx = 0;
-  let canvas  = null;
+  // Restore lesson progress if resuming
+  const savedProgress = state.chapters[chapterId]?.lessonProgress;
+  let stepIdx    = savedProgress?.stepIdx || 0;
+  let subProbIdx = savedProgress?.subProbIdx || 0;
+  let canvas     = null;
 
   function renderStep() {
     const step   = ch.lessonSteps[stepIdx];
     const isLast = stepIdx === ch.lessonSteps.length - 1;
-    const pct    = (stepIdx / ch.lessonSteps.length) * 100;
 
-    const problem = generateProblem(chapterId, step.problemType, 1);
+    // Progression: array of { difficulty, variation } per sub-problem
+    const progression = step.progression || [{ difficulty: 1, variation: 'basic' }];
+    const prog = progression[subProbIdx];
+    const isLastSub = subProbIdx >= progression.length - 1;
+
+    // Progress bar: sub-problem granularity
+    const totalSubs = ch.lessonSteps.reduce((s, st) => s + (st.progression?.length || 1), 0);
+    const doneSubs  = ch.lessonSteps.slice(0, stepIdx).reduce((s, st) => s + (st.progression?.length || 1), 0) + subProbIdx;
+    const pct = (doneSubs / totalSubs) * 100;
+
+    let problem = generateProblem(chapterId, step.problemType, prog.difficulty, prog.variation);
     let answered  = false;
+    let retryCount = 0;
 
     const hints = {
       vector:  'Format: x, y &nbsp; (e.g. 3, 4)',
@@ -351,8 +364,18 @@ function renderLesson(chapterId) {
           </div>
 
           <div class="card" style="padding:16px 20px;">
-            <div style="font-size:12px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">
-              Try it
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+              <div style="font-size:12px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">
+                Try it
+              </div>
+              ${progression.length > 1 ? `
+                <div class="sub-progress">
+                  <span class="sub-label">Problem ${subProbIdx + 1} of ${progression.length}</span>
+                  ${progression.map((_, pi) =>
+                    `<span class="sub-dot ${pi < subProbIdx ? 'done' : pi === subProbIdx ? 'current' : ''}"></span>`
+                  ).join('')}
+                </div>
+              ` : ''}
             </div>
             <div class="problem-text" style="font-size:20px;margin-bottom:14px;" id="lesson-q">
               ${problem.question}
@@ -424,7 +447,7 @@ function renderLesson(chapterId) {
             Try Again
           </button>
           <button class="btn btn-green" id="lesson-next" onclick="window.__lessonNext();">
-            ${isLast ? 'Finish →' : 'Next →'}
+            ${isLast && isLastSub ? 'Finish →' : isLastSub ? 'Next Concept →' : 'Next Problem →'}
           </button>
         </div>
       </div>
@@ -450,8 +473,11 @@ function renderLesson(chapterId) {
       banner.className = 'result-banner ' + (correct ? 'correct' : 'incorrect');
       document.getElementById('result-icon').textContent  = correct ? '✅' : '❌';
       document.getElementById('result-title').textContent = correct ? 'Correct!' : 'Incorrect';
+      const correctMsg = isLast && isLastSub ? 'Lesson complete!'
+        : isLastSub ? 'On to the next concept!'
+        : 'Nice! Next one\'s a bit harder...';
       document.getElementById('result-detail').textContent = correct
-        ? (isLast ? 'Lesson complete!' : 'On to the next concept!')
+        ? correctMsg
         : `Correct answer: ${formattedAnswer}`;
       const whyEl = document.getElementById('result-why');
       if (whyEl && step.whyItMatters) {
@@ -460,13 +486,8 @@ function renderLesson(chapterId) {
       setTimeout(() => banner.classList.add('visible'), 50);
 
       if (!correct) {
-        if (answerMode === 'draw') {
-          const wrap = document.getElementById('answer-canvas-wrap');
-          if (wrap) { wrap.classList.add('shake'); setTimeout(() => wrap.classList.remove('shake'), 450); }
-        } else {
-          const inp = document.getElementById('answer-input');
-          if (inp) { inp.classList.add('shake'); setTimeout(() => inp.classList.remove('shake'), 450); }
-        }
+        const shakeEl = document.getElementById('lesson-ans');
+        if (shakeEl) { shakeEl.classList.add('shake'); setTimeout(() => shakeEl.classList.remove('shake'), 450); }
       }
 
       document.getElementById('lesson-check').style.display = 'none';
@@ -474,18 +495,62 @@ function renderLesson(chapterId) {
 
     window.__lessonNext = () => {
       canvas?.clear();
-      if (isLast) {
+      if (!isLastSub) {
+        // More sub-problems in this concept
+        subProbIdx++;
+        state.chapters[chapterId].lessonProgress = { stepIdx, subProbIdx };
+        saveState();
+        renderStep();
+      } else if (isLast) {
+        // All done — clear lesson progress and go to practice
+        state.chapters[chapterId].lessonProgress = null;
+        saveState();
         navigate('/practice/' + chapterId);
       } else {
+        // Next concept
         stepIdx++;
+        subProbIdx = 0;
+        state.chapters[chapterId].lessonProgress = { stepIdx, subProbIdx };
+        saveState();
         renderStep();
       }
     };
 
     window.__lessonRetry = () => {
+      retryCount++;
       answered = false;
+
       const banner = document.getElementById('result-banner');
       if (banner) banner.classList.remove('visible', 'correct', 'incorrect');
+
+      if (retryCount >= 2) {
+        // Anti-frustration: show worked solution inline
+        const solutionHtml = problem.steps
+          ? `<div class="worked-solution-inline">
+               <div style="font-size:11px;font-weight:800;color:var(--ch${chapterId});text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Worked Solution</div>
+               ${problem.steps.map(s => `<div style="font-size:14px;color:var(--text);line-height:1.6;font-family:var(--mono);">${s}</div>`).join('')}
+               <button class="btn btn-green btn-full" style="margin-top:12px;" onclick="window.__lessonRetryAfterSolution();">Got it — Try Again</button>
+             </div>`
+          : '';
+        const tryCard = document.getElementById('lesson-q')?.parentElement;
+        if (tryCard && solutionHtml) {
+          const existing = tryCard.querySelector('.worked-solution-inline');
+          if (existing) existing.remove();
+          tryCard.insertAdjacentHTML('beforeend', solutionHtml);
+        }
+        // Hide check button and input
+        const check = document.getElementById('lesson-check');
+        if (check) check.style.display = 'none';
+        const inp = document.getElementById('lesson-ans');
+        if (inp) inp.style.display = 'none';
+        return;
+      }
+
+      // Regenerate at same difficulty + variation (new random numbers)
+      problem = generateProblem(chapterId, step.problemType, prog.difficulty, prog.variation);
+      const qEl = document.getElementById('lesson-q');
+      if (qEl) qEl.textContent = problem.question;
+
       const check = document.getElementById('lesson-check');
       if (check) check.style.display = '';
       const inp = document.getElementById('lesson-ans');
@@ -495,6 +560,22 @@ function renderLesson(chapterId) {
       if (resp) resp.textContent = '';
       const askInp = document.getElementById('ask-tutor-input');
       if (askInp) askInp.value = '';
+    };
+
+    // After studying the worked solution, regenerate and try again
+    window.__lessonRetryAfterSolution = () => {
+      retryCount = 0;
+      answered = false;
+      problem = generateProblem(chapterId, step.problemType, prog.difficulty, prog.variation);
+      const qEl = document.getElementById('lesson-q');
+      if (qEl) qEl.textContent = problem.question;
+      // Remove the solution block
+      const sol = document.querySelector('.worked-solution-inline');
+      if (sol) sol.remove();
+      const check = document.getElementById('lesson-check');
+      if (check) check.style.display = '';
+      const inp = document.getElementById('lesson-ans');
+      if (inp) { inp.style.display = ''; inp.value = ''; inp.focus(); }
     };
 
     window.__askTutor = async () => {

@@ -25,14 +25,16 @@ A Duolingo-style quantum computing learning app built for iPad with Apple Pencil
 
 ## Features
 
-- **52 lesson steps** across 11 chapters, each with a worked example before the practice problem
-- **41 problem generators** with deterministic grading (no AI required)
+- **202 sub-problems** across 52 lesson steps in 11 chapters, each with a worked example before the practice problems
+- **Multi-problem progressions** — each lesson step has 3-5 problems that escalate from basic to advanced variations, building fluency before moving on
+- **42 problem generators** with structural variations (negatives, edge cases, extended operations) and deterministic grading (no AI required)
+- **Anti-frustration system** — after 2 wrong attempts on the same variation, the worked solution appears inline so students don't get stuck
 - **"Why This Matters"** — every problem shows a plain-English explanation of what you just computed and why it matters in quantum computing
 - **Ask Tutor** — AI chat powered by Claude, available before, during, and after answering. Gives hints while you work (without spoiling the answer) and explains concepts after you answer
 - **Worked solutions** shown on incorrect answers with step-by-step breakdowns
 - **Apple Pencil notepad** for working out problems by hand, with palm rejection
 - **Optional AI work review** — vision-based feedback on handwritten work via Claude API
-- **Progress tracking** — localStorage persistence, sequential chapter unlocking
+- **Progress tracking** — localStorage persistence, sequential chapter unlocking, lesson progress resume
 - **Quiz gates** — pass the quiz to unlock the next chapter
 
 ## Running
@@ -50,13 +52,28 @@ The app is fully functional without an API key. Set `ANTHROPIC_API_KEY` in `.env
   - `/api/ask` — AI tutor chat (context-aware Q&A powered by Claude Sonnet)
   - `/api/read-answer` — OCR for handwritten answers via vision
   - `/api/review-work` — AI feedback on handwritten work via vision
-- `static/app.js` — SPA router, state machine, all screen renderers
-- `static/problems.js` — 41 problem generators + answer checker (numeric, vector, vector4, complex, matrix, yesno)
-- `static/chapters.js` — 11 chapters of curriculum with lesson HTML, worked examples, and "Why This Matters" context
+- `static/app.js` — SPA router, state machine, all screen renderers, sub-problem progression loop
+- `static/problems.js` — 42 problem generators with variation support + answer checker (numeric, vector, vector4, complex, matrix, yesno)
+- `static/chapters.js` — 11 chapters of curriculum with lesson HTML, worked examples, progression arrays, and "Why This Matters" context
 - `static/canvas.js` — Apple Pencil drawing engine with palm rejection and stroke tracking
 - `static/style.css` — Duolingo-inspired dark theme design system
 
 All grading runs in the browser. The server handles static files and the optional AI endpoints.
+
+### Lesson Progression System
+
+Each lesson step defines a `progression` array of 3-5 sub-problems that escalate in difficulty:
+
+```js
+progression: [
+  { difficulty: 1, variation: 'basic' },        // mirrors the worked example
+  { difficulty: 1, variation: 'with_negatives' }, // introduces negative values
+  { difficulty: 2, variation: 'edge_case' },      // zero components, purely real, etc.
+  { difficulty: 2, variation: 'extended' },        // more operands or combined operations
+]
+```
+
+The `variation` parameter controls problem **structure** (negatives, pure-real terms, three operands), while `difficulty` controls **number ranges**. Students must complete all sub-problems in a step before advancing to the next concept.
 
 ## Tech Stack
 

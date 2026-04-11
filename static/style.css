@@ -1100,6 +1100,52 @@ code { font-family: var(--mono); font-size: 14px; background: var(--border); pad
   gap: 10px;
 }
 
+/* ── Sub-problem Progress Dots ── */
+.sub-progress {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+.sub-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 700;
+  margin-right: 4px;
+}
+.sub-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: background 0.3s, transform 0.3s;
+}
+.sub-dot.done {
+  background: var(--green);
+}
+.sub-dot.current {
+  background: var(--ch-color, var(--blue));
+  transform: scale(1.25);
+  animation: dotPulse 1.5s ease-in-out infinite;
+}
+@keyframes dotPulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ch-color, var(--blue)) 40%, transparent); }
+  50%      { box-shadow: 0 0 0 4px color-mix(in srgb, var(--ch-color, var(--blue)) 15%, transparent); }
+}
+
+/* ── Worked Solution Inline (anti-frustration) ── */
+.worked-solution-inline {
+  margin-top: 14px;
+  padding: 14px 16px;
+  background: color-mix(in srgb, var(--ch-color, var(--blue)) 8%, var(--bg));
+  border-left: 3px solid var(--ch-color, var(--blue));
+  border-radius: 0 var(--radius) var(--radius) 0;
+  animation: fadeIn 0.3s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* ── Animations ── */
 @keyframes nodePulse {
   0%, 100% { box-shadow: 0 0 16px color-mix(in srgb, var(--ch-color) 40%, transparent); }
