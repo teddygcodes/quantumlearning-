@@ -54,17 +54,19 @@ export class CanvasManager {
     el.addEventListener('pointercancel', e => this._up(e),    opt);
     el.addEventListener('contextmenu',   e => e.preventDefault());
 
+    // Kill all touch events — iOS Safari ignores touch-action:none in some
+    // flex/scroll contexts. This fully prevents palm/finger from scrolling,
+    // panning, or triggering any response on the canvas.
+    el.addEventListener('touchstart', e => e.preventDefault(), opt);
+    el.addEventListener('touchmove',  e => e.preventDefault(), opt);
+
     new ResizeObserver(() => this._resize()).observe(el.parentElement || el);
     (window.visualViewport || window).addEventListener('resize', () => this._resize());
   }
 
   _accept(e) {
-    if (e.pointerType === 'pen') { this._hasPen = true; return true; }
-    if (e.pointerType === 'mouse') return true;
-    // Once Apple Pencil is detected, reject ALL touch — no palm interference.
-    if (this._hasPen) return false;
-    // No pencil detected yet (phone/finger) — accept primary touch only.
-    return e.isPrimary;
+    // Only pen (Apple Pencil) and mouse. Touch is always rejected — no palm issues.
+    return e.pointerType === 'pen' || e.pointerType === 'mouse';
   }
 
   _pt(e) {
