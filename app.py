@@ -54,7 +54,7 @@ class ReviewRequest(BaseModel):
 async def ask_question(req: AskQuestionRequest):
     api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
-        raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY not set")
+        return JSONResponse(content={"answer": "Ask Tutor requires an API key. Set ANTHROPIC_API_KEY in your .env file to enable this feature."})
 
     has_answered = req.was_correct is not None and req.correct_answer != '(not yet answered)'
     if has_answered:
@@ -92,9 +92,9 @@ async def ask_question(req: AskQuestionRequest):
         )
         return JSONResponse(content={"answer": response.content[0].text.strip()})
     except Exception as e:
+        print(f"[/api/ask] Error: {e}")
         return JSONResponse(
-            status_code=500,
-            content={"answer": "Sorry, I couldn't process that question right now.", "error": str(e)},
+            content={"answer": f"Tutor error: {str(e)[:120]}"},
         )
 
 
