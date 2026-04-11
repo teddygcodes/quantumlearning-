@@ -300,6 +300,7 @@ function renderLesson(chapterId) {
             <div id="result-detail" style="font-size:15px;color:#fff;margin-top:4px;"></div>
           </div>
         </div>
+        <div id="result-why" style="font-size:13px;color:rgba(255,255,255,0.85);padding:0 4px;line-height:1.4;"></div>
         <div class="result-buttons">
           <button class="btn btn-ghost" id="lesson-retry" onclick="window.__lessonRetry();">
             Try Again
@@ -334,6 +335,10 @@ function renderLesson(chapterId) {
       document.getElementById('result-detail').textContent = correct
         ? (isLast ? 'Lesson complete!' : 'On to the next concept!')
         : `Correct answer: ${formattedAnswer}`;
+      const whyEl = document.getElementById('result-why');
+      if (whyEl && step.whyItMatters) {
+        whyEl.textContent = '💡 ' + step.whyItMatters;
+      }
       setTimeout(() => banner.classList.add('visible'), 50);
 
       if (!correct) {

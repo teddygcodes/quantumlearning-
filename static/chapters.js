@@ -41,6 +41,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">Whatever you do to one side, you must do to the other.</p>
         `,
         problemType: 'linear_equation',
+        whyItMatters: 'Isolating a variable is how you solve for unknowns — in quantum computing, you will rearrange equations to find amplitudes and probabilities.',
       },
       {
         title: 'Substitution',
@@ -61,6 +62,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">Common mistake: computing 2x = 6 then squaring. Don't — exponents bind tighter.</p>
         `,
         problemType: 'substitution',
+        whyItMatters: 'Quantum formulas like P = |α|² require plugging in a value and evaluating — substitution is that skill.',
       },
       {
         title: 'Square Roots',
@@ -81,6 +83,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">You'll use square roots constantly for vector and complex number magnitudes.</p>
         `,
         problemType: 'square_root',
+        whyItMatters: 'Square roots show up every time you compute a vector length or normalize a quantum state — you will use them constantly.',
       },
       {
         title: 'Exponents',
@@ -101,6 +104,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">In quantum mechanics |α|² appears constantly — that's the probability of a measurement outcome.</p>
         `,
         problemType: 'exponent',
+        whyItMatters: 'Squaring an amplitude gives you the probability of a measurement outcome — this is the most fundamental calculation in quantum mechanics.',
       },
     ],
   },
@@ -135,6 +139,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">Write your answer as two numbers separated by a comma: x, y</p>
         `,
         problemType: 'vector_addition',
+        whyItMatters: 'Quantum states are vectors. Adding them is how superpositions combine — the math of "both at once."',
       },
       {
         title: 'Vector Addition',
@@ -154,6 +159,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">Order doesn't matter: (a,b) + (c,d) = (c,d) + (a,b).</p>
         `,
         problemType: 'vector_addition',
+        whyItMatters: 'Combining quantum states means adding their vectors component by component — this is how interference patterns emerge.',
       },
       {
         title: 'Scalar Multiplication',
@@ -173,6 +179,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">Multiplying a qubit state by a scalar changes its scale, not its direction.</p>
         `,
         problemType: 'scalar_multiplication',
+        whyItMatters: 'Scaling a vector changes its amplitude. In quantum computing, amplitudes control how likely each outcome is when you measure.',
       },
       {
         title: 'Vector Magnitude',
@@ -193,6 +200,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">A magnitude of 1 is special — that's a "unit vector." Coming up next chapter.</p>
         `,
         problemType: 'vector_magnitude',
+        whyItMatters: 'A quantum state must have magnitude exactly 1 — that is what makes probabilities add up to 100%. Magnitude is how you check.',
       },
     ],
   },
@@ -227,6 +235,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">Answer yes or no below.</p>
         `,
         problemType: 'unit_vector_check',
+        whyItMatters: 'Every valid quantum state is a unit vector. If the magnitude is not 1, the probabilities do not add up and the state is physically impossible.',
       },
       {
         title: 'Normalizing a Vector',
@@ -248,6 +257,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">Pythagorean triples (3,4,5) and (5,12,13) give clean decimal results.</p>
         `,
         problemType: 'normalize_vector',
+        whyItMatters: 'Normalization turns any vector into a valid quantum state. Real quantum computers do this to prepare qubits before a computation starts.',
       },
       {
         title: 'Quantum Probability',
@@ -268,6 +278,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">|α|² + |β|² = 1 is exactly the unit vector condition.</p>
         `,
         problemType: 'probability_from_components',
+        whyItMatters: 'You just computed what a quantum computer actually outputs — the chance of seeing a 0 or 1 when you look at a qubit.',
       },
     ],
   },
@@ -301,6 +312,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">A complex number a + bi has a real part (a) and imaginary part (b). They always stay separate.</p>
         `,
         problemType: 'complex_addition',
+        whyItMatters: 'Quantum amplitudes are complex numbers. Adding them is how quantum states combine and interfere with each other.',
       },
       {
         title: 'Addition & Subtraction',
@@ -321,6 +333,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">Format your answer as: a + bi &nbsp; (e.g. 3 + 2i, or 5 - i)</p>
         `,
         problemType: 'complex_addition',
+        whyItMatters: 'When quantum gates transform a state, the new amplitudes come from adding and subtracting complex numbers like these.',
       },
       {
         title: 'Multiplication',
@@ -341,6 +354,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">The key step: replace i² with −1 every time you see it.</p>
         `,
         problemType: 'complex_multiplication',
+        whyItMatters: 'Multiplying complex numbers is the core of how quantum gates transform qubit states — every gate operation uses this math.',
       },
       {
         title: 'Complex Conjugate',
@@ -361,6 +375,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">Conjugates appear everywhere in quantum — used to compute probabilities.</p>
         `,
         problemType: 'complex_conjugate',
+        whyItMatters: 'To get a probability from a complex amplitude, you multiply it by its conjugate. That is how the imaginary part cancels out and gives a real number.',
       },
       {
         title: 'Complex Magnitude',
@@ -381,6 +396,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">Note: |a+bi|² = a² + b² — this is probability in quantum mechanics.</p>
         `,
         problemType: 'complex_magnitude',
+        whyItMatters: 'The magnitude squared of a complex amplitude IS the measurement probability. This is the Born rule — the bridge between math and physical reality.',
       },
     ],
   },
@@ -414,6 +430,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">Format: x, y &nbsp; (e.g. 11, 24)</p>
         `,
         problemType: 'matrix_vector_multiply',
+        whyItMatters: 'Every quantum gate is a matrix multiplied by a state vector. You just did exactly what a quantum computer does to transform a qubit.',
       },
       {
         title: 'Matrix × Vector',
@@ -434,6 +451,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">Format: x, y &nbsp; (e.g. 1, 3)</p>
         `,
         problemType: 'matrix_vector_multiply',
+        whyItMatters: 'Applying a gate to a qubit is matrix-times-vector. This single operation is the heartbeat of every quantum algorithm.',
       },
       {
         title: 'Matrix × Matrix',
@@ -455,6 +473,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">⚠️ A×B ≠ B×A. Gate order in quantum circuits matters for this reason.</p>
         `,
         problemType: 'matrix_matrix_multiply',
+        whyItMatters: 'Applying two gates in sequence is the same as multiplying their matrices. This is how quantum circuits are simplified before running on hardware.',
       },
       {
         title: 'The Identity Matrix',
@@ -478,6 +497,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">Every valid quantum gate is a special matrix. More in Phase 2.</p>
         `,
         problemType: 'identity_matrix',
+        whyItMatters: 'The identity matrix means "do nothing." In quantum circuits, it represents a qubit that sits idle while other qubits are being transformed.',
       },
     ],
   },
@@ -510,6 +530,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">Format: x, y</p>
         `,
         problemType: 'ket_to_vector',
+        whyItMatters: 'Ket notation is the standard language of quantum computing. Converting kets to vectors is how you go from a physicist\'s description to actual numbers you can compute with.',
       },
       {
         title: 'Bras and Inner Products',
@@ -529,6 +550,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">The inner product gives a single number, not a vector.</p>
         `,
         problemType: 'inner_product',
+        whyItMatters: 'The inner product measures how much two quantum states overlap. Zero overlap means they are perfectly distinguishable — you can always tell them apart.',
       },
       {
         title: 'Orthogonality',
@@ -549,6 +571,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">Answer yes or no.</p>
         `,
         problemType: 'orthogonality_check',
+        whyItMatters: 'Orthogonal states can be perfectly distinguished by measurement. This is why |0⟩ and |1⟩ work as the two outcomes of a qubit — they are orthogonal.',
       },
       {
         title: 'Probability via Inner Product',
@@ -569,6 +592,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">Enter a decimal (e.g. 0.36).</p>
         `,
         problemType: 'dirac_probability',
+        whyItMatters: 'This is the Born rule — the single most important formula in quantum mechanics. It tells you what you will actually see when you measure a qubit.',
       },
       {
         title: 'Putting It All Together',
@@ -590,6 +614,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">Enter a decimal (e.g. 0.36).</p>
         `,
         problemType: 'dirac_probability',
+        whyItMatters: 'Every quantum computation ends with a measurement. The number you just computed is the actual output — the chance of seeing each result.',
       },
     ],
   },
@@ -624,6 +649,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">Format: x, y</p>
         `,
         problemType: 'pauli_gate_apply',
+        whyItMatters: 'The X gate is the quantum NOT — it flips a qubit from 0 to 1 or back. It is one of the most basic operations in any quantum program.',
       },
       {
         title: 'Pauli Z — Phase Flip',
@@ -645,6 +671,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">Z only affects the second component's sign.</p>
         `,
         problemType: 'pauli_gate_apply',
+        whyItMatters: 'The Z gate changes the phase without changing measurement probabilities. Phase differences are invisible on one qubit but become critical in multi-qubit interference.',
       },
       {
         title: 'Pauli Z — Phase Flip',
@@ -667,6 +694,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">Z is a phase gate — it changes the sign of the |1⟩ amplitude but keeps probabilities the same.</p>
         `,
         problemType: 'pauli_gate_apply',
+        whyItMatters: 'Practicing both X and Z builds fluency with the two most common single-qubit gates. Together they form the building blocks for more complex operations.',
       },
       {
         title: 'The Hadamard Gate',
@@ -688,6 +716,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">Format: x, y (rounded to 2 decimal places)</p>
         `,
         problemType: 'hadamard_apply',
+        whyItMatters: 'The Hadamard gate creates superposition — it puts a qubit into a state of being both 0 and 1 at once. Almost every quantum algorithm starts with this gate.',
       },
       {
         title: 'Gate Then Measure',
@@ -710,6 +739,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">This is the Hadamard gate's signature: equal 50/50 superposition.</p>
         `,
         problemType: 'gate_then_measure',
+        whyItMatters: 'This is the full quantum workflow: prepare a state, apply a gate, then measure. The probability you computed is what a real quantum computer would report.',
       },
       {
         title: 'Composing Two Gates',
@@ -731,6 +761,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">Format: x, y</p>
         `,
         problemType: 'two_gate_compose',
+        whyItMatters: 'Quantum programs are sequences of gates. Tracing two gates in order is how you read a quantum circuit — the programs that run on quantum hardware.',
       },
     ],
   },
@@ -763,6 +794,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">Enter a number.</p>
         `,
         problemType: 'born_rule_complex',
+        whyItMatters: 'Real quantum amplitudes are often complex numbers. Squaring the magnitude is the only way to extract a real-world probability from them.',
       },
       {
         title: 'Valid Quantum States',
@@ -784,6 +816,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">Answer yes or no.</p>
         `,
         problemType: 'valid_state_check',
+        whyItMatters: 'If a state is not valid, the probabilities do not sum to 1 and the physics breaks down. Checking validity is a basic sanity test for any quantum computation.',
       },
       {
         title: 'From Probability to Expected Counts',
@@ -804,6 +837,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">Enter a number (e.g. 128).</p>
         `,
         problemType: 'expected_counts',
+        whyItMatters: 'Quantum computers run circuits thousands of times and count the outcomes. The expected count is the prediction you compare against those real results.',
       },
       {
         title: 'Expected Counts',
@@ -824,6 +858,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">Enter a number.</p>
         `,
         problemType: 'expected_counts',
+        whyItMatters: 'This is how scientists verify quantum experiments — they predict the counts and check if the real measurements match.',
       },
       {
         title: 'Finding a Missing Amplitude',
@@ -845,6 +880,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">Enter a positive decimal.</p>
         `,
         problemType: 'missing_amplitude',
+        whyItMatters: 'If you know one outcome probability, the normalization rule lets you figure out everything else. This is how partial information still gives you the full picture.',
       },
     ],
   },
@@ -882,6 +918,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">Format: a, b, c, d — four numbers separated by commas.</p>
         `,
         problemType: 'two_qubit_basis',
+        whyItMatters: 'Two-qubit basis states are the possible outcomes when you measure two qubits. Real quantum algorithms use 2, 50, or even 1000 qubits — this is where it starts.',
       },
       {
         title: 'The Tensor Product',
@@ -907,6 +944,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">The tensor product is NOT the same as a dot product or cross product.</p>
         `,
         problemType: 'tensor_product',
+        whyItMatters: 'The tensor product is how you describe multiple qubits together. Every multi-qubit quantum computer relies on this operation to represent its full state.',
       },
       {
         title: 'Building a Joint State',
@@ -929,6 +967,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">Enter four values separated by commas (e.g. 0, 0.8, 0, 0.6).</p>
         `,
         problemType: 'two_qubit_state',
+        whyItMatters: 'You just combined two separate qubits into one joint state. This is what happens at the start of every multi-qubit quantum computation.',
       },
       {
         title: 'Building Joint States',
@@ -948,6 +987,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">If you can write a two-qubit state as a tensor product, the qubits are "independent" (separable).</p>
         `,
         problemType: 'two_qubit_state',
+        whyItMatters: 'Building joint states from individual qubits is the default starting point. When a state cannot be built this way, something special is happening — that is entanglement.',
       },
       {
         title: 'More Tensor Products',
@@ -969,6 +1009,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">Enter four values separated by commas.</p>
         `,
         problemType: 'tensor_product',
+        whyItMatters: 'Fluency with tensor products lets you quickly compute multi-qubit states in your head — essential for reading and understanding quantum circuits.',
       },
       {
         title: 'Separable vs Entangled (Preview)',
@@ -990,6 +1031,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">Entangled states are the subject of the next chapter.</p>
         `,
         problemType: 'separable_check',
+        whyItMatters: 'The separability test tells you whether two qubits are independent or entangled. Entangled states are the secret weapon that makes quantum computers faster than classical ones.',
       },
     ],
   },
@@ -1026,6 +1068,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">Einstein called entanglement "spooky action at a distance."</p>
         `,
         problemType: 'entanglement_check',
+        whyItMatters: 'Detecting entanglement is how you know a quantum state has correlations that no classical system can produce. This is what gives quantum computers their edge.',
       },
       {
         title: 'The CNOT Gate',
@@ -1049,6 +1092,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">CNOT + H together can create entanglement from scratch.</p>
         `,
         problemType: 'cnot_apply',
+        whyItMatters: 'CNOT is the most important two-qubit gate. Combined with single-qubit gates, it can build any quantum operation — it is the universal connector.',
       },
       {
         title: 'Building Bell States',
@@ -1070,6 +1114,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">This is the circuit used in quantum teleportation and superdense coding.</p>
         `,
         problemType: 'build_bell_state',
+        whyItMatters: 'You just built entanglement from scratch using H and CNOT. This exact two-step recipe is used in quantum teleportation, cryptography, and error correction.',
       },
       {
         title: 'The Four Bell States',
@@ -1094,6 +1139,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">The four Bell states form a basis for the two-qubit space.</p>
         `,
         problemType: 'build_bell_state',
+        whyItMatters: 'The four Bell states are like the alphabet of entanglement. Every entangled two-qubit state can be written in terms of them.',
       },
       {
         title: 'Measuring Entangled States',
@@ -1116,6 +1162,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">This correlation holds no matter how far apart the qubits are.</p>
         `,
         problemType: 'entangled_measurement',
+        whyItMatters: 'Measuring one entangled qubit instantly determines the other, no matter how far apart they are. This is the resource that powers quantum teleportation and secure communication.',
       },
     ],
   },
@@ -1154,6 +1201,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">Gates are applied in reading order — left gate first, right gate second.</p>
         `,
         problemType: 'trace_single_qubit',
+        whyItMatters: 'Quantum circuits are the programs of a quantum computer. Tracing one is like running code by hand — you can predict exactly what the computer will do.',
       },
       {
         title: 'Tracing Single-Qubit Circuits',
@@ -1176,6 +1224,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">When using H, multiply by 1/√2 ≈ 0.71.</p>
         `,
         problemType: 'trace_single_qubit',
+        whyItMatters: 'Being able to trace a circuit step by step means you can understand any quantum algorithm — from simple rotations to complex search and factoring routines.',
       },
       {
         title: 'Tracing Two-Qubit Circuits',
@@ -1197,6 +1246,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">Think of each gate as acting on the relevant qubit(s) independently.</p>
         `,
         problemType: 'trace_two_qubit',
+        whyItMatters: 'Two-qubit circuits are where quantum computing gets its power. Tracing them shows how gates on one qubit can affect the other through entanglement.',
       },
       {
         title: 'Circuit Output Probabilities',
@@ -1219,6 +1269,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">This is the Born rule — the fundamental law connecting quantum states to experimental outcomes.</p>
         `,
         problemType: 'circuit_probabilities',
+        whyItMatters: 'The output probability is what you actually get from a quantum computer. This is the final step — circuit in, probability out.',
       },
       {
         title: 'Circuit Equivalence',
@@ -1241,6 +1292,7 @@ export const CHAPTERS = [
           <p style="color:var(--text-muted);font-size:13px;">These identities let you simplify circuits before running them on a quantum computer.</p>
         `,
         problemType: 'circuit_equivalence',
+        whyItMatters: 'Finding simpler circuits that do the same thing is how engineers optimize quantum programs. Fewer gates means less error on real hardware.',
       },
     ],
   },
