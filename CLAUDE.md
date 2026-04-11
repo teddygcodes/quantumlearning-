@@ -7,15 +7,16 @@ python app.py          # serves at http://0.0.0.0:8000
 ```
 
 ## Key files
-- `app.py`             — FastAPI server + `/api/review-work`
+- `app.py`             — FastAPI server + `/api/ask`, `/api/read-answer`, `/api/review-work`
 - `static/app.js`      — SPA router + all screen renderers
 - `static/problems.js` — Problem generators + answer checkers
-- `static/chapters.js` — Curriculum + lesson HTML
+- `static/chapters.js` — Curriculum + lesson HTML + whyItMatters
 - `static/canvas.js`   — Apple Pencil drawing engine
 - `static/style.css`   — Full Duolingo-inspired design system
 
 ## Architecture
 - **Deterministic grading** runs entirely in the browser — never uses AI.
+- **Ask Tutor** (`/api/ask`) — context-aware AI chat, available before and after answering.
 - **Vision feedback** (`/api/review-work`) is the optional enhancement layer.
 - App is fully functional without an API key.
 - Progress persists in `localStorage` under key `qp`.
