@@ -285,14 +285,19 @@ function renderLesson(chapterId) {
       </div>
 
       <div class="result-banner" id="result-banner">
-        <div id="result-icon" style="font-size:28px;"></div>
-        <div style="flex:1;">
-          <div id="result-title" style="font-size:16px;font-weight:800;"></div>
-          <div id="result-detail" style="font-size:13px;color:var(--text-muted);margin-top:2px;"></div>
+        <div id="result-icon" style="font-size:32px;flex-shrink:0;"></div>
+        <div style="flex:1;min-width:0;">
+          <div id="result-title" style="font-size:18px;font-weight:800;"></div>
+          <div id="result-detail" style="font-size:15px;color:#fff;margin-top:4px;"></div>
         </div>
-        <button class="btn btn-green" id="lesson-next" style="display:none;white-space:nowrap;" onclick="window.__lessonNext();">
-          ${isLast ? 'Finish →' : 'Next →'}
-        </button>
+        <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
+          <button class="btn btn-ghost" id="lesson-retry" style="display:none;font-size:13px;padding:10px 16px;" onclick="window.__lessonRetry();">
+            Try Again
+          </button>
+          <button class="btn btn-green" id="lesson-next" style="display:none;font-size:13px;padding:10px 16px;white-space:nowrap;" onclick="window.__lessonNext();">
+            ${isLast ? 'Finish →' : 'Next →'}
+          </button>
+        </div>
       </div>
     `);
 
@@ -315,10 +320,10 @@ function renderLesson(chapterId) {
       const banner = document.getElementById('result-banner');
       banner.className = 'result-banner ' + (correct ? 'correct' : 'incorrect');
       document.getElementById('result-icon').textContent  = correct ? '✅' : '❌';
-      document.getElementById('result-title').textContent = correct ? 'Correct!' : 'Not quite';
+      document.getElementById('result-title').textContent = correct ? 'Correct!' : 'Incorrect';
       document.getElementById('result-detail').textContent = correct
         ? (isLast ? 'Lesson complete!' : 'On to the next concept!')
-        : `Answer: ${formattedAnswer}`;
+        : `Correct answer: ${formattedAnswer}`;
       setTimeout(() => banner.classList.add('visible'), 50);
 
       if (!correct) {
@@ -329,6 +334,8 @@ function renderLesson(chapterId) {
           const inp = document.getElementById('answer-input');
           if (inp) { inp.classList.add('shake'); setTimeout(() => inp.classList.remove('shake'), 450); }
         }
+        const retry = document.getElementById('lesson-retry');
+        if (retry) retry.style.display = '';
       }
 
       document.getElementById('lesson-check').style.display = 'none';
@@ -343,6 +350,20 @@ function renderLesson(chapterId) {
         stepIdx++;
         renderStep();
       }
+    };
+
+    window.__lessonRetry = () => {
+      answered = false;
+      const banner = document.getElementById('result-banner');
+      if (banner) banner.classList.remove('visible', 'correct', 'incorrect');
+      const retry = document.getElementById('lesson-retry');
+      if (retry) retry.style.display = 'none';
+      const next = document.getElementById('lesson-next');
+      if (next) next.style.display = 'none';
+      const check = document.getElementById('lesson-check');
+      if (check) check.style.display = '';
+      const inp = document.getElementById('lesson-ans');
+      if (inp) { inp.value = ''; inp.focus(); }
     };
 
     // Canvas tools
@@ -487,15 +508,15 @@ function renderProblemScreen(chapterId, isQuiz) {
     </div>
 
     <div class="result-banner" id="result-banner">
-      <div id="result-icon" style="font-size:28px;"></div>
-      <div style="flex:1;">
-        <div id="result-title" style="font-size:16px;font-weight:800;"></div>
-        <div id="result-detail" style="font-size:13px;color:var(--text-muted);margin-top:2px;"></div>
+      <div id="result-icon" style="font-size:32px;flex-shrink:0;"></div>
+      <div style="flex:1;min-width:0;">
+        <div id="result-title" style="font-size:18px;font-weight:800;"></div>
+        <div id="result-detail" style="font-size:15px;color:#fff;margin-top:4px;"></div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:6px;align-items:stretch;min-width:110px;">
-        ${!isQuiz ? '<button class="btn btn-ghost" id="btn-similar" style="display:none;font-size:12px;padding:8px 12px;" onclick="window.__trySimilar();">Try Similar</button>' : ''}
-        <button class="btn btn-green" id="btn-next" style="display:none;white-space:nowrap;" onclick="window.__next();">
-          ${isQuiz ? 'Next →' : 'Next →'}
+      <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
+        ${!isQuiz ? '<button class="btn btn-ghost" id="btn-similar" style="display:none;font-size:13px;padding:10px 16px;" onclick="window.__trySimilar();">Try Again</button>' : ''}
+        <button class="btn btn-green" id="btn-next" style="display:none;font-size:13px;padding:10px 16px;white-space:nowrap;" onclick="window.__next();">
+          Next →
         </button>
       </div>
     </div>
@@ -657,8 +678,8 @@ function renderProblemScreen(chapterId, isQuiz) {
       const title  = document.getElementById('result-title');
       const detail = document.getElementById('result-detail');
       if (icon)   icon.textContent   = correct ? '✅' : '❌';
-      if (title)  title.textContent  = correct ? 'Correct!' : 'Not quite';
-      if (detail) detail.textContent = correct ? 'Great work!' : `Answer: ${formattedAnswer}`;
+      if (title)  title.textContent  = correct ? 'Correct!' : 'Incorrect';
+      if (detail) detail.textContent = correct ? 'Great work!' : `Correct answer: ${formattedAnswer}`;
       setTimeout(() => banner.classList.add('visible'), 50);
 
       // Show worked solution on wrong answer in practice mode
@@ -797,7 +818,11 @@ function renderProblemScreen(chapterId, isQuiz) {
 
   window.__submit     = handleSubmit;
   window.__next       = () => { canvas && canvas.clear(); newProblem(); };
-  window.__trySimilar = () => { canvas && canvas.clear(); newProblem(problem.type); };
+  window.__trySimilar = () => {
+    // Reset so user can try the same problem again
+    answered = false;
+    newProblem(problem.type);
+  };
 
   window.__clearAnswer = () => {
     answerCanvas?.clear();
