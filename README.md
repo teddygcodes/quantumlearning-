@@ -65,6 +65,8 @@ All grading runs in the browser. The server handles static files and the optiona
 - **AI (optional):** Anthropic Claude API (Sonnet) for tutoring chat and vision-based work review
 - **Target device:** iPad with Apple Pencil (also works on desktop)
 
-## Screenshot
+## Screenshots
 
-![Quantum Primer — lesson with Apple Pencil notepad](screenshot-app.png)
+| Home Screen | Lesson + Notepad |
+|:-----------:|:----------------:|
+| ![Home screen with skill path](screenshot-home.jpg) | ![Lesson with Apple Pencil notepad](screenshot-app.png) |
