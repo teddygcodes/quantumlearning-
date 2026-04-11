@@ -8,7 +8,7 @@
  * the future, add DOMPurify first.
  */
 import { CHAPTERS } from './chapters.js?v=3';
-import { generateRandomProblem, generateProblem, checkAnswer } from './problems.js?v=3';
+import { generateRandomProblem, generateProblem, checkAnswer } from './problems.js?v=4';
 import { CanvasManager } from './canvas.js';
 
 // ── State ──────────────────────────────────────────────────────────────────

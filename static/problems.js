@@ -2128,5 +2128,22 @@ export function generateProblem(chapterId, type, difficulty = 1, variation = 'ba
 
 export function generateRandomProblem(chapter, difficulty = 1) {
   const type = chapter.problemTypes[Math.floor(Math.random() * chapter.problemTypes.length)];
-  return generateProblem(chapter.id, type, difficulty);
+
+  // Collect variations taught in lessons for this type, gated by difficulty
+  const taughtVariations = [];
+  for (const step of chapter.lessonSteps || []) {
+    if (step.problemType === type && step.progression) {
+      for (const p of step.progression) {
+        if (p.difficulty <= difficulty && !taughtVariations.includes(p.variation)) {
+          taughtVariations.push(p.variation);
+        }
+      }
+    }
+  }
+
+  const variation = taughtVariations.length > 0
+    ? taughtVariations[Math.floor(Math.random() * taughtVariations.length)]
+    : 'basic';
+
+  return generateProblem(chapter.id, type, difficulty, variation);
 }
