@@ -67,4 +67,4 @@ All grading runs in the browser. The server handles static files and the optiona
 
 ## Screenshot
 
-![Quantum Primer home screen](screenshot.png)
+![Quantum Primer — lesson with Apple Pencil notepad](screenshot-ipad.png)
