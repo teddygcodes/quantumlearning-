@@ -26,11 +26,19 @@ const DEFAULT_STATE = {
 function loadState() {
   try {
     const saved = JSON.parse(localStorage.getItem('qp') || '{}');
-    return {
+    const merged = {
       ...DEFAULT_STATE,
       ...saved,
       chapters: { ...DEFAULT_STATE.chapters, ...saved.chapters },
     };
+    // Auto-unlock: if chapter N is completed, chapter N+1 should be unlocked.
+    // Handles new chapters added after the user already passed earlier ones.
+    for (let id = 1; id <= 11; id++) {
+      if (merged.chapters[id]?.completed && merged.chapters[id + 1]) {
+        merged.chapters[id + 1].unlocked = true;
+      }
+    }
+    return merged;
   } catch {
     return { ...DEFAULT_STATE };
   }
@@ -715,7 +723,7 @@ function renderProblemScreen(chapterId, isQuiz) {
       }
       // Unlock next chapter
       const nextId = chapterId + 1;
-      if (nextId <= 5 && state.chapters[nextId]) {
+      if (state.chapters[nextId]) {
         state.chapters[nextId].unlocked = true;
       }
       saveState();
