@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from starlette.types import Scope
 
-load_dotenv()
+load_dotenv(override=True)
 STATIC_DIR = Path(__file__).parent / "static"
 
 
