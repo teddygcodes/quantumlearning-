@@ -26,7 +26,7 @@ A Duolingo-style quantum computing learning app built for iPad with Apple Pencil
 ## Features
 
 - **192 sub-problems** across 51 lesson steps in 11 chapters
-- **Dynamic teaching units** — teaching text, worked examples, and practice problems advance together in lockstep per sub-problem. The worked example always matches the type of problem being asked, with different numbers so students can't copy answers. (Migration in progress: `complex_addition` complete, remaining types use static HTML)
+- **Dynamic teaching units** — teaching text, worked examples, and practice problems advance together in lockstep per sub-problem. The worked example always matches the type of problem being asked, with different numbers so students can't copy answers. All 43 problem types fully migrated to dynamic templates.
 - **43 problem generators** with structural variations (negatives, edge cases, extended operations) and deterministic grading (no AI required)
 - **Anti-frustration system** — after 2 wrong attempts on the same variation, the worked solution appears inline so students don't get stuck
 - **"Why This Matters"** — every problem shows a plain-English explanation of what you just computed and why it matters in quantum computing
@@ -70,7 +70,7 @@ TEMPLATES[problemType].generate(difficulty, variation)
 // Returns: { teachingText, workedExample: { problem, steps, insight }, tryIt: { question, answer, ... } }
 ```
 
-The worked example and practice problem are structurally identical but use different random numbers. When a student retries, the entire left panel re-renders with fresh numbers for both the example and the problem. Steps that haven't been migrated to templates fall back to static HTML.
+The worked example and practice problem are structurally identical but use different random numbers. When a student retries, the entire left panel re-renders with fresh numbers for both the example and the problem. All 43 problem types have been migrated to dynamic templates.
 
 ### Lesson Progression System
 
