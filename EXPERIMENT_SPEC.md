@@ -57,6 +57,8 @@ After completing a chapter's lessons + quiz, the chapter node on the home screen
 ### Chapter 1: Algebra Refresher
 **Experiment: "Equation Balancer"**
 
+**ONE JOB**: Algebra is maintaining balance — every operation you do to one side, you do to the other.
+
 A visual balance beam where the student performs algebra operations to isolate x. The beam tilts based on whether the equation is balanced.
 
 **How it works**:
@@ -78,6 +80,8 @@ A visual balance beam where the student performs algebra operations to isolate x
 ### Chapter 2: Vectors in 2D
 **Experiment: "Vector Playground"**
 
+**ONE JOB**: Vectors are arrows you can see, drag, and combine — making the math spatial.
+
 A free-form 2D grid sandbox for dragging vectors, adding them tip-to-tail, and scaling with a slider.
 
 **How it works**:
@@ -98,6 +102,8 @@ A free-form 2D grid sandbox for dragging vectors, adding them tip-to-tail, and s
 ### Chapter 3: Unit Vectors
 **Experiment: "Normalization Machine"**
 
+**ONE JOB**: Every vector, no matter how big or small, normalizes to the same unit circle.
+
 Drag any vector and watch the normalization formula compute in real time, with the unit vector drawn on the unit circle.
 
 **How it works**:
@@ -116,31 +122,30 @@ Drag any vector and watch the normalization formula compute in real time, with t
 ---
 
 ### Chapter 4: Complex Numbers
-**Experiment: "Complex Number Explorer"**
+**Experiment: "Complex Multiplier"**
 
-An interactive Argand diagram (complex plane) where the student plots and manipulates complex numbers visually.
+**ONE JOB**: Multiplication is rotation. That's the single insight that matters for quantum computing — and it's nearly impossible to internalize from arithmetic alone.
 
 **How it works**:
-- Complex plane with real axis (horizontal) and imaginary axis (vertical)
-- Tap/drag to place a complex number — coordinates, magnitude, and phase shown live
-- Operation buttons: "Add", "Multiply", "Conjugate"
-  - Place two numbers → tap Add → parallelogram rule animates
-  - Place two numbers → tap Multiply → one rotates and scales the other (rotation = phase addition, scaling = magnitude multiplication)
-  - Tap Conjugate → point reflects across real axis
-- "i Machine" button: tap repeatedly to multiply by i — watch the point rotate 90° each time: 1 → i → -1 → -i → 1. The i-cycle from lessons, now visible.
-- "Random" button for quick exploration
-- Live readouts: rectangular form (a + bi), polar form (r∠θ), magnitude, phase
+- Complex plane with unit circle shown
+- Drag to place a complex number — magnitude and phase angle shown live
+- "× i" button: tap repeatedly to multiply by i — watch the point rotate 90° each time: 1 → i → -1 → -i → 1. The i-cycle from lessons, now visible.
+- "× (other)" mode: place a second number, tap Multiply — first number rotates by second's phase and scales by second's magnitude
+- Live readouts: polar form (r∠θ) and rectangular form (a + bi) — both update as you drag
+- "Random" button drops a new number to multiply by
+- The entire UI is oriented around ONE question: "What does multiplying do to the angle and the length?"
 
-**Live feedback**: All readouts update as user drags. Multiplication visually shows rotation + scaling.
+**Live feedback**: Phase angle and magnitude update continuously. Multiplication animates the rotation + scaling.
 
-**Discovery prompts** (appear after some exploration, optional):
-- "Multiply 1+i by itself repeatedly. What shape does it trace?" → Spiral
-- "What does multiplying by i always do to the angle?" → Adds 90°
+**Discovery prompt** (optional):
+- "Multiply 1+i by itself repeatedly. What path does it trace?" → Spiral (rotation + growing magnitude)
 
 ---
 
 ### Chapter 5: Matrices
 **Experiment: "Transformation Sandbox"**
+
+**ONE JOB**: A matrix is not numbers in a grid — it's an instruction for reshaping space.
 
 A 2D grid with a shape (letter F) that the student transforms by applying matrices. See rotation, reflection, scaling, and shearing happen visually.
 
@@ -163,25 +168,26 @@ A 2D grid with a shape (letter F) that the student transforms by applying matric
 ---
 
 ### Chapter 6: Dirac Notation
-**Experiment: "State Space Navigator"**
+**Experiment: "State Explorer"**
 
-An interactive visualization showing how ket notation maps to the Bloch sphere and how inner products measure similarity between states.
+**ONE JOB**: A qubit state |ψ⟩ = α|0⟩ + β|1⟩ encodes probabilities — adjust α and β and watch P(|0⟩) and P(|1⟩) change. That's it. No Bloch sphere yet (save that for Ch 7 where gates rotate it).
 
 **How it works**:
-- Split display: ket notation on one side, Bloch sphere on the other
-- Sliders for α and β: |ψ⟩ = α|0⟩ + β|1⟩ — point on Bloch sphere moves in real time
-- Probability bars: P(|0⟩) = |α|² and P(|1⟩) = |β|² update live
-- Inner product tool: set two states, see ⟨ψ|φ⟩ computed live — value shrinks as states separate, hits 0 when orthogonal, hits 1 when identical
-- Orthogonality indicator: fires when ⟨ψ|φ⟩ = 0 (arrows are perpendicular on sphere)
-- Preset states: |0⟩, |1⟩, |+⟩, |−⟩ buttons for quick exploration
-- Free exploration — drag sliders endlessly, watch everything respond
+- Two sliders control α and β (automatically normalized so |α|² + |β|² = 1)
+- Ket notation updates live: |ψ⟩ = 0.71|0⟩ + 0.71|1⟩
+- Probability bars: P(|0⟩) = |α|² and P(|1⟩) = |β|² — fill visually like a tank
+- Normalization constraint shown: |α|² + |β|² always equals 1 (bar always full)
+- Preset buttons: |0⟩, |1⟩, |+⟩, |−⟩ — tap to see how named states map to amplitudes
+- The student sees: amplitudes are just knobs that control measurement probabilities, and they must add to 1
 
-**Live feedback**: Bloch sphere, probabilities, and inner product all update continuously.
+**Live feedback**: Ket notation, probability bars, and normalization sum all update continuously as sliders move.
 
 ---
 
 ### Chapter 7: Quantum Gates
 **Experiment: "Gate Laboratory"**
+
+**ONE JOB**: Gates are rotations — each one moves the state arrow to a specific place on the Bloch sphere.
 
 Pick a gate, pick an input state, watch the transformation on the Bloch sphere. Chain gates and discover identities through play.
 
@@ -209,6 +215,8 @@ Pick a gate, pick an input state, watch the transformation on the Bloch sphere. 
 ### Chapter 8: Measurement
 **Experiment: "Quantum Coin Toss Lab"**
 
+**ONE JOB**: Measurement is genuinely random — the histogram converges but never perfectly.
+
 Create quantum states and measure them repeatedly, building up histograms and experiencing quantum randomness firsthand.
 
 **How it works**:
@@ -232,6 +240,8 @@ Create quantum states and measure them repeatedly, building up histograms and ex
 ### Chapter 9: Tensor Products
 **Experiment: "Qubit Combiner"**
 
+**ONE JOB**: Two independent qubits combine into a 4-element state vector via tensor product.
+
 Combine two single-qubit states into a two-qubit state, seeing the tensor product computed visually in real time.
 
 **How it works**:
@@ -251,6 +261,8 @@ Combine two single-qubit states into a two-qubit state, seeing the tensor produc
 
 ### Chapter 10: Entanglement
 **Experiment: "Entanglement Lab"**
+
+**ONE JOB**: Measuring one entangled qubit instantly determines the other — every single time.
 
 Build Bell states and measure one qubit — watch the other qubit's state instantly update. Repeated measurements reveal perfect correlations.
 
@@ -275,6 +287,8 @@ Build Bell states and measure one qubit — watch the other qubit's state instan
 ### Chapter 11: Quantum Circuits
 **Experiment: "Circuit Puzzler"**
 
+**ONE JOB**: Circuits are sequences of gates that produce outputs — build one and see what it does.
+
 A sandbox circuit builder where the student drags gates onto wires and tests circuits against target outputs.
 
 **How it works**:
@@ -295,6 +309,8 @@ A sandbox circuit builder where the student drags gates onto wires and tests cir
 
 ### Chapter 12: Rotation Gates
 **Experiment: "Bloch Sphere Painter"**
+
+**ONE JOB**: Each rotation axis (Rx, Ry, Rz) traces a different circle on the sphere — see which parts of state space each one can reach.
 
 Use rotation gate sliders as brushes to paint trails on the Bloch sphere, discovering how Rx, Ry, Rz each trace different paths.
 
@@ -320,6 +336,8 @@ Use rotation gate sliders as brushes to paint trails on the Bloch sphere, discov
 ### Chapter 13: Phase Gates
 **Experiment: "Phase Clock"**
 
+**ONE JOB**: Phase gates add fixed angles — T, S, and Z are just different-sized steps around the same circle.
+
 A clock face showing the phase of |1⟩'s amplitude. Phase gates rotate the clock hand in fixed increments.
 
 **How it works**:
@@ -341,6 +359,8 @@ A clock face showing the phase of |1⟩'s amplitude. Phase gates rotate the cloc
 
 ### Chapter 14: Multi-Qubit Gates
 **Experiment: "Gate Wiring Lab"**
+
+**ONE JOB**: Complex gates decompose into simple ones — you become the compiler.
 
 Build multi-qubit gates from simpler ones and verify equivalence by testing all inputs.
 
@@ -364,6 +384,8 @@ Build multi-qubit gates from simpler ones and verify equivalence by testing all 
 
 ### Chapter 15: Quantum Teleportation
 **Experiment: "Teleportation Simulator"**
+
+**ONE JOB**: Teleportation is a procedure you can run — CNOT, H, measure, send bits, correct.
 
 Step-by-step interactive simulation of the teleportation protocol with Alice and Bob on opposite sides of the screen.
 
@@ -390,6 +412,8 @@ Step-by-step interactive simulation of the teleportation protocol with Alice and
 ### Chapter 16: Deutsch-Jozsa Algorithm
 **Experiment: "Oracle Detective"**
 
+**ONE JOB**: A quantum circuit answers the question in one query where classical needs many.
+
 Explore how quantum queries solve oracle problems faster than classical ones. Compare classical vs quantum approaches side by side.
 
 **How it works**:
@@ -410,6 +434,8 @@ Explore how quantum queries solve oracle problems faster than classical ones. Co
 
 ### Chapter 17: Grover's Search
 **Experiment: "Quantum Search Race"**
+
+**ONE JOB**: Amplitude amplification — watching the marked item's bar grow while others shrink IS Grover's algorithm.
 
 Visual side-by-side race between classical search and Grover's algorithm. Watch amplitude amplification happen in real time.
 
@@ -432,6 +458,8 @@ Visual side-by-side race between classical search and Grover's algorithm. Watch 
 
 ### Chapter 18: Quantum Error Correction
 **Experiment: "Noisy Quantum Lab"**
+
+**ONE JOB**: Error correction protects results from noise — watch clean histograms degrade, then watch error correction save them.
 
 Run circuits with and without error correction. A noise slider lets you feel how errors degrade results and how error correction fights back.
 
@@ -460,48 +488,40 @@ Run circuits with and without error correction. A noise slider lets you feel how
 ### Chapter 19: Shor's Algorithm
 **Experiment: "Period Finder"**
 
-Interactive visualization of period finding in modular exponentiation — the heart of Shor's algorithm.
+**ONE JOB**: Factoring reduces to finding a repeating pattern. The student should SEE the period in modular exponentiation — that visual pattern is the entire insight.
 
 **How it works**:
 - Student picks N to factor (15, 21, 35) and a base a
-- Table fills in: a¹ mod N, a² mod N, a³ mod N, ... — student can see the repeating pattern
-- Graph plots values — the periodic structure is visible
-- "Find Period" prompt: student identifies r from the pattern
-- Calculator: plug in r to compute gcd(a^(r/2) ± 1, N) → factors appear
-- QFT visualization: same sequence shown as frequency spectrum
-  - Before QFT: pattern spread across all inputs
-  - After QFT: sharp peaks at multiples of N/r → period readable from peak spacing
-  - Caption: "The quantum computer does this step exponentially faster"
+- Table fills in: a¹ mod N, a² mod N, a³ mod N, ... — values appear one by one
+- Graph plots the values — the repeating pattern becomes visually obvious
+- "What's the period?" — student taps the repeating length on the graph
+- Once period r is found, the factors appear: gcd(a^(r/2) ± 1, N) — computed automatically
+- Caption: "A quantum computer finds this period exponentially faster using QFT"
 - "New Number" button to try different N and a values
-- Sometimes it fails (odd period, trivial factor) — student discovers you sometimes need to retry
+- Sometimes it fails (odd period, trivial factor) — "Try a different base a"
 
-**Live feedback**: Table, graph, and QFT spectrum all update as parameters change.
+**Live feedback**: Graph updates as each a^k mod N value is computed. Period highlight appears when student taps.
+
+**What's NOT here**: No QFT visualization, no frequency spectrum. Those are separate concepts. This experiment is about one thing: see the pattern, find the period, get the factors.
 
 ---
 
 ### Chapter 20: The Landscape
-**Experiment: "Quantum Hardware Explorer"**
+**Experiment: "Hardware Tradeoffs"**
 
-Interactive comparison of quantum computing platforms, plus a "build your quantum computer" configurator.
+**ONE JOB**: Every quantum hardware approach has tradeoffs — there is no "best" technology. The student explores those tradeoffs visually.
 
 **How it works**:
-- Comparison view: 5 qubit technologies (Superconducting, Trapped Ion, Photonic, Neutral Atom, Topological)
-  - Radar charts showing strengths/weaknesses on 5 axes: qubit count, gate fidelity, coherence time, connectivity, operating temperature
-  - Tap a technology for details: which companies use it, current records, key tradeoffs
-- "Build Your Quantum Computer" configurator:
-  - Choose technology → sets base parameters
-  - Qubit slider → shows what algorithms you can run at that scale:
-    - 5 qubits: toy problems
-    - 50 qubits: quantum advantage demonstrations
-    - 100 logical qubits: useful chemistry simulation
-    - 4000 logical qubits: Shor's on RSA-2048
-  - Physical qubit calculator: "4000 logical × ~1000 physical per logical = 4M physical qubits needed"
-- "Your Journey" section:
-  - Visual map of every concept learned across 20 chapters
-  - Total engagement stats (not scores)
-  - Links to next steps: Qiskit, Cirq, textbooks, courses
+- 5 qubit technologies: Superconducting, Trapped Ion, Photonic, Neutral Atom, Topological
+- Radar chart for each: qubit count, gate fidelity, coherence time, connectivity, operating temperature
+- Tap a technology → details expand: which companies use it, current records, why they chose it
+- "Compare" mode: overlay two radar charts to see where one wins and the other loses
+- The student discovers: superconducting has the most qubits but shortest coherence. Trapped ions have the best fidelity but scale slowly. Every choice is a tradeoff.
+- "Random Matchup" button picks two technologies to compare
 
-**Live feedback**: Radar charts and configurator update in real time as selections change.
+**Live feedback**: Radar charts animate when switching technologies. Comparison overlay updates instantly.
+
+**What's NOT here**: No "build your computer" configurator (that's a separate tool). No journey summary (that belongs on the home screen, not in an experiment).
 
 ---
 
@@ -512,9 +532,9 @@ Interactive comparison of quantum computing platforms, plus a "build your quantu
 | 1 | Equation Balancer | Balance beam + operation buttons | Canvas animation |
 | 2 | Vector Playground | Drag vectors + live readouts | Canvas, vector math |
 | 3 | Normalization Machine | Drag → normalize with live formula | Canvas, unit circle |
-| 4 | Complex Number Explorer | Interactive Argand diagram | Canvas, complex math |
+| 4 | Complex Multiplier | Multiply = rotate on complex plane | Canvas, complex math |
 | 5 | Transformation Sandbox | Matrix transforms on shapes | Canvas, matrix math |
-| 6 | State Space Navigator | Bloch sphere + sliders + inner product | 2D Bloch projection |
+| 6 | State Explorer | Amplitude sliders → probability bars | Sliders + bars |
 | 7 | Gate Laboratory | Gate buttons + Bloch sphere animation | 2D Bloch sphere |
 | 8 | Quantum Coin Toss Lab | Measure button + histogram builder | Canvas, RNG |
 | 9 | Qubit Combiner | Dual Bloch spheres + tensor product | Bloch sphere × 2 |
@@ -527,8 +547,8 @@ Interactive comparison of quantum computing platforms, plus a "build your quantu
 | 16 | Oracle Detective | Classical vs quantum query comparison | Oracle sim |
 | 17 | Quantum Search Race | Side-by-side race + amplitude bars | Bar animation |
 | 18 | Noisy Quantum Lab | Noise slider + error correction toggle | Noisy sim |
-| 19 | Period Finder | Modular exponentiation + QFT viz | Graphing |
-| 20 | Hardware Explorer | Radar charts + configurator | Data viz |
+| 19 | Period Finder | See repeating pattern in mod exponentiation | Graphing |
+| 20 | Hardware Tradeoffs | Radar chart comparison of 5 technologies | Data viz |
 
 ### Shared Components Needed
 - **Bloch sphere renderer**: Used in Ch 6, 7, 8, 9, 10, 12. Build once, reuse. 2D projection is fine.
