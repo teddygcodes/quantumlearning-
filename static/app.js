@@ -7,8 +7,9 @@
  * never injected into the DOM. If user-generated content is ever rendered in
  * the future, add DOMPurify first.
  */
-import { CHAPTERS } from './chapters.js?v=4';
+import { CHAPTERS } from './chapters.js?v=5';
 import { generateRandomProblem, generateProblem, checkAnswer } from './problems.js?v=5';
+import { TEMPLATES } from './templates.js?v=1';
 import { CanvasManager } from './canvas.js';
 
 // ── State ──────────────────────────────────────────────────────────────────
@@ -334,7 +335,13 @@ function renderLesson(chapterId) {
     const doneSubs  = ch.lessonSteps.slice(0, stepIdx).reduce((s, st) => s + (st.progression?.length || 1), 0) + subProbIdx;
     const pct = (doneSubs / totalSubs) * 100;
 
-    let problem = generateProblem(chapterId, step.problemType, prog.difficulty, prog.variation);
+    // Dynamic teaching unit: if a template exists, generate teaching + problem together
+    const template = TEMPLATES[step.problemType];
+    let unit = template ? template.generate(prog.difficulty, prog.variation) : null;
+    let problem = unit
+      ? { question: unit.tryIt.question, answer: unit.tryIt.answer, answerType: unit.tryIt.answerType,
+          answerDisplay: unit.tryIt.answerDisplay, steps: unit.tryIt.steps, chapterId }
+      : generateProblem(chapterId, step.problemType, prog.difficulty, prog.variation);
     let answered  = false;
     let retryCount = 0;
 
@@ -345,6 +352,19 @@ function renderLesson(chapterId) {
       yesno:   'Type yes or no',
       numeric: '',
     };
+
+    // Concept card content: dynamic from template or static from step.html
+    const conceptHtml = unit ? `
+      <p style="font-size:15px;line-height:1.6;color:var(--text);margin-bottom:14px;">${unit.teachingText}</p>
+      <div class="worked-example">
+        <div class="worked-example-label">Worked Example</div>
+        <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:10px;font-family:var(--mono);">${unit.workedExample.problem}</div>
+        ${unit.workedExample.steps.map(s =>
+          `<div style="font-size:14px;color:var(--text);line-height:1.6;font-family:var(--mono);">${s}</div>`
+        ).join('')}
+        <div style="font-size:13px;color:var(--text-muted);margin-top:10px;font-style:italic;">💡 ${unit.workedExample.insight}</div>
+      </div>
+    ` : step.html;
 
     setContent(`
       <div class="problem-screen" data-ch="${chapterId}" style="--ch-color:var(--ch${chapterId});--ch-dk:var(--ch${chapterId}-dk);">
@@ -370,7 +390,7 @@ function renderLesson(chapterId) {
             <div style="font-size:12px;font-weight:800;color:var(--ch${chapterId});text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">
               ${step.title}
             </div>
-            ${step.html}
+            ${conceptHtml}
           </div>
 
           <div class="card" style="padding:16px 20px;">
@@ -491,8 +511,9 @@ function renderLesson(chapterId) {
         ? correctMsg
         : `Correct answer: ${formattedAnswer}`;
       const whyEl = document.getElementById('result-why');
-      if (whyEl && step.whyItMatters) {
-        whyEl.textContent = '💡 ' + step.whyItMatters;
+      const why = unit ? unit.tryIt.whyItMatters : step.whyItMatters;
+      if (whyEl && why) {
+        whyEl.textContent = '💡 ' + why;
       }
       setTimeout(() => banner.classList.add('visible'), 50);
 
@@ -536,10 +557,12 @@ function renderLesson(chapterId) {
 
       if (retryCount >= 2) {
         // Anti-frustration: show worked solution inline
-        const solutionHtml = problem.steps
+        // Use template worked example steps if available, else problem.steps
+        const solutionSteps = unit ? unit.workedExample.steps : problem.steps;
+        const solutionHtml = solutionSteps
           ? `<div class="worked-solution-inline">
                <div style="font-size:11px;font-weight:800;color:var(--ch${chapterId});text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Worked Solution</div>
-               ${problem.steps.map(s => `<div style="font-size:14px;color:var(--text);line-height:1.6;font-family:var(--mono);">${s}</div>`).join('')}
+               ${solutionSteps.map(s => `<div style="font-size:14px;color:var(--text);line-height:1.6;font-family:var(--mono);">${s}</div>`).join('')}
                <button class="btn btn-green btn-full" style="margin-top:12px;" onclick="window.__lessonRetryAfterSolution();">Got it — Try Again</button>
              </div>`
           : '';
@@ -557,36 +580,47 @@ function renderLesson(chapterId) {
         return;
       }
 
-      // Regenerate at same difficulty + variation (new random numbers)
-      problem = generateProblem(chapterId, step.problemType, prog.difficulty, prog.variation);
-      const qEl = document.getElementById('lesson-q');
-      if (qEl) qEl.textContent = problem.question;
+      if (template) {
+        // Template path: full re-render with fresh random numbers for both
+        // worked example AND practice problem
+        renderStep();
+      } else {
+        // Static HTML path: just swap the question text
+        problem = generateProblem(chapterId, step.problemType, prog.difficulty, prog.variation);
+        const qEl = document.getElementById('lesson-q');
+        if (qEl) qEl.textContent = problem.question;
 
-      const check = document.getElementById('lesson-check');
-      if (check) check.style.display = '';
-      const inp = document.getElementById('lesson-ans');
-      if (inp) { inp.value = ''; inp.blur(); }
-      // Clear ask tutor state
-      const resp = document.getElementById('ask-tutor-response');
-      if (resp) resp.textContent = '';
-      const askInp = document.getElementById('ask-tutor-input');
-      if (askInp) askInp.value = '';
+        const check = document.getElementById('lesson-check');
+        if (check) check.style.display = '';
+        const inp = document.getElementById('lesson-ans');
+        if (inp) { inp.value = ''; inp.blur(); }
+        // Clear ask tutor state
+        const resp = document.getElementById('ask-tutor-response');
+        if (resp) resp.textContent = '';
+        const askInp = document.getElementById('ask-tutor-input');
+        if (askInp) askInp.value = '';
+      }
     };
 
     // After studying the worked solution, regenerate and try again
     window.__lessonRetryAfterSolution = () => {
       retryCount = 0;
       answered = false;
-      problem = generateProblem(chapterId, step.problemType, prog.difficulty, prog.variation);
-      const qEl = document.getElementById('lesson-q');
-      if (qEl) qEl.textContent = problem.question;
-      // Remove the solution block
-      const sol = document.querySelector('.worked-solution-inline');
-      if (sol) sol.remove();
-      const check = document.getElementById('lesson-check');
-      if (check) check.style.display = '';
-      const inp = document.getElementById('lesson-ans');
-      if (inp) { inp.style.display = ''; inp.value = ''; inp.blur(); }
+      if (template) {
+        // Full re-render with fresh teaching unit
+        renderStep();
+      } else {
+        problem = generateProblem(chapterId, step.problemType, prog.difficulty, prog.variation);
+        const qEl = document.getElementById('lesson-q');
+        if (qEl) qEl.textContent = problem.question;
+        // Remove the solution block
+        const sol = document.querySelector('.worked-solution-inline');
+        if (sol) sol.remove();
+        const check = document.getElementById('lesson-check');
+        if (check) check.style.display = '';
+        const inp = document.getElementById('lesson-ans');
+        if (inp) { inp.style.display = ''; inp.value = ''; inp.blur(); }
+      }
     };
 
     window.__askTutor = async () => {
@@ -611,7 +645,9 @@ function renderLesson(chapterId) {
           body: JSON.stringify({
             question: q,
             lesson_title: step.title,
-            lesson_html: step.html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 600),
+            lesson_html: unit
+              ? `${unit.teachingText} Worked example: ${unit.workedExample.problem} → ${unit.workedExample.steps.join('; ')}`
+              : (step.html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 600),
             problem_text: problem.question,
             student_answer: document.getElementById('lesson-ans')?.value || '',
             correct_answer: answered ? (problem.answerDisplay || String(problem.answer)) : '(not yet answered)',

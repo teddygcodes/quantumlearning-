@@ -358,58 +358,13 @@ export const CHAPTERS = [
     description: 'Quantum amplitudes are complex numbers. This chapter unlocks the full picture.',
     lessonSteps: [
       {
-        title: 'The Imaginary Unit i',
-        html: `
-          <p>i is defined as √(−1), so i² = −1. A complex number is written a + bi — a real part and an imaginary part that always stay separate.</p>
-          <div class="concept-card">
-            i¹ = i &nbsp; i² = −1 &nbsp; i³ = −i &nbsp; i⁴ = 1<br><br>
-            3 + 4i → real part: 3, imaginary part: 4<br>
-            To add: combine real with real, imaginary with imaginary.
-          </div>
-          <div class="worked-example">
-            <div class="worked-example-label">Worked Example</div>
-            (3 + 5i) + (2 + 1i)<br>
-            Step 1 — real parts: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 3 + 2 = 5<br>
-            Step 2 — imaginary parts: &nbsp; 5 + 1 = 6<br>
-            Answer: 5 + 6i
-          </div>
-          <p style="color:var(--text-muted);font-size:13px;">A complex number a + bi has a real part (a) and imaginary part (b). They always stay separate.</p>
-        `,
+        title: 'Complex Addition',
         problemType: 'complex_addition',
-        whyItMatters: 'Quantum amplitudes are complex numbers. Adding them is how quantum states combine and interfere with each other.',
         progression: [
           { difficulty: 1, variation: 'basic' },
           { difficulty: 1, variation: 'with_negatives' },
-          { difficulty: 2, variation: 'one_pure_real' },
-          { difficulty: 2, variation: 'three_terms' },
-        ],
-      },
-      {
-        title: 'Addition & Subtraction',
-        html: `
-          <p>Add real parts together and imaginary parts together. Keep them separate.</p>
-          <div class="concept-card">
-            Rule: (a + bi) + (c + di) = (a+c) + (b+d)i<br><br>
-            Real parts combine with real parts.<br>
-            Imaginary parts combine with imaginary parts.
-          </div>
-          <div class="worked-example">
-            <div class="worked-example-label">Worked Example</div>
-            (4 + 2i) + (1 + 5i)<br>
-            Step 1 — real parts: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 4 + 1 = 5<br>
-            Step 2 — imaginary parts: &nbsp; 2 + 5 = 7<br>
-            Answer: 5 + 7i
-          </div>
-          <p style="color:var(--text-muted);font-size:13px;">Format your answer as: a + bi &nbsp; (e.g. 3 + 2i, or 5 - i)</p>
-          <p class="hint">💡 Watch for negative components — subtracting a complex number means flipping both its real and imaginary parts before adding.</p>
-        `,
-        problemType: 'complex_addition',
-        whyItMatters: 'When quantum gates transform a state, the new amplitudes come from adding and subtracting complex numbers like these.',
-        progression: [
-          { difficulty: 1, variation: 'basic' },
-          { difficulty: 1, variation: 'with_negatives' },
-          { difficulty: 2, variation: 'one_pure_real' },
-          { difficulty: 2, variation: 'three_terms' },
+          { difficulty: 2, variation: 'edge_case' },
+          { difficulty: 2, variation: 'extended' },
         ],
       },
       {
