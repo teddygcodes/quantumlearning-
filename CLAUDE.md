@@ -63,16 +63,16 @@ the original code.
 ## Answer types
 | Type | Parser | Checker | UI |
 |------|--------|---------|----|
-| `numeric` | `parseFloat` | Tolerance (TOL=0.02) | Text input |
-| `vector` | Split on comma, 2 elements | Element-wise tolerance | Text input |
-| `vector4` | Split on comma, 4 elements | Element-wise tolerance | Text input |
-| `vector8` | Split on comma, 8 elements | Element-wise tolerance | Text input |
-| `complex` | Regex for `a + bi` format | Real + imag tolerance | Text input |
-| `matrix` | Split on `;` then spaces, 2x2 | Element-wise tolerance | Text input |
-| `yesno` | Boolean string parse | Exact match | Text input |
-| `angle` | Handles `pi/4`, `π/4`, `3pi/2` → radians | Tolerance | Text input |
-| `gate_name` | Trim, case-insensitive | Exact match (lowered) | Text input |
-| `choice` | Trim, uppercase first char | Exact letter match | Choice buttons |
+| `numeric` | `parseFloat` | Tolerance (TOL=0.02) | Custom KB: 0-9, `.`, `−` |
+| `vector` | Split on comma, 2 elements | Element-wise tolerance | Custom KB: 0-9, `.`, `−`, `,` |
+| `vector4` | Split on comma, 4 elements | Element-wise tolerance | Custom KB: 0-9, `.`, `−`, `,` |
+| `vector8` | Split on comma, 8 elements | Element-wise tolerance | Custom KB: 0-9, `.`, `−`, `,` |
+| `complex` | Regex for `a + bi` format | Real + imag tolerance | Custom KB: 0-9, `.`, `−`, `+`, `i` |
+| `matrix` | Split on `;` then spaces, 2x2 | Element-wise tolerance | Custom KB: 0-9, `.`, `−`, `;`, space |
+| `yesno` | Boolean string parse | Exact match | Yes / No buttons |
+| `angle` | Handles `pi/4`, `π/4`, `3pi/2` → radians | Tolerance | Custom KB: 0-9, `π`, `/` |
+| `gate_name` | Trim, case-insensitive | Exact match (lowered) | Custom KB: X,Y,Z,H,S,T,†,CNOT |
+| `choice` | Trim, uppercase first char | Exact letter match | A/B/C/D choice buttons |
 
 ## Cache busting
 ES module imports in app.js use query params: `./chapters.js?v=13`, `./problems.js?v=13`, `./templates.js?v=9`, `./keyboard.js?v=1`.
@@ -89,3 +89,4 @@ via `.value` only and never injected into the DOM.
 - **Phase 3:** Multi-problem lesson progressions — 361 sub-problems across 102 steps with structural variations
 - **Phase 4:** Dynamic teaching unit system — all 87 problem types migrated to templates, static HTML fully removed from chapters.js
 - **Phase 5:** Chapters 12-20 (advanced quantum) — rotation gates, phase gates, multi-qubit gates, teleportation, Deutsch-Jozsa, Grover's, error correction, Shor's algorithm, quantum landscape. Added 4 new answer types (angle, gate_name, vector8, choice) with multiple-choice button UI.
+- **Phase 6:** Custom answer keyboard — context-aware on-screen keyboard per answer type (suppresses native keyboard via `inputmode="none"`). Yes/no converted to choice-style buttons. Keyboard in `keyboard.js`, integrated into both lesson and practice/quiz modes.
