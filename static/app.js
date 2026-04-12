@@ -7,8 +7,8 @@
  * never injected into the DOM. If user-generated content is ever rendered in
  * the future, add DOMPurify first.
  */
-import { CHAPTERS } from './chapters.js?v=3';
-import { generateRandomProblem, generateProblem, checkAnswer } from './problems.js?v=4';
+import { CHAPTERS } from './chapters.js?v=4';
+import { generateRandomProblem, generateProblem, checkAnswer } from './problems.js?v=5';
 import { CanvasManager } from './canvas.js';
 
 // ── State ──────────────────────────────────────────────────────────────────
@@ -71,6 +71,16 @@ function route() {
 
 window.addEventListener('hashchange', route);
 document.addEventListener('DOMContentLoaded', route);
+
+// ── Keyboard dismiss: tap outside input to blur on iPad ──
+document.addEventListener('touchstart', (e) => {
+  const active = document.activeElement;
+  if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+    if (!e.target.closest('input, textarea, button, .btn, .tool-btn, .color-swatch')) {
+      active.blur();
+    }
+  }
+}, { passive: true });
 
 // ── Home — skill tree ──────────────────────────────────────────────────────
 
@@ -383,7 +393,8 @@ function renderLesson(chapterId) {
             <input class="answer-input" id="lesson-ans" type="text"
                    placeholder="Your answer…"
                    autocomplete="off" autocorrect="off" spellcheck="false"
-                   onkeydown="if(event.key==='Enter')window.__lessonSubmit();" />
+                   enterkeyhint="done"
+                   onkeydown="if(event.key==='Enter'){window.__lessonSubmit();this.blur();}" />
             <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">${hints[problem.answerType] || ''}</div>
           </div>
 
@@ -455,7 +466,7 @@ function renderLesson(chapterId) {
 
     requestAnimationFrame(() => {
       canvas = new CanvasManager(document.getElementById('work-canvas'));
-      document.getElementById('lesson-ans')?.focus();
+      // Don't auto-focus input — let the student tap when ready (avoids keyboard popping up on iPad)
     });
 
     // ── Answer handling ──────────────────────────────────────────
@@ -554,7 +565,7 @@ function renderLesson(chapterId) {
       const check = document.getElementById('lesson-check');
       if (check) check.style.display = '';
       const inp = document.getElementById('lesson-ans');
-      if (inp) { inp.value = ''; inp.focus(); }
+      if (inp) { inp.value = ''; inp.blur(); }
       // Clear ask tutor state
       const resp = document.getElementById('ask-tutor-response');
       if (resp) resp.textContent = '';
@@ -575,7 +586,7 @@ function renderLesson(chapterId) {
       const check = document.getElementById('lesson-check');
       if (check) check.style.display = '';
       const inp = document.getElementById('lesson-ans');
-      if (inp) { inp.style.display = ''; inp.value = ''; inp.focus(); }
+      if (inp) { inp.style.display = ''; inp.value = ''; inp.blur(); }
     };
 
     window.__askTutor = async () => {
@@ -717,7 +728,8 @@ function renderProblemScreen(chapterId, isQuiz) {
             <input class="answer-input" id="answer-input" type="text"
                    placeholder="Type your answer…"
                    autocomplete="off" autocorrect="off" spellcheck="false"
-                   onkeydown="if(event.key==='Enter')window.__submit();" />
+                   enterkeyhint="done"
+                   onkeydown="if(event.key==='Enter'){window.__submit();this.blur();}" />
             <div style="font-size:11px;color:var(--text-muted);margin-top:6px;" id="hint-text"></div>
           </div>
         </div>
@@ -857,7 +869,7 @@ function renderProblemScreen(chapterId, isQuiz) {
       if (rt) rt.textContent = '';
     } else {
       const inp = document.getElementById('answer-input');
-      if (inp) { inp.value = ''; inp.classList.remove('shake'); inp.focus(); }
+      if (inp) { inp.value = ''; inp.classList.remove('shake'); inp.blur(); }
     }
 
     const banner = document.getElementById('result-banner');

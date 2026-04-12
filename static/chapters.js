@@ -1113,7 +1113,7 @@ export const CHAPTERS = [
     title: 'Tensor Products',
     color: 'var(--ch9)',
     darkColor: 'var(--ch9-dk)',
-    problemTypes: ['two_qubit_basis', 'tensor_product', 'two_qubit_state', 'separable_check'],
+    problemTypes: ['two_qubit_basis', 'tensor_product', 'two_qubit_state', 'tensor_component_identify', 'tensor_probability', 'separable_check'],
     quizCount: 10,
     quizPass: 8,
     description: 'Two-qubit systems use tensor products to combine individual qubit states into joint states.',
@@ -1145,8 +1145,7 @@ export const CHAPTERS = [
           { difficulty: 1, variation: 'basic' },
           { difficulty: 1, variation: 'harder_labels' },
           { difficulty: 2, variation: 'harder_labels' },
-          { difficulty: 2, variation: 'harder_labels' },
-          { difficulty: 3, variation: 'harder_labels' },
+          { difficulty: 2, variation: 'superposition' },
         ],
       },
       {
@@ -1180,7 +1179,6 @@ export const CHAPTERS = [
           { difficulty: 1, variation: 'basis_states' },
           { difficulty: 2, variation: 'with_negatives' },
           { difficulty: 2, variation: 'with_negatives' },
-          { difficulty: 3, variation: 'with_negatives' },
         ],
       },
       {
@@ -1211,63 +1209,63 @@ export const CHAPTERS = [
           { difficulty: 1, variation: 'both_general' },
           { difficulty: 2, variation: 'both_general' },
           { difficulty: 2, variation: 'both_general' },
-          { difficulty: 3, variation: 'both_general' },
         ],
       },
       {
-        title: 'Building Joint States',
+        title: 'Decomposing a Joint State',
         html: `
-          <p>When two qubits are independent, their joint state is the tensor product of the individual states. This is how you go from knowing each qubit separately to describing them together.</p>
+          <p>Sometimes you know the joint state and one qubit — can you figure out the other? This is the <strong>reverse</strong> of the tensor product.</p>
           <div class="concept-card">
-            If qubit A = (α, β) and qubit B = (γ, δ), then:<br>
-            Joint state = A ⊗ B = (αγ, αδ, βγ, βδ)
+            If (a, b, c, d) = (x, y) ⊗ (p, q), and you know (p, q):<br>
+            Then x = a / p &nbsp;and&nbsp; y = c / p<br><br>
+            Use any nonzero component of the known qubit to solve.
           </div>
           <div class="worked-example">
             <div class="worked-example-label">Worked Example</div>
-            Qubit A = (0.6, 0.8), Qubit B = (1, 0)<br>
-            A ⊗ B = (0.6×1, 0.6×0, 0.8×1, 0.8×0)<br>
-            = (0.6, 0, 0.8, 0)<br>
-            This means: 60% amplitude on |00⟩, 80% on |10⟩.
+            (0, 0.6, 0, 0.8) = (x, y) ⊗ (0, 1). Find (x, y).<br>
+            From the formula: a = x·0 = 0 ✓, b = x·1 = 0.6 → x = 0.6<br>
+            c = y·0 = 0 ✓, d = y·1 = 0.8 → y = 0.8<br>
+            Answer: (0.6, 0.8)
           </div>
-          <p style="color:var(--text-muted);font-size:13px;">If you can write a two-qubit state as a tensor product, the qubits are "independent" (separable).</p>
+          <p style="color:var(--text-muted);font-size:13px;">Format: x, y — two numbers separated by a comma.</p>
+          <p class="hint">💡 Pick the nonzero component of the known qubit — divide to find the unknown component.</p>
         `,
-        problemType: 'two_qubit_state',
-        whyItMatters: 'Building joint states from individual qubits is the default starting point. When a state cannot be built this way, something special is happening — that is entanglement.',
+        problemType: 'tensor_component_identify',
+        whyItMatters: 'Decomposing a joint state tells you what each qubit is doing individually. If the state can\'t be decomposed, the qubits are entangled — a key concept in the next chapter.',
         progression: [
           { difficulty: 1, variation: 'basic' },
-          { difficulty: 1, variation: 'both_general' },
-          { difficulty: 2, variation: 'both_general' },
-          { difficulty: 2, variation: 'both_general' },
-          { difficulty: 3, variation: 'both_general' },
+          { difficulty: 1, variation: 'basic' },
+          { difficulty: 2, variation: 'general' },
+          { difficulty: 2, variation: 'general' },
         ],
       },
       {
-        title: 'More Tensor Products',
+        title: 'Measurement Probabilities',
         html: `
-          <p>Let's practice the tensor product with non-basis states. The formula is the same — multiply every component of the first vector by every component of the second.</p>
+          <p>Given two independent qubits, what is the probability of measuring a specific two-qubit outcome like |01⟩? First compute the tensor product, then square the relevant amplitude.</p>
           <div class="concept-card">
-            (a, b) ⊗ (c, d) = (ac, ad, bc, bd)<br><br>
-            Works for any two 2-vectors, not just quantum states.
+            P(|ab⟩) = |amplitude of |ab⟩|²<br><br>
+            The amplitudes come from A ⊗ B = (α₀₀, α₀₁, α₁₀, α₁₁).<br>
+            P(|01⟩) = |α₀₁|²
           </div>
           <div class="worked-example">
             <div class="worked-example-label">Worked Example</div>
-            (1, 1) ⊗ (0, 1) = ?<br>
-            Step 1 — 1×0 = 0<br>
-            Step 2 — 1×1 = 1<br>
-            Step 3 — 1×0 = 0<br>
-            Step 4 — 1×1 = 1<br>
-            Answer: (0, 1, 0, 1)
+            Qubit A = (0.6, 0.8), Qubit B = (1, 0). What is P(|10⟩)?<br>
+            Step 1 — A ⊗ B = (0.6, 0, 0.8, 0)<br>
+            Step 2 — amplitude of |10⟩ is the 3rd component = 0.8<br>
+            Step 3 — P(|10⟩) = 0.8² = 0.64<br>
+            Answer: 0.64
           </div>
-          <p style="color:var(--text-muted);font-size:13px;">Enter four values separated by commas.</p>
+          <p style="color:var(--text-muted);font-size:13px;">Enter a single number (e.g. 0.64).</p>
+          <p class="hint">💡 Compute the tensor product first, then pick out the right amplitude and square it.</p>
         `,
-        problemType: 'tensor_product',
-        whyItMatters: 'Fluency with tensor products lets you quickly compute multi-qubit states in your head — essential for reading and understanding quantum circuits.',
+        problemType: 'tensor_probability',
+        whyItMatters: 'This connects tensor products to real measurement outcomes. Every quantum algorithm ends with a measurement — predicting those probabilities is the whole point.',
         progression: [
           { difficulty: 1, variation: 'basic' },
-          { difficulty: 1, variation: 'basis_states' },
-          { difficulty: 2, variation: 'with_negatives' },
-          { difficulty: 2, variation: 'with_negatives' },
-          { difficulty: 3, variation: 'with_negatives' },
+          { difficulty: 1, variation: 'basic' },
+          { difficulty: 2, variation: 'general' },
+          { difficulty: 2, variation: 'general' },
         ],
       },
       {
@@ -1297,7 +1295,6 @@ export const CHAPTERS = [
           { difficulty: 1, variation: 'forced_separable' },
           { difficulty: 2, variation: 'forced_entangled' },
           { difficulty: 2, variation: 'forced_entangled' },
-          { difficulty: 3, variation: 'forced_entangled' },
         ],
       },
     ],

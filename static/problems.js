@@ -1528,6 +1528,33 @@ function twoQubitBasis(d, variation = 'basic') {
     };
   }
 
+  if (variation === 'superposition') {
+    // Express a superposition of two basis states as a 4-vector
+    const pairs = [
+      { label: '(|00⟩ + |11⟩)/√2', vec: [0.71, 0, 0, 0.71] },
+      { label: '(|00⟩ − |11⟩)/√2', vec: [0.71, 0, 0, -0.71] },
+      { label: '(|01⟩ + |10⟩)/√2', vec: [0, 0.71, 0.71, 0] },
+      { label: '(|01⟩ − |10⟩)/√2', vec: [0, 0.71, -0.71, 0] },
+      { label: '(|00⟩ + |01⟩)/√2', vec: [0.71, 0.71, 0, 0] },
+      { label: '(|10⟩ + |11⟩)/√2', vec: [0, 0, 0.71, 0.71] },
+    ];
+    const pick = pairs[rnd(0, pairs.length - 1)];
+    return {
+      type: 'two_qubit_basis',
+      question: `Write ${pick.label} as a 4-vector (a, b, c, d):`,
+      answer: pick.vec,
+      answerDisplay: `(${pick.vec.join(', ')})`,
+      answerType: 'vector4',
+      difficulty: d,
+      steps: [
+        `Recall: |00⟩=(1,0,0,0), |01⟩=(0,1,0,0), |10⟩=(0,0,1,0), |11⟩=(0,0,0,1)`,
+        `${pick.label} adds the two basis vectors and divides by √2 ≈ 1.414`,
+        `1/√2 ≈ 0.71`,
+        `Answer: (${pick.vec.join(', ')})`,
+      ],
+    };
+  }
+
   // basic (and all other variations): original logic
   return {
     type: 'two_qubit_basis',
@@ -1559,7 +1586,7 @@ function tensorProduct(d, variation = 'basic') {
     b2 = rndNZ(-2, 2);
   } else if (d < 2) {
     // basic easy: use basis-like states or simple values
-    const simple = [[1,0],[0,1],[1,1]];
+    const simple = [[1,0],[0,1],[1,1],[1,-1],[0.71,0.71],[0.71,-0.71],[2,1],[1,2]];
     const v1 = simple[rnd(0, simple.length - 1)];
     const v2 = simple[rnd(0, simple.length - 1)];
     [a1, a2] = v1;
@@ -1592,9 +1619,9 @@ function tensorProduct(d, variation = 'basic') {
 function twoQubitState(d, variation = 'basic') {
   if (variation === 'both_general') {
     // Both qubits are general (not basis) states using two different Pythagorean triples
-    const allTriples = [[3,4,5],[4,3,5],[6,8,10],[8,6,10]];
+    const allTriples = [[3,4,5],[4,3,5],[5,12,13],[12,5,13],[6,8,10],[8,6,10]];
     const i1 = rnd(0, 1); // pick from first pair
-    const i2 = rnd(2, 3); // pick from second pair
+    const i2 = rnd(2, allTriples.length - 1); // pick from remaining
     const [ta1,tb1,tm1] = allTriples[i1];
     const [ta2,tb2,tm2] = allTriples[i2];
     const a1 = Math.round((ta1/tm1)*100)/100;
@@ -1665,20 +1692,26 @@ function separableCheck(d, variation = 'basic') {
   let state, label;
   if (isSeparable) {
     // Generate as tensor product so it's separable
-    const simple = [[1,0],[0,1]];
-    const v1 = simple[rnd(0, 1)];
-    const v2 = simple[rnd(0, 1)];
-    state = [v1[0]*v2[0], v1[0]*v2[1], v1[1]*v2[0], v1[1]*v2[1]];
+    const pool = [[1,0],[0,1],[0.71,0.71],[0.71,-0.71],[0.6,0.8],[0.8,0.6]];
+    const v1 = d < 2 ? pool[rnd(0, 1)] : pool[rnd(0, pool.length - 1)];
+    const v2 = d < 2 ? pool[rnd(0, 1)] : pool[rnd(0, pool.length - 1)];
+    state = [
+      Math.round(v1[0]*v2[0]*100)/100, Math.round(v1[0]*v2[1]*100)/100,
+      Math.round(v1[1]*v2[0]*100)/100, Math.round(v1[1]*v2[1]*100)/100,
+    ];
     label = `(${state.join(', ')})`;
   } else {
-    // Bell-like entangled states (not factorable)
-    const bellStates = [
+    // Entangled states (not factorable)
+    const entangled = [
       { v: [0.71, 0, 0, 0.71], name: '(0.71, 0, 0, 0.71)' },
       { v: [0.71, 0, 0, -0.71], name: '(0.71, 0, 0, -0.71)' },
       { v: [0, 0.71, 0.71, 0], name: '(0, 0.71, 0.71, 0)' },
       { v: [0, 0.71, -0.71, 0], name: '(0, 0.71, -0.71, 0)' },
+      { v: [0.5, 0.5, 0.5, -0.5], name: '(0.5, 0.5, 0.5, -0.5)' },
+      { v: [0.5, -0.5, 0.5, 0.5], name: '(0.5, -0.5, 0.5, 0.5)' },
+      { v: [0.5, 0.5, -0.5, 0.5], name: '(0.5, 0.5, -0.5, 0.5)' },
     ];
-    const pick = bellStates[rnd(0, bellStates.length - 1)];
+    const pick = entangled[rnd(0, entangled.length - 1)];
     state = pick.v;
     label = pick.name;
   }
@@ -1696,6 +1729,110 @@ function separableCheck(d, variation = 'basic') {
       isSeparable
         ? `${fmt(state[0]*state[3])} = ${fmt(state[1]*state[2])}, so yes — this state is separable.`
         : `${fmt(state[0]*state[3])} ≠ ${fmt(state[1]*state[2])}, so no — this state is entangled.`,
+    ],
+  };
+}
+
+function tensorComponentIdentify(d, variation = 'basic') {
+  // Reverse problem: given a tensor product result and one qubit, find the other
+  const triples = [[3,4,5],[4,3,5],[5,12,13],[12,5,13]];
+  const pick = d < 2 ? triples[rnd(0,1)] : triples[rnd(0, triples.length - 1)];
+  const a1 = Math.round((pick[0]/pick[2])*100)/100;
+  const a2 = Math.round((pick[1]/pick[2])*100)/100;
+
+  // Second qubit: basis state for basic, general for harder
+  let b1, b2;
+  if (variation === 'general' || d >= 3) {
+    const pick2 = triples[rnd(0,1)];
+    b1 = Math.round((pick2[0]/pick2[2])*100)/100;
+    b2 = Math.round((pick2[1]/pick2[2])*100)/100;
+  } else {
+    const basis = [[1,0],[0,1]];
+    [b1, b2] = basis[rnd(0,1)];
+  }
+
+  const tp = [
+    Math.round(a1*b1*100)/100, Math.round(a1*b2*100)/100,
+    Math.round(a2*b1*100)/100, Math.round(a2*b2*100)/100,
+  ];
+
+  // Randomly decide whether to reveal qubit A or qubit B
+  const revealFirst = Math.random() > 0.5;
+  if (revealFirst) {
+    return {
+      type: 'tensor_component_identify',
+      question: `The state (${tp.join(', ')}) = (${a1}, ${a2}) ⊗ (x, y).\nFind (x, y):`,
+      answer: [b1, b2],
+      answerDisplay: `(${b1}, ${b2})`,
+      answerType: 'vector',
+      difficulty: d,
+      steps: [
+        `We know: (${a1}, ${a2}) ⊗ (x, y) = (${tp.join(', ')})`,
+        `From the formula: first component = ${a1}·x = ${tp[0]}`,
+        `So x = ${tp[0]} / ${a1} = ${b1}`,
+        `Second component = ${a1}·y = ${tp[1]}`,
+        `So y = ${tp[1]} / ${a1} = ${b2}`,
+        `Answer: (${b1}, ${b2})`,
+      ],
+    };
+  } else {
+    return {
+      type: 'tensor_component_identify',
+      question: `The state (${tp.join(', ')}) = (x, y) ⊗ (${b1}, ${b2}).\nFind (x, y):`,
+      answer: [a1, a2],
+      answerDisplay: `(${a1}, ${a2})`,
+      answerType: 'vector',
+      difficulty: d,
+      steps: [
+        `We know: (x, y) ⊗ (${b1}, ${b2}) = (${tp.join(', ')})`,
+        `From the formula: first component = x·${b1} = ${tp[0]}`,
+        `So x = ${tp[0]} / ${b1} = ${a1}`,
+        `Third component = y·${b1} = ${tp[2]}`,
+        `So y = ${tp[2]} / ${b1} = ${a2}`,
+        `Answer: (${a1}, ${a2})`,
+      ],
+    };
+  }
+}
+
+function tensorProbability(d, variation = 'basic') {
+  // Compute P(|ab⟩) from a two-qubit tensor product state
+  const triples = [[3,4,5],[4,3,5],[5,12,13],[12,5,13]];
+  const pick1 = d < 2 ? triples[rnd(0,1)] : triples[rnd(0, triples.length - 1)];
+  const a1 = Math.round((pick1[0]/pick1[2])*100)/100;
+  const a2 = Math.round((pick1[1]/pick1[2])*100)/100;
+
+  let b1, b2;
+  if (variation === 'general' || d >= 2) {
+    const pick2 = triples[rnd(0,1)];
+    b1 = Math.round((pick2[0]/pick2[2])*100)/100;
+    b2 = Math.round((pick2[1]/pick2[2])*100)/100;
+  } else {
+    const basis = [[1,0],[0,1]];
+    [b1, b2] = basis[rnd(0,1)];
+  }
+
+  const tp = [
+    Math.round(a1*b1*100)/100, Math.round(a1*b2*100)/100,
+    Math.round(a2*b1*100)/100, Math.round(a2*b2*100)/100,
+  ];
+  const labels = ['00', '01', '10', '11'];
+  const idx = rnd(0, 3);
+  const amp = tp[idx];
+  const prob = Math.round(amp * amp * 100) / 100;
+
+  return {
+    type: 'tensor_probability',
+    question: `Qubit A = (${a1}, ${a2}), Qubit B = (${b1}, ${b2}).\nWhat is P(|${labels[idx]}⟩)?`,
+    answer: prob,
+    answerDisplay: `${prob}`,
+    answerType: 'numeric',
+    difficulty: d,
+    steps: [
+      `First compute A ⊗ B = (${a1}, ${a2}) ⊗ (${b1}, ${b2})`,
+      `= (${tp.join(', ')})`,
+      `The amplitude of |${labels[idx]}⟩ is ${amp}`,
+      `P(|${labels[idx]}⟩) = |${amp}|² = ${prob}`,
     ],
   };
 }
@@ -2108,6 +2245,8 @@ const GENS = {
   tensor_product:              tensorProduct,
   two_qubit_state:             twoQubitState,
   separable_check:             separableCheck,
+  tensor_component_identify:   tensorComponentIdentify,
+  tensor_probability:          tensorProbability,
   // Chapter 10: Entanglement & Bell States
   entanglement_check:          entanglementCheck,
   cnot_apply:                  cnotApply,
