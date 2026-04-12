@@ -4146,7 +4146,7 @@ function djGeneralize(d, variation = 'basic') {
       type: 'dj_generalize',
       question: 'The Deutsch-Jozsa algorithm achieves what type of speedup over classical computation?',
       choices: ['Constant', 'Polynomial', 'Exponential', 'Logarithmic'],
-      answer: 'C', display: 'C) Exponential',
+      answer: 'C', answerDisplay: 'C) Exponential',
       answerType: 'choice',
       difficulty: d,
       steps: [

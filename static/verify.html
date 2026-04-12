@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Verification: Chapters 12-20</title>
+  <style>
+    body { font-family: 'Courier New', monospace; background: #111; color: #eee; padding: 20px; font-size: 14px; }
+    h1 { color: #0f0; }
+    h2 { color: #0cf; margin-top: 24px; }
+    .pass { color: #0f0; }
+    .fail { color: #f44; }
+    .warn { color: #fa0; }
+    .summary { font-size: 18px; margin: 20px 0; padding: 12px; border: 2px solid; border-radius: 8px; }
+    .summary.ok { border-color: #0f0; }
+    .summary.bad { border-color: #f44; }
+    pre { white-space: pre-wrap; word-break: break-all; }
+    table { border-collapse: collapse; margin: 8px 0; }
+    td, th { border: 1px solid #444; padding: 4px 8px; text-align: left; }
+    th { background: #222; }
+  </style>
+</head>
+<body>
+<h1>Quantum Primer - Chapters 12-20 Verification</h1>
+<div id="output">Running...</div>
+
+<script type="module">
+import { CHAPTERS } from './chapters.js?v=13';
+import { generateProblem, checkAnswer } from './problems.js?v=13';
+import { TEMPLATES } from './templates.js?v=9';
+
+const out = document.getElementById('output');
+const results = { pass: 0, fail: 0, warnings: [], failures: [] };
+
+function log(msg, cls) {
+  const div = document.createElement('div');
+  if (cls) div.className = cls;
+  div.textContent = msg;
+  out.appendChild(div);
+}
+
+function logHeading(level, text) {
+  const el = document.createElement(level);
+  el.textContent = text;
+  out.appendChild(el);
+}
+
+function assert(condition, msg) {
+  if (condition) {
+    results.pass++;
+  } else {
+    results.fail++;
+    results.failures.push(msg);
+    log('FAIL: ' + msg, 'fail');
+  }
+}
+
+function warn(msg) {
+  results.warnings.push(msg);
+  log('WARN: ' + msg, 'warn');
+}
+
+function validateAnswerShape(answer, answerType, context) {
+  switch (answerType) {
+    case 'numeric':
+      assert(typeof answer === 'number' && !isNaN(answer), context + ': numeric answer should be a number, got ' + typeof answer);
+      break;
+    case 'vector':
+      assert(Array.isArray(answer) && answer.length === 2, context + ': vector should be [2], got ' + JSON.stringify(answer));
+      break;
+    case 'vector4':
+      assert(Array.isArray(answer) && answer.length === 4, context + ': vector4 should be [4], got ' + JSON.stringify(answer));
+      break;
+    case 'vector8':
+      assert(Array.isArray(answer) && answer.length === 8, context + ': vector8 should be [8], got ' + JSON.stringify(answer));
+      break;
+    case 'complex':
+      assert(Array.isArray(answer) && answer.length === 2, context + ': complex should be [re,im], got ' + JSON.stringify(answer));
+      break;
+    case 'matrix':
+      assert(Array.isArray(answer) && answer.length === 2 && Array.isArray(answer[0]) && answer[0].length === 2,
+        context + ': matrix should be [[2],[2]], got ' + JSON.stringify(answer));
+      break;
+    case 'yesno':
+      assert(typeof answer === 'boolean', context + ': yesno should be boolean, got ' + typeof answer);
+      break;
+    case 'gate_name':
+      assert(typeof answer === 'string' && answer.length > 0, context + ': gate_name should be non-empty string, got ' + JSON.stringify(answer));
+      break;
+    case 'choice':
+      assert(typeof answer === 'string' && /^[A-Da-d]$/.test(answer), context + ': choice should be A-D, got ' + JSON.stringify(answer));
+      break;
+    case 'angle':
+      assert(typeof answer === 'number' && !isNaN(answer), context + ': angle should be a number, got ' + typeof answer);
+      break;
+    default:
+      warn(context + ': unknown answerType "' + answerType + '"');
+  }
+}
+
+const VALID_ANSWER_TYPES = ['numeric', 'vector', 'vector4', 'vector8', 'complex', 'matrix', 'yesno', 'angle', 'gate_name', 'choice'];
+
+out.textContent = '';
+logHeading('h2', 'Phase A: Cross-Reference Check');
+
+const newChapters = CHAPTERS.filter(ch => ch.id >= 12 && ch.id <= 20);
+assert(newChapters.length === 9, 'Expected 9 new chapters, found ' + newChapters.length);
+
+const allTypes = new Set();
+for (const ch of newChapters) {
+  for (const step of ch.lessonSteps || []) {
+    allTypes.add(step.problemType);
+  }
+  for (const t of ch.problemTypes || []) {
+    allTypes.add(t);
+  }
+}
+
+log('Found ' + allTypes.size + ' unique problem types in chapters 12-20');
+
+for (const type of allTypes) {
+  assert(TEMPLATES[type] !== undefined, 'Template missing for "' + type + '"');
+  try {
+    generateProblem(12, type, 1, 'basic');
+    results.pass++;
+  } catch (e) {
+    results.fail++;
+    results.failures.push('Generator missing/broken for "' + type + '": ' + e.message);
+    log('FAIL: Generator missing/broken for "' + type + '": ' + e.message, 'fail');
+  }
+}
+
+log('Phase A complete: all ' + allTypes.size + ' types have generators and templates', 'pass');
+
+// Phase B: Generator Smoke Test
+logHeading('h2', 'Phase B: Generator Smoke Test (3 runs each)');
+let genTests = 0;
+
+for (const ch of newChapters) {
+  for (const step of ch.lessonSteps || []) {
+    for (const prog of step.progression || []) {
+      for (let run = 0; run < 3; run++) {
+        const ctx = 'Ch' + ch.id + '/' + step.problemType + '[d=' + prog.difficulty + ',v=' + prog.variation + '] run' + (run+1);
+        try {
+          const p = generateProblem(ch.id, step.problemType, prog.difficulty, prog.variation);
+          genTests++;
+
+          assert(typeof p.question === 'string' && p.question.length > 0, ctx + ': missing question');
+          assert(p.answer !== undefined && p.answer !== null, ctx + ': missing answer');
+          assert(VALID_ANSWER_TYPES.includes(p.answerType), ctx + ': invalid answerType "' + p.answerType + '"');
+          assert(typeof p.answerDisplay === 'string', ctx + ': missing answerDisplay');
+          assert(Array.isArray(p.steps) && p.steps.length > 0, ctx + ': missing/empty steps');
+
+          if (p.answerType === 'choice') {
+            assert(Array.isArray(p.choices) && p.choices.length >= 2, ctx + ': choice type missing choices array');
+          }
+
+          validateAnswerShape(p.answer, p.answerType, ctx);
+        } catch (e) {
+          results.fail++;
+          results.failures.push(ctx + ': threw ' + e.message);
+          log('FAIL: ' + ctx + ': ' + e.message, 'fail');
+        }
+      }
+    }
+  }
+}
+
+log('Phase B complete: ' + genTests + ' generator invocations tested', 'pass');
+
+// Phase C: Template Smoke Test
+logHeading('h2', 'Phase C: Template Smoke Test (3 runs each)');
+let tmplTests = 0;
+
+for (const ch of newChapters) {
+  for (const step of ch.lessonSteps || []) {
+    for (const prog of step.progression || []) {
+      for (let run = 0; run < 3; run++) {
+        const ctx = 'Ch' + ch.id + '/T:' + step.problemType + '[d=' + prog.difficulty + ',v=' + prog.variation + '] run' + (run+1);
+        try {
+          const tmpl = TEMPLATES[step.problemType];
+          const unit = tmpl.generate(prog.difficulty, prog.variation);
+          tmplTests++;
+
+          assert(typeof unit.teachingText === 'string' && unit.teachingText.length > 0, ctx + ': missing teachingText');
+          assert(unit.workedExample && typeof unit.workedExample === 'object', ctx + ': missing workedExample');
+          assert(typeof unit.workedExample.problem === 'string', ctx + ': workedExample.problem missing');
+          assert(Array.isArray(unit.workedExample.steps) && unit.workedExample.steps.length > 0, ctx + ': workedExample.steps missing');
+          assert(typeof unit.workedExample.insight === 'string', ctx + ': workedExample.insight missing');
+
+          const t = unit.tryIt;
+          assert(t && typeof t === 'object', ctx + ': missing tryIt');
+          assert(typeof t.question === 'string' && t.question.length > 0, ctx + ': tryIt.question missing');
+          assert(t.answer !== undefined && t.answer !== null, ctx + ': tryIt.answer missing');
+          assert(VALID_ANSWER_TYPES.includes(t.answerType), ctx + ': tryIt invalid answerType "' + t.answerType + '"');
+          assert(typeof t.answerDisplay === 'string', ctx + ': tryIt.answerDisplay missing');
+          assert(Array.isArray(t.steps) && t.steps.length > 0, ctx + ': tryIt.steps missing');
+          assert(typeof t.whyItMatters === 'string' && t.whyItMatters.length > 0, ctx + ': tryIt.whyItMatters missing');
+
+          if (t.answerType === 'choice') {
+            assert(Array.isArray(t.choices) && t.choices.length >= 2, ctx + ': choice type missing tryIt.choices');
+          }
+
+          validateAnswerShape(t.answer, t.answerType, ctx);
+        } catch (e) {
+          results.fail++;
+          results.failures.push(ctx + ': threw ' + e.message);
+          log('FAIL: ' + ctx + ': ' + e.message, 'fail');
+        }
+      }
+    }
+  }
+}
+
+log('Phase C complete: ' + tmplTests + ' template invocations tested', 'pass');
+
+// Phase D: Answer Self-Check
+logHeading('h2', 'Phase D: Answer Self-Check');
+let selfCheckTests = 0;
+let selfCheckFails = 0;
+
+for (const ch of newChapters) {
+  for (const step of ch.lessonSteps || []) {
+    for (const prog of step.progression || []) {
+      const ctx = 'Ch' + ch.id + '/' + step.problemType + '[d=' + prog.difficulty + ',v=' + prog.variation + ']';
+      try {
+        const p = generateProblem(ch.id, step.problemType, prog.difficulty, prog.variation);
+        selfCheckTests++;
+
+        let input;
+        if (p.answerType === 'choice') {
+          input = p.answer;
+        } else if (p.answerType === 'yesno') {
+          input = p.answer ? 'yes' : 'no';
+        } else {
+          input = p.answerDisplay;
+        }
+
+        const result = checkAnswer(input, p);
+        if (!result.correct) {
+          selfCheckFails++;
+          warn(ctx + ': answerDisplay "' + p.answerDisplay + '" failed self-check (type: ' + p.answerType + ', answer: ' + JSON.stringify(p.answer) + ')');
+        }
+      } catch (e) {
+        selfCheckFails++;
+        warn(ctx + ': self-check threw: ' + e.message);
+      }
+    }
+  }
+}
+
+log('Phase D complete: ' + selfCheckTests + ' self-checks, ' + selfCheckFails + ' issues');
+
+// Summary
+logHeading('h2', 'Summary');
+const totalTests = results.pass + results.fail;
+const summaryDiv = document.createElement('div');
+summaryDiv.className = 'summary ' + (results.fail === 0 ? 'ok' : 'bad');
+summaryDiv.textContent = 'Total assertions: ' + totalTests + ' | Passed: ' + results.pass + ' | Failed: ' + results.fail + ' | Warnings: ' + results.warnings.length;
+out.appendChild(summaryDiv);
+
+if (results.failures.length > 0) {
+  logHeading('h2', 'All Failures');
+  for (const f of results.failures) {
+    log(f, 'fail');
+  }
+}
+
+if (results.warnings.length > 0) {
+  logHeading('h2', 'All Warnings');
+  for (const w of results.warnings) {
+    log(w, 'warn');
+  }
+}
+</script>
+</body>
+</html>

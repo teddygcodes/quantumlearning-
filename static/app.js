@@ -8,7 +8,7 @@
  * the future, add DOMPurify first.
  */
 import { CHAPTERS } from './chapters.js?v=13';
-import { generateRandomProblem, generateProblem, checkAnswer } from './problems.js?v=12';
+import { generateRandomProblem, generateProblem, checkAnswer } from './problems.js?v=13';
 import { TEMPLATES } from './templates.js?v=9';
 import { CanvasManager } from './canvas.js';
 
@@ -340,7 +340,8 @@ function renderLesson(chapterId) {
     let unit = template ? template.generate(prog.difficulty, prog.variation) : null;
     let problem = unit
       ? { question: unit.tryIt.question, answer: unit.tryIt.answer, answerType: unit.tryIt.answerType,
-          answerDisplay: unit.tryIt.answerDisplay, steps: unit.tryIt.steps, chapterId }
+          answerDisplay: unit.tryIt.answerDisplay, steps: unit.tryIt.steps,
+          choices: unit.tryIt.choices, acceptAlternate: unit.tryIt.acceptAlternate, chapterId }
       : generateProblem(chapterId, step.problemType, prog.difficulty, prog.variation);
     let answered  = false;
     let retryCount = 0;
