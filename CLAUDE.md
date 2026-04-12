@@ -92,7 +92,8 @@ via `.value` only and never injected into the DOM.
 - **Phase 4:** Dynamic teaching unit system — all 87 problem types migrated to templates, static HTML fully removed from chapters.js
 - **Phase 5:** Chapters 12-20 (advanced quantum) — rotation gates, phase gates, multi-qubit gates, teleportation, Deutsch-Jozsa, Grover's, error correction, Shor's algorithm, quantum landscape. Added 4 new answer types (angle, gate_name, vector8, choice) with multiple-choice button UI.
 - **Phase 6:** Custom answer keyboard — context-aware on-screen keyboard per answer type (suppresses native keyboard via `inputmode="none"`). Yes/no converted to choice-style buttons. Keyboard in `keyboard.js`, integrated into both lesson and practice/quiz modes.
-- **Phase 7 (in progress):** Chapter Experiments — interactive games/labs that unlock after completing each chapter. Exploratory, not graded. Session 1 built: architecture + Ch 1 (Equation Balancer), Ch 2 (Vector Playground), Ch 3 (Normalization Machine).
+- **Phase 7 (in progress):** Chapter Experiments — sandbox-style interactive labs that unlock after completing each chapter. No scoring, no rounds, no pass/fail — pure exploration. Session 1 built: architecture + Ch 1 (Equation Balancer — choose operations to isolate x), Ch 2 (Vector Playground — drag/add/scale vectors with live readouts), Ch 3 (Normalization Machine — drag any vector, see unit vector + formula live).
+- **Keyboard scroll fix:** Custom keyboard now shrinks `.problem-screen` via `--kb-height` CSS var, makes `.problem-left` scrollable, and scrolls input into view above the keyboard.
 
 ## Experiment system
 Each chapter gets an interactive experiment that unlocks after chapter completion. Experiments are **sandboxes** — exploratory, no pass/fail, no scoring. They teach through free-form interaction and live feedback. `onComplete` silently marks engagement in state without navigating away; the user stays in the sandbox.
@@ -124,6 +125,17 @@ Build experiments alongside shared components. Each session adds 2-3 experiments
 | 5 | Ch 12: Bloch Sphere Painter, Ch 13: Phase Clock, Ch 14: Gate Wiring Lab | BlochSphere trail rendering, clock face component |
 | 6 | Ch 15: Teleportation Simulator, Ch 16: Oracle Detective, Ch 17: Quantum Search Race | Animation sequencer (step-by-step protocol viz) |
 | 7 | Ch 18: Noisy Quantum Lab, Ch 19: Period Finder, Ch 20: Hardware Explorer | Noise simulation, RadarChart, data viz |
+
+### Sandbox design principles
+Experiments are NOT quizzes. They must follow these rules:
+- **No scoring** — track engagement (e.g. "equations solved: N") but never grade
+- **No rounds** — no "Round 1/5", no forced progression, user explores freely
+- **No completion screen** — `onComplete` silently marks state, user stays in sandbox
+- **Live feedback** — show formulas, readouts, and visual changes in real time as user interacts
+- **Endless play** — "New Equation" / "Random Vector" buttons for infinite exploration
+
+### Keyboard scroll behavior
+When the custom keyboard appears, it sets `--kb-height` CSS var on `:root`. CSS shrinks `.problem-screen` to `height: calc(100dvh - var(--kb-height))` and makes `.problem-left` scrollable with `overflow-y: auto`. After layout reflow (double rAF), `keyboard.js` calls `input.scrollIntoView({ block: 'center', behavior: 'instant' })` to ensure the input field is visible above the keyboard.
 
 ### Experiment spec reference
 Full spec for all 20 experiments is in the file that was dragged into the original conversation (titled "Chapter Experiments — Spec"). It contains detailed game mechanics, completion criteria, and pedagogical rationale for each experiment. Refer to it when building Sessions 2-7.
