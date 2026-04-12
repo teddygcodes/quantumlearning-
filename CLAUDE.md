@@ -138,4 +138,4 @@ Experiments are NOT quizzes. They must follow these rules:
 When the custom keyboard appears, it sets `--kb-height` CSS var on `:root`. CSS shrinks `.problem-screen` to `height: calc(100dvh - var(--kb-height))` and makes `.problem-left` scrollable with `overflow-y: auto`. After layout reflow (double rAF), `keyboard.js` calls `input.scrollIntoView({ block: 'center', behavior: 'instant' })` to ensure the input field is visible above the keyboard.
 
 ### Experiment spec reference
-Full spec for all 20 experiments is in the file that was dragged into the original conversation (titled "Chapter Experiments — Spec"). It contains detailed game mechanics, completion criteria, and pedagogical rationale for each experiment. Refer to it when building Sessions 2-7.
+Full spec for all 20 experiments is in `EXPERIMENT_SPEC.md` at the project root. It contains detailed game mechanics, completion criteria, and pedagogical rationale for each experiment. Refer to it when building Sessions 2-7.
