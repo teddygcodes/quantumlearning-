@@ -19,15 +19,15 @@ A Duolingo-style quantum computing learning app built for iPad with Apple Pencil
 | 6 | Dirac Notation | Bra-ket formalism, inner products, orthogonality, probability |
 | 7 | Quantum Gates | Pauli X/Z, Hadamard, gate-then-measure, gate composition |
 | 8 | Measurement | Born rule (complex amplitudes), valid states, expected counts, missing amplitude |
-| 9 | Tensor Products | Two-qubit basis, tensor products, joint states, separability |
+| 9 | Tensor Products | Two-qubit basis, tensor products, joint states, decomposition, measurement probabilities, separability |
 | 10 | Entanglement | CNOT gate, Bell states, entangled measurement |
 | 11 | Quantum Circuits | Circuit tracing (1- and 2-qubit), output probabilities, equivalence |
 
 ## Features
 
-- **202 sub-problems** across 52 lesson steps in 11 chapters, each with a worked example before the practice problems
-- **Multi-problem progressions** — each lesson step has 3-5 problems that escalate from basic to advanced variations, building fluency before moving on
-- **42 problem generators** with structural variations (negatives, edge cases, extended operations) and deterministic grading (no AI required)
+- **192 sub-problems** across 51 lesson steps in 11 chapters
+- **Dynamic teaching units** — teaching text, worked examples, and practice problems advance together in lockstep per sub-problem. The worked example always matches the type of problem being asked, with different numbers so students can't copy answers. (Migration in progress: `complex_addition` complete, remaining types use static HTML)
+- **43 problem generators** with structural variations (negatives, edge cases, extended operations) and deterministic grading (no AI required)
 - **Anti-frustration system** — after 2 wrong attempts on the same variation, the worked solution appears inline so students don't get stuck
 - **"Why This Matters"** — every problem shows a plain-English explanation of what you just computed and why it matters in quantum computing
 - **Ask Tutor** — AI chat powered by Claude, available before, during, and after answering. Gives hints while you work (without spoiling the answer) and explains concepts after you answer
@@ -53,12 +53,24 @@ The app is fully functional without an API key. Set `ANTHROPIC_API_KEY` in `.env
   - `/api/read-answer` — OCR for handwritten answers via vision
   - `/api/review-work` — AI feedback on handwritten work via vision
 - `static/app.js` — SPA router, state machine, all screen renderers, sub-problem progression loop
-- `static/problems.js` — 42 problem generators with variation support + answer checker (numeric, vector, vector4, complex, matrix, yesno)
-- `static/chapters.js` — 11 chapters of curriculum with lesson HTML, worked examples, progression arrays, and "Why This Matters" context
+- `static/templates.js` — Dynamic teaching unit templates that generate teaching text + worked examples + practice problems together per variation
+- `static/problems.js` — 43 problem generators with variation support + answer checker (numeric, vector, vector4, complex, matrix, yesno)
+- `static/chapters.js` — 11 chapters of curriculum with progression arrays and lesson structure
 - `static/canvas.js` — Apple Pencil drawing engine with palm rejection and stroke tracking
 - `static/style.css` — Duolingo-inspired dark theme design system
 
 All grading runs in the browser. The server handles static files and the optional AI endpoints.
+
+### Dynamic Teaching Unit System
+
+Teaching content is generated programmatically from templates defined per problem type. Each template produces a complete teaching unit for a given difficulty/variation:
+
+```js
+TEMPLATES[problemType].generate(difficulty, variation)
+// Returns: { teachingText, workedExample: { problem, steps, insight }, tryIt: { question, answer, ... } }
+```
+
+The worked example and practice problem are structurally identical but use different random numbers. When a student retries, the entire left panel re-renders with fresh numbers for both the example and the problem. Steps that haven't been migrated to templates fall back to static HTML.
 
 ### Lesson Progression System
 
