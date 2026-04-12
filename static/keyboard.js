@@ -144,6 +144,16 @@ export function show(input, answerType, submitFn) {
 
   kbElement.classList.add('kb-visible');
   document.body.classList.add('kb-active');
+
+  // Set keyboard height CSS var and scroll input into view above the keyboard
+  requestAnimationFrame(() => {
+    const kbH = kbElement.offsetHeight || 300;
+    document.documentElement.style.setProperty('--kb-height', kbH + 'px');
+    // After layout reflow from height change, scroll input into view
+    requestAnimationFrame(() => {
+      input.scrollIntoView({ block: 'center', behavior: 'instant' });
+    });
+  });
 }
 
 export function hide() {
@@ -151,6 +161,7 @@ export function hide() {
     kbElement.classList.remove('kb-visible');
   }
   document.body.classList.remove('kb-active');
+  document.documentElement.style.removeProperty('--kb-height');
   if (activeInput) {
     activeInput.removeAttribute('readonly');
   }

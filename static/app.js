@@ -11,7 +11,8 @@ import { CHAPTERS } from './chapters.js?v=13';
 import { generateRandomProblem, generateProblem, checkAnswer } from './problems.js?v=13';
 import { TEMPLATES } from './templates.js?v=9';
 import { CanvasManager } from './canvas.js';
-import * as KB from './keyboard.js?v=1';
+import * as KB from './keyboard.js?v=2';
+import { EXPERIMENTS } from './experiments.js?v=2';
 
 // ── State ──────────────────────────────────────────────────────────────────
 
@@ -19,7 +20,7 @@ const DEFAULT_STATE = {
   chapters: Object.fromEntries(
     CHAPTERS.map(ch => [
       ch.id,
-      { unlocked: ch.id === 1, completed: false, quizScore: null, bestScore: null, practiceCount: 0, lessonProgress: null },
+      { unlocked: ch.id === 1, completed: false, quizScore: null, bestScore: null, practiceCount: 0, lessonProgress: null, experimentCompleted: false, experimentStats: null },
     ])
   ),
   tutorMode: false,
@@ -31,7 +32,9 @@ function loadState() {
     const merged = {
       ...DEFAULT_STATE,
       ...saved,
-      chapters: { ...DEFAULT_STATE.chapters, ...saved.chapters },
+      chapters: Object.fromEntries(
+        CHAPTERS.map(ch => [ch.id, { ...DEFAULT_STATE.chapters[ch.id], ...(saved.chapters?.[ch.id] || {}) }])
+      ),
     };
     // Auto-unlock: if chapter N is completed, chapter N+1 should be unlocked.
     // Handles new chapters added after the user already passed earlier ones.
@@ -58,16 +61,24 @@ function setContent(html) { root.innerHTML = html; }
 
 function navigate(path) { KB.hide(); window.location.hash = '#' + path; }
 
+// ── Experiment cleanup ─────────────────────────────────────────────────────
+
+let experimentCleanup = null;
+
 // ── Router ─────────────────────────────────────────────────────────────────
 
 function route() {
+  // Clean up active experiment on navigation
+  if (experimentCleanup) { experimentCleanup(); experimentCleanup = null; }
+
   const hash  = window.location.hash.slice(1) || '/';
   const parts = hash.split('/').filter(Boolean);
   switch (parts[0] || '') {
-    case 'lesson':   renderLesson(+parts[1]);       break;
-    case 'practice': renderProblemScreen(+parts[1], false); break;
-    case 'quiz':     renderProblemScreen(+parts[1], true);  break;
-    default:         renderHome();
+    case 'lesson':     renderLesson(+parts[1]);       break;
+    case 'practice':   renderProblemScreen(+parts[1], false); break;
+    case 'quiz':       renderProblemScreen(+parts[1], true);  break;
+    case 'experiment': renderExperiment(+parts[1]);   break;
+    default:           renderHome();
   }
 }
 
@@ -105,6 +116,7 @@ function renderHome() {
     const badge = cs.bestScore !== null
       ? `<div class="node-badge">${cs.bestScore}/${ch.quizCount}</div>`
       : '';
+    const expBadge = cs.experimentCompleted ? '<div class="node-exp-badge">🔬</div>' : '';
 
     // Progress ring for unlocked (show practice progress)
     const progressPct = cs.completed ? 100 : cs.unlocked ? Math.min((cs.practiceCount || 0) / 10 * 100, 95) : 0;
@@ -140,6 +152,7 @@ function renderHome() {
             <span class="node-icon">${icon}</span>
           </div>
           ${badge}
+          ${expBadge}
         </div>
         <div class="node-info ${cls}">
           <span class="node-chapter-num">Chapter ${ch.id}</span>
@@ -285,6 +298,11 @@ function showChapterDetail(ch, cs) {
               ${!cs.unlocked && !cs.completed ? 'disabled style="opacity:0.4;cursor:default;"' : ''}>
         🎯 Take Quiz (${ch.quizPass}/${ch.quizCount} to pass)
       </button>
+      ${cs.completed && EXPERIMENTS[ch.id] ? `
+      <button id="modal-experiment" class="btn btn-full"
+              style="background:var(--ch${ch.id});border-bottom:4px solid var(--ch${ch.id}-dk);color:#fff;">
+        🔬 ${cs.experimentCompleted ? 'Replay' : 'Start'} Experiment
+      </button>` : ''}
     </div>
   `;
 
@@ -294,6 +312,10 @@ function showChapterDetail(ch, cs) {
   const quizBtn = modal.querySelector('#modal-quiz');
   if (cs.unlocked || cs.completed) {
     quizBtn.addEventListener('click', () => { closeModal(); navigate('/quiz/' + ch.id); });
+  }
+  const expBtn = modal.querySelector('#modal-experiment');
+  if (expBtn) {
+    expBtn.addEventListener('click', () => { closeModal(); navigate('/experiment/' + ch.id); });
   }
 
   requestAnimationFrame(() => {
@@ -309,6 +331,84 @@ function closeModal() {
 // Expose to inline onclick handlers (ES module functions aren't on window by default)
 window.navigate   = navigate;
 window.closeModal = closeModal;
+
+// ── Experiment screen ──────────────────────────────────────────────────────
+
+function renderExperiment(chapterId) {
+  if (experimentCleanup) { experimentCleanup(); experimentCleanup = null; }
+
+  const ch = CHAPTERS.find(c => c.id === chapterId);
+  const exp = EXPERIMENTS[chapterId];
+  if (!ch || !exp) { navigate('/'); return; }
+
+  const cs = state.chapters[chapterId];
+  if (!cs || !cs.completed) { navigate('/'); return; }
+
+  setContent(`
+    <div class="experiment-screen" data-ch="${chapterId}"
+         style="--ch-color:var(--ch${chapterId});--ch-dk:var(--ch${chapterId}-dk);">
+      <div class="experiment-topbar">
+        <button class="btn btn-ghost" style="padding:8px 16px;" onclick="navigate('/');">✕</button>
+        <div style="flex:1;text-align:center;">
+          <div style="font-size:11px;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:1px;">
+            Experiment
+          </div>
+          <div style="font-size:16px;font-weight:800;color:var(--ch${chapterId});">
+            ${exp.title}
+          </div>
+        </div>
+        <div style="width:52px;"></div>
+      </div>
+      <div class="experiment-body" id="experiment-container"></div>
+    </div>
+  `);
+
+  requestAnimationFrame(() => {
+    const container = document.getElementById('experiment-container');
+    if (!container) return;
+
+    experimentCleanup = exp.mount(container, {
+      chapterColor: `var(--ch${chapterId})`,
+      chapterColorDk: `var(--ch${chapterId}-dk)`,
+      onComplete(stats) {
+        if (!state.chapters[chapterId].experimentCompleted) {
+          state.chapters[chapterId].experimentCompleted = true;
+          state.chapters[chapterId].experimentStats = {
+            ...stats,
+            completedAt: new Date().toISOString().slice(0, 10),
+          };
+          saveState();
+        }
+      },
+      getChapterState() { return state.chapters[chapterId]; },
+    });
+  });
+}
+
+function showExperimentComplete(ch, stats) {
+  if (experimentCleanup) { experimentCleanup(); experimentCleanup = null; }
+
+  setContent(`
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+                min-height:100dvh;padding:32px 24px;text-align:center;">
+      <div style="font-size:72px;margin-bottom:16px;">🔬</div>
+      <div style="font-size:28px;font-weight:800;color:var(--ch${ch.id});margin-bottom:8px;">
+        Experiment Complete!
+      </div>
+      <div style="font-size:18px;color:var(--text-muted);margin-bottom:32px;">
+        Score: <strong style="color:var(--gold);">${stats.score}</strong> / ${stats.maxScore}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;width:100%;max-width:340px;">
+        <button class="btn btn-green btn-full" onclick="navigate('/');">Continue</button>
+        <button class="btn btn-ghost btn-full" onclick="navigate('/experiment/${ch.id}');">
+          Play Again
+        </button>
+      </div>
+    </div>
+  `);
+
+  showConfetti();
+}
 
 // ── Lesson screen (multi-step: teach → practice → next section) ───────────
 
