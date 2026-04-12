@@ -140,6 +140,8 @@ Drag any vector and watch the normalization formula compute in real time, with t
 **Discovery prompt** (optional):
 - "Multiply 1+i by itself repeatedly. What path does it trace?" → Spiral (rotation + growing magnitude)
 
+**Built in Session 2** ✅
+
 ---
 
 ### Chapter 5: Matrices
@@ -164,6 +166,8 @@ A 2D grid with a shape (letter F) that the student transforms by applying matric
 **Discovery prompts** (optional):
 - "Apply Rotate 90° four times. What happens?" → Returns to original (rotation by 360°)
 - "Apply two transforms in different orders. Same result?" → Usually not (AB ≠ BA)
+
+**Built in Session 2** ✅
 
 ---
 
@@ -561,7 +565,7 @@ Run circuits with and without error correction. A noise slider lets you feel how
 | Session | Experiments | Key shared component |
 |---------|-------------|----------------------|
 | 1 ✅ | Ch 1-3 (Equation Balancer, Vector Playground, Normalization Machine) | GridCanvas, PhysicsBeam |
-| 2 | Ch 4-5 (Complex Number Explorer, Transformation Sandbox) | Extend GridCanvas for complex plane |
+| 2 ✅ | Ch 4-5 (Complex Multiplier, Transformation Sandbox) | Extended GridCanvas: drawArc, drawPolygon, drawAxisLabels |
 | 3 | Ch 6-8 (State Space Navigator, Gate Laboratory, Quantum Coin Toss Lab) | BlochSphere renderer, HistogramRenderer |
 | 4 | Ch 9-11 (Qubit Combiner, Entanglement Lab, Circuit Puzzler) | CircuitSimulator |
 | 5 | Ch 12-14 (Bloch Sphere Painter, Phase Clock, Gate Wiring Lab) | BlochSphere trails, clock face |
