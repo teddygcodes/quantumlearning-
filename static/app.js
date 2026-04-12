@@ -7,18 +7,18 @@
  * never injected into the DOM. If user-generated content is ever rendered in
  * the future, add DOMPurify first.
  */
-import { CHAPTERS } from './chapters.js?v=6';
-import { generateRandomProblem, generateProblem, checkAnswer } from './problems.js?v=5';
-import { TEMPLATES } from './templates.js?v=2';
+import { CHAPTERS } from './chapters.js?v=13';
+import { generateRandomProblem, generateProblem, checkAnswer } from './problems.js?v=12';
+import { TEMPLATES } from './templates.js?v=9';
 import { CanvasManager } from './canvas.js';
 
 // ── State ──────────────────────────────────────────────────────────────────
 
 const DEFAULT_STATE = {
   chapters: Object.fromEntries(
-    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(id => [
-      id,
-      { unlocked: id === 1, completed: false, quizScore: null, bestScore: null, practiceCount: 0, lessonProgress: null },
+    CHAPTERS.map(ch => [
+      ch.id,
+      { unlocked: ch.id === 1, completed: false, quizScore: null, bestScore: null, practiceCount: 0, lessonProgress: null },
     ])
   ),
   tutorMode: false,
@@ -34,7 +34,7 @@ function loadState() {
     };
     // Auto-unlock: if chapter N is completed, chapter N+1 should be unlocked.
     // Handles new chapters added after the user already passed earlier ones.
-    for (let id = 1; id <= 11; id++) {
+    for (let id = 1; id < CHAPTERS.length; id++) {
       if (merged.chapters[id]?.completed && merged.chapters[id + 1]) {
         merged.chapters[id + 1].unlocked = true;
       }
@@ -346,11 +346,16 @@ function renderLesson(chapterId) {
     let retryCount = 0;
 
     const hints = {
-      vector:  'Format: x, y &nbsp; (e.g. 3, 4)',
-      complex: 'Format: a + bi &nbsp; (e.g. 3 + 4i)',
-      matrix:  'Format: a b; c d &nbsp; (e.g. 1 2; 3 4)',
-      yesno:   'Type yes or no',
-      numeric: '',
+      vector:    'Format: x, y &nbsp; (e.g. 3, 4)',
+      vector4:   'Format: a, b, c, d &nbsp; (e.g. 0.71, 0, 0, 0.71)',
+      vector8:   'Format: 8 values &nbsp; (e.g. 1, 0, 0, 0, 0, 0, 0, 0)',
+      complex:   'Format: a + bi &nbsp; (e.g. 3 + 4i)',
+      matrix:    'Format: a b; c d &nbsp; (e.g. 1 2; 3 4)',
+      yesno:     'Type yes or no',
+      angle:     'Format: pi/4 or 3pi/2 &nbsp; (use pi for π)',
+      gate_name: 'Type the gate name &nbsp; (e.g. X, Z, CNOT, S)',
+      choice:    '',
+      numeric:   '',
     };
 
     // Concept card content: dynamic from template or static from step.html
@@ -410,12 +415,23 @@ function renderLesson(chapterId) {
             <div class="problem-text" style="font-size:20px;margin-bottom:14px;" id="lesson-q">
               ${problem.question}
             </div>
-            <input class="answer-input" id="lesson-ans" type="text"
-                   placeholder="Your answer…"
-                   autocomplete="off" autocorrect="off" spellcheck="false"
-                   enterkeyhint="done"
-                   onkeydown="if(event.key==='Enter'){window.__lessonSubmit();this.blur();}" />
-            <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">${hints[problem.answerType] || ''}</div>
+            ${problem.answerType === 'choice' && problem.choices ? `
+              <div id="lesson-choices" class="choice-grid">
+                ${problem.choices.map((c, i) => `
+                  <button class="choice-btn" data-choice="${String.fromCharCode(65+i)}" onclick="window.__selectChoice(this)">
+                    <span class="choice-letter">${String.fromCharCode(65+i)}</span> ${c}
+                  </button>
+                `).join('')}
+              </div>
+              <input type="hidden" id="lesson-ans" value="" />
+            ` : `
+              <input class="answer-input" id="lesson-ans" type="text"
+                     placeholder="Your answer…"
+                     autocomplete="off" autocorrect="off" spellcheck="false"
+                     enterkeyhint="done"
+                     onkeydown="if(event.key==='Enter'){window.__lessonSubmit();this.blur();}" />
+              <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">${hints[problem.answerType] || ''}</div>
+            `}
           </div>
 
           <button class="btn btn-green btn-full" id="lesson-check" onclick="window.__lessonSubmit();">
@@ -488,6 +504,16 @@ function renderLesson(chapterId) {
       canvas = new CanvasManager(document.getElementById('work-canvas'));
       // Don't auto-focus input — let the student tap when ready (avoids keyboard popping up on iPad)
     });
+
+    // ── Choice selection (multiple-choice) ─────────────────────
+    window.__selectChoice = (btn) => {
+      if (answered) return;
+      document.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      const inp = document.getElementById('lesson-ans');
+      if (inp) inp.value = btn.dataset.choice;
+      window.__lessonSubmit();
+    };
 
     // ── Answer handling ──────────────────────────────────────────
 
@@ -768,6 +794,12 @@ function renderProblemScreen(chapterId, isQuiz) {
                    onkeydown="if(event.key==='Enter'){window.__submit();this.blur();}" />
             <div style="font-size:11px;color:var(--text-muted);margin-top:6px;" id="hint-text"></div>
           </div>
+
+          <!-- Multiple choice (hidden by default, shown for choice-type problems) -->
+          <div id="practice-choice-wrap" style="display:none;">
+            <div id="practice-choices" class="choice-grid"></div>
+            <input type="hidden" id="practice-choice-input" value="" />
+          </div>
         </div>
 
         <button class="btn btn-green btn-full" id="btn-submit" onclick="window.__submit();">
@@ -887,13 +919,65 @@ function renderProblemScreen(chapterId, isQuiz) {
     if (textEl) textEl.textContent = problem.question;
     if (hintEl) {
       const hints = {
-        vector:  'Format: x, y  (e.g. 3, 4)',
-        complex: 'Format: a + bi  (e.g. 3 + 4i)',
-        matrix:  'Format: a b; c d  (e.g. 1 2; 3 4)',
-        yesno:   'Type yes or no',
-        numeric: '',
+        vector:    'Format: x, y  (e.g. 3, 4)',
+        vector4:   'Format: a, b, c, d  (e.g. 0.71, 0, 0, 0.71)',
+        vector8:   'Format: 8 values  (e.g. 1, 0, 0, 0, 0, 0, 0, 0)',
+        complex:   'Format: a + bi  (e.g. 3 + 4i)',
+        matrix:    'Format: a b; c d  (e.g. 1 2; 3 4)',
+        yesno:     'Type yes or no',
+        angle:     'Format: pi/4 or 3pi/2  (use pi for π)',
+        gate_name: 'Type the gate name  (e.g. X, Z, CNOT, S)',
+        choice:    '',
+        numeric:   '',
       };
       hintEl.textContent = hints[problem.answerType] || '';
+    }
+
+    // Handle choice-type problems in practice/quiz
+    // Note: innerHTML used only with our own generated content (choice text from problem generators), never user input
+    const choiceWrap = document.getElementById('practice-choice-wrap');
+    const submitBtn = document.getElementById('btn-submit');
+    if (problem.answerType === 'choice' && problem.choices) {
+      if (choiceWrap) {
+        choiceWrap.style.display = '';
+        const grid = document.getElementById('practice-choices');
+        if (grid) {
+          grid.innerHTML = problem.choices.map((c, i) => `
+            <button class="choice-btn" data-choice="${String.fromCharCode(65+i)}" onclick="window.__selectPracticeChoice(this)">
+              <span class="choice-letter">${String.fromCharCode(65+i)}</span> ${c}
+            </button>
+          `).join('');
+        }
+        const ci = document.getElementById('practice-choice-input');
+        if (ci) ci.value = '';
+      }
+      const cw = document.getElementById('answer-canvas-wrap');
+      if (cw) cw.style.display = 'none';
+      const ctools = cw?.nextElementSibling;
+      if (ctools) ctools.style.display = 'none';
+      const tw = document.getElementById('answer-text-wrap');
+      if (tw) tw.style.display = 'none';
+      const toggle = document.getElementById('btn-type-toggle');
+      if (toggle) toggle.style.display = 'none';
+      if (submitBtn) submitBtn.style.display = 'none';
+    } else {
+      if (choiceWrap) choiceWrap.style.display = 'none';
+      const toggle = document.getElementById('btn-type-toggle');
+      if (toggle) toggle.style.display = '';
+      if (submitBtn) submitBtn.style.display = '';
+      const cw = document.getElementById('answer-canvas-wrap');
+      const tw = document.getElementById('answer-text-wrap');
+      if (answerMode === 'draw') {
+        if (cw) cw.style.display = '';
+        const ctools = cw?.nextElementSibling;
+        if (ctools) ctools.style.display = 'flex';
+        if (tw) tw.style.display = 'none';
+      } else {
+        if (cw) cw.style.display = 'none';
+        const ctools = cw?.nextElementSibling;
+        if (ctools) ctools.style.display = 'none';
+        if (tw) tw.style.display = '';
+      }
     }
 
     // Clear answer area
@@ -930,12 +1014,27 @@ function renderProblemScreen(chapterId, isQuiz) {
     if (submit) submit.style.display = '';
   }
 
+  // Choice selection for practice/quiz
+  window.__selectPracticeChoice = (btn) => {
+    if (answered) return;
+    document.querySelectorAll('#practice-choices .choice-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    const ci = document.getElementById('practice-choice-input');
+    if (ci) ci.value = btn.dataset.choice;
+    handleSubmit();
+  };
+
   async function handleSubmit() {
     if (answered) return;
 
     let value = '';
 
-    if (answerMode === 'draw') {
+    // Check for choice-type answer first
+    if (problem.answerType === 'choice') {
+      const ci = document.getElementById('practice-choice-input');
+      value = ci?.value?.trim() || '';
+      if (!value) return;
+    } else if (answerMode === 'draw') {
       if (!answerCanvas || answerCanvas.isBlank()) {
         const rt = document.getElementById('recognized-text');
         if (rt) { rt.textContent = 'Write your answer first!'; rt.style.color = 'var(--red)'; }

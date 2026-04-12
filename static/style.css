@@ -34,6 +34,15 @@
   --ch9:  #4ECDC4;  --ch9-dk:  #3EA8A0;
   --ch10: #A855F7;  --ch10-dk: #8644C6;
   --ch11: #F97316;  --ch11-dk: #C75C12;
+  --ch12: #14B8A6;  --ch12-dk: #0F9488;
+  --ch13: #6366F1;  --ch13-dk: #4F52C1;
+  --ch14: #F43F5E;  --ch14-dk: #C3324B;
+  --ch15: #F59E0B;  --ch15-dk: #C47E09;
+  --ch16: #06B6D4;  --ch16-dk: #0592A9;
+  --ch17: #84CC16;  --ch17-dk: #6AA312;
+  --ch18: #D946EF;  --ch18-dk: #AE38BF;
+  --ch19: #0EA5E9;  --ch19-dk: #0B84BA;
+  --ch20: #10B981;  --ch20-dk: #0D9467;
 
   --radius:    12px;
   --radius-lg: 16px;
@@ -53,6 +62,15 @@
 [data-ch="9"] { --ch-color: var(--ch9); --ch-color-dk: var(--ch9-dk); }
 [data-ch="10"] { --ch-color: var(--ch10); --ch-color-dk: var(--ch10-dk); }
 [data-ch="11"] { --ch-color: var(--ch11); --ch-color-dk: var(--ch11-dk); }
+[data-ch="12"] { --ch-color: var(--ch12); --ch-color-dk: var(--ch12-dk); }
+[data-ch="13"] { --ch-color: var(--ch13); --ch-color-dk: var(--ch13-dk); }
+[data-ch="14"] { --ch-color: var(--ch14); --ch-color-dk: var(--ch14-dk); }
+[data-ch="15"] { --ch-color: var(--ch15); --ch-color-dk: var(--ch15-dk); }
+[data-ch="16"] { --ch-color: var(--ch16); --ch-color-dk: var(--ch16-dk); }
+[data-ch="17"] { --ch-color: var(--ch17); --ch-color-dk: var(--ch17-dk); }
+[data-ch="18"] { --ch-color: var(--ch18); --ch-color-dk: var(--ch18-dk); }
+[data-ch="19"] { --ch-color: var(--ch19); --ch-color-dk: var(--ch19-dk); }
+[data-ch="20"] { --ch-color: var(--ch20); --ch-color-dk: var(--ch20-dk); }
 
 /* ── Reset & Base ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1130,6 +1148,63 @@ code { font-family: var(--mono); font-size: 14px; background: var(--border); pad
 @keyframes dotPulse {
   0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ch-color, var(--blue)) 40%, transparent); }
   50%      { box-shadow: 0 0 0 4px color-mix(in srgb, var(--ch-color, var(--blue)) 15%, transparent); }
+}
+
+/* ── Multiple Choice Buttons ── */
+.choice-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.choice-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+}
+.choice-btn:hover {
+  border-color: var(--ch-color, var(--blue));
+  background: color-mix(in srgb, var(--ch-color, var(--blue)) 10%, var(--surface));
+}
+.choice-btn.selected {
+  border-color: var(--ch-color, var(--blue));
+  background: color-mix(in srgb, var(--ch-color, var(--blue)) 15%, var(--surface));
+}
+.choice-btn.correct-choice {
+  border-color: var(--green);
+  background: color-mix(in srgb, var(--green) 15%, var(--surface));
+}
+.choice-btn.wrong-choice {
+  border-color: var(--red);
+  background: color-mix(in srgb, var(--red) 10%, var(--surface));
+  opacity: 0.7;
+}
+.choice-letter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--border);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.choice-btn.selected .choice-letter {
+  background: var(--ch-color, var(--blue));
 }
 
 /* ── Worked Solution Inline (anti-frustration) ── */

@@ -5913,4 +5913,6158 @@ circuit_equivalence: {
   },
 },
 
+// ── Chapter 12: Rotation Gates ───────────────────────────────────────────────
+
+bloch_identification: {
+  generate(difficulty, variation) {
+    const items = {
+      ket0: {
+        q: 'Where is |0⟩ on the Bloch sphere?',
+        choices: ['North pole', 'South pole', 'On the equator (positive x)', 'On the equator (negative x)'],
+        answer: 'A', display: 'A) North pole',
+        steps: ['|0⟩ corresponds to θ=0 on the Bloch sphere, which is the north pole.'],
+      },
+      ket1: {
+        q: 'Where is |1⟩ on the Bloch sphere?',
+        choices: ['North pole', 'South pole', 'On the equator (positive x)', 'On the equator (negative x)'],
+        answer: 'B', display: 'B) South pole',
+        steps: ['|0⟩ is the north pole.', '|1⟩ is the opposite — the south pole.'],
+      },
+      plus: {
+        q: 'Where is |+⟩ = (|0⟩ + |1⟩)/√2 on the Bloch sphere?',
+        choices: ['North pole', 'South pole', 'On the equator (positive x)', 'On the equator (negative x)'],
+        answer: 'C', display: 'C) On the equator (positive x)',
+        steps: ['|+⟩ is an equal superposition with no relative phase — the +x direction on the equator.'],
+      },
+      minus: {
+        q: 'Where is |−⟩ = (|0⟩ − |1⟩)/√2 on the Bloch sphere?',
+        choices: ['North pole', 'South pole', 'On the equator (positive x)', 'On the equator (negative x)'],
+        answer: 'D', display: 'D) On the equator (negative x)',
+        steps: ['|−⟩ has a π phase difference — the −x direction on the equator.'],
+      },
+      plusI: {
+        q: 'Where is (|0⟩ + i|1⟩)/√2 on the Bloch sphere?',
+        choices: ['North pole', 'On the equator (positive x)', 'On the equator (positive y)', 'On the equator (negative y)'],
+        answer: 'C', display: 'C) On the equator (positive y)',
+        steps: ['This state has a relative phase of π/2 (the factor i).', 'That corresponds to the +y direction on the equator.'],
+      },
+      minusI: {
+        q: 'Where is (|0⟩ − i|1⟩)/√2 on the Bloch sphere?',
+        choices: ['North pole', 'On the equator (positive x)', 'On the equator (positive y)', 'On the equator (negative y)'],
+        answer: 'D', display: 'D) On the equator (negative y)',
+        steps: ['This state has a relative phase of −π/2 (the factor −i).', 'That corresponds to the −y direction on the equator.'],
+      },
+    };
+
+    function pickFrom(pool) {
+      return pool[randInt(0, pool.length - 1)];
+    }
+
+    let wPool, pPool;
+    if (variation === 'basis_states') { wPool = pPool = ['ket0', 'ket1']; }
+    else if (variation === 'superposition') { wPool = pPool = ['plus', 'minus']; }
+    else if (variation === 'phase_state') { wPool = pPool = ['plusI', 'minusI']; }
+    else { wPool = pPool = ['ket0', 'ket1', 'plus', 'minus']; }
+
+    const wKey = pickFrom(wPool);
+    let pKey;
+    do { pKey = pickFrom(pPool); } while (pKey === wKey && pPool.length > 1);
+    const w = items[wKey];
+    const p = items[pKey];
+
+    const teachingMap = {
+      basic:
+        `The Bloch sphere is a geometric representation of a single qubit. Every ` +
+        `single-qubit state can be mapped to a point on or inside this sphere. ` +
+        `|0⟩ sits at the north pole, |1⟩ at the south pole. Equal superpositions ` +
+        `like |+⟩ and |−⟩ live on the equator. Rotation gates correspond to ` +
+        `rotations around different axes of the Bloch sphere.`,
+      basis_states:
+        `On the Bloch sphere, the computational basis states map to the poles: ` +
+        `|0⟩ is the north pole (θ=0) and |1⟩ is the south pole (θ=π). ` +
+        `The polar angle θ controls the probability split between |0⟩ and |1⟩, ` +
+        `while the azimuthal angle φ controls the relative phase.`,
+      superposition:
+        `Equal superposition states live on the equator of the Bloch sphere. ` +
+        `|+⟩ = (|0⟩ + |1⟩)/√2 is at the +x direction, and ` +
+        `|−⟩ = (|0⟩ − |1⟩)/√2 is at the −x direction. The sign between ` +
+        `the components determines which side of the equator the state sits on. ` +
+        `The Hadamard gate rotates between the poles and the equator.`,
+      phase_state:
+        `States with imaginary relative phases sit on the y-axis of the equator. ` +
+        `(|0⟩ + i|1⟩)/√2 is at +y, and (|0⟩ − i|1⟩)/√2 is at −y. ` +
+        `The S gate rotates states from the x-axis to the y-axis of the equator — ` +
+        `it adds a phase of π/2 to the |1⟩ component.`,
+    };
+
+    return {
+      teachingText: teachingMap[variation] || teachingMap['basic'],
+      workedExample: {
+        problem: w.q,
+        steps: [...w.steps, `Answer: ${w.display}`],
+        insight: `The Bloch sphere maps every possible qubit state to a point on a sphere — poles for basis states, equator for superpositions.`,
+      },
+      tryIt: {
+        question: p.q,
+        choices: p.choices,
+        answer: p.answer,
+        answerType: 'choice',
+        answerDisplay: p.display,
+        steps: p.steps,
+        whyItMatters:
+          `The Bloch sphere lets you visualize rotation gates as physical rotations. ` +
+          `Rx rotates around x, Ry around y, Rz around z. This geometric picture ` +
+          `makes it much easier to understand what quantum gates actually do to a qubit.`,
+      },
+    };
+  },
+},
+
+rz_apply: {
+  generate(difficulty, variation) {
+    const ANGLE_DATA = [
+      { label: 'π/6', halfLabel: 'π/12', cosH: 0.97, sinH: 0.26 },
+      { label: 'π/4', halfLabel: 'π/8',  cosH: 0.92, sinH: 0.38 },
+      { label: 'π/3', halfLabel: 'π/6',  cosH: 0.87, sinH: 0.5  },
+      { label: 'π/2', halfLabel: 'π/4',  cosH: 0.71, sinH: 0.71 },
+      { label: 'π',   halfLabel: 'π/2',  cosH: 0,    sinH: 1    },
+    ];
+    const r2v = (n) => Math.round(n * 100) / 100;
+
+    function makeNums(v) {
+      const a = (v === 'simple_angle')
+        ? ANGLE_DATA[randInt(3, 4)]
+        : ANGLE_DATA[randInt(0, ANGLE_DATA.length - 1)];
+      const useKet1 = Math.random() > 0.5;
+      return { a, useKet1 };
+    }
+
+    function compute(a, useKet1) {
+      const re = r2v(a.cosH);
+      const im = useKet1 ? r2v(a.sinH) : r2v(-a.sinH);
+      return [re, im];
+    }
+
+    switch (variation) {
+
+      case 'basic':
+      case 'simple_angle': {
+        const w = makeNums(variation);
+        const [wre, wim] = compute(w.a, w.useKet1);
+        const wState = w.useKet1 ? '|1⟩' : '|0⟩';
+        const wSign = w.useKet1 ? '+' : '−';
+        const wComp = w.useKet1 ? 'second' : 'first';
+
+        let p;
+        do { p = makeNums(variation); } while (p.a.label === w.a.label && p.useKet1 === w.useKet1);
+        const [pre, pim] = compute(p.a, p.useKet1);
+        const pState = p.useKet1 ? '|1⟩' : '|0⟩';
+        const pSign = p.useKet1 ? '+' : '−';
+        const pComp = p.useKet1 ? 'second' : 'first';
+
+        const teachingMap = {
+          basic:
+            `The Rz gate rotates a qubit around the z-axis of the Bloch sphere. ` +
+            `Its matrix is Rz(θ) = [[e^(−iθ/2), 0], [0, e^(iθ/2)]]. ` +
+            `Applied to |0⟩, the result is (e^(−iθ/2), 0) — only the first ` +
+            `component changes, picking up a phase. Applied to |1⟩, the result ` +
+            `is (0, e^(iθ/2)). Use Euler's formula: e^(iφ) = cos(φ) + i·sin(φ).`,
+          simple_angle:
+            `Let's use Rz with simple angles. For Rz(π), we need e^(−iπ/2) and ` +
+            `e^(iπ/2). Since e^(iπ/2) = cos(π/2) + i·sin(π/2) = 0 + i = i, ` +
+            `we get Rz(π)|0⟩ = (−i, 0) and Rz(π)|1⟩ = (0, i). ` +
+            `For Rz(π/2): e^(iπ/4) = cos(π/4) + i·sin(π/4) = 0.71 + 0.71i.`,
+        };
+
+        return {
+          teachingText: teachingMap[variation] || teachingMap['basic'],
+          workedExample: {
+            problem: `Apply Rz(${w.a.label}) to ${wState}. What is the ${wComp} component?`,
+            steps: [
+              `Rz(${w.a.label})${wState}: ${wComp} component = e^(${wSign}i${w.a.halfLabel})`,
+              `= cos(${w.a.halfLabel}) ${wSign} i·sin(${w.a.halfLabel})`,
+              `= ${fmt(w.a.cosH)} ${wSign} ${fmt(w.a.sinH)}i`,
+              `= ${fmtComplex(wre, wim)}`,
+            ],
+            insight: `Rz adds a phase to each component but never changes measurement probabilities — it's a pure phase gate.`,
+          },
+          tryIt: {
+            question: `Apply Rz(${p.a.label}) to ${pState}. What is the ${pComp} component?\nRz(θ) = [[e^(−iθ/2), 0], [0, e^(iθ/2)]]`,
+            answer: [pre, pim],
+            answerType: 'complex',
+            answerDisplay: fmtComplex(pre, pim),
+            steps: [
+              `${pComp} component = e^(${pSign}i${p.a.halfLabel})`,
+              `= cos(${p.a.halfLabel}) ${pSign} i·sin(${p.a.halfLabel})`,
+              `= ${fmtComplex(pre, pim)}`,
+            ],
+            whyItMatters:
+              `Rz is the most common rotation gate in real quantum computers. ` +
+              `Many hardware platforms implement it as a "virtual" gate — just ` +
+              `by adjusting the phase of subsequent microwave pulses, making it ` +
+              `essentially free in terms of circuit depth.`,
+          },
+        };
+      }
+
+      case 'superposition': {
+        const wa = ANGLE_DATA[randInt(0, ANGLE_DATA.length - 1)];
+        const wre = r2v(0.71 * wa.cosH);
+        const wim = r2v(-0.71 * wa.sinH);
+
+        let pa;
+        do { pa = ANGLE_DATA[randInt(0, ANGLE_DATA.length - 1)]; } while (pa.label === wa.label);
+        const pre = r2v(0.71 * pa.cosH);
+        const pim = r2v(-0.71 * pa.sinH);
+
+        return {
+          teachingText:
+            `Rz works on any state, not just basis states. For a superposition ` +
+            `(α, β), Rz(θ) gives (α·e^(−iθ/2), β·e^(iθ/2)). Each component ` +
+            `gets its own phase factor. The first component's phase rotates one ` +
+            `way (−θ/2) and the second rotates the other way (+θ/2). ` +
+            `The probabilities |α|² and |β|² stay exactly the same.`,
+          workedExample: {
+            problem: `Apply Rz(${wa.label}) to (0.71, 0.71). What is the first component?`,
+            steps: [
+              `First component = 0.71 · e^(−i${wa.halfLabel})`,
+              `e^(−i${wa.halfLabel}) = cos(${wa.halfLabel}) − i·sin(${wa.halfLabel}) = ${fmt(wa.cosH)} − ${fmt(wa.sinH)}i`,
+              `0.71 × (${fmt(wa.cosH)} − ${fmt(wa.sinH)}i) = ${fmtComplex(wre, wim)}`,
+            ],
+            insight: `The relative phase between components changes, but each component's magnitude stays the same.`,
+          },
+          tryIt: {
+            question: `Apply Rz(${pa.label}) to (0.71, 0.71). What is the first component?\nRz(θ) = [[e^(−iθ/2), 0], [0, e^(iθ/2)]]`,
+            answer: [pre, pim],
+            answerType: 'complex',
+            answerDisplay: fmtComplex(pre, pim),
+            steps: [
+              `First component = 0.71 · e^(−i${pa.halfLabel})`,
+              `= 0.71 × (${fmt(pa.cosH)} − ${fmt(pa.sinH)}i)`,
+              `= ${fmtComplex(pre, pim)}`,
+            ],
+            whyItMatters:
+              `Rz on a superposition changes the relative phase between |0⟩ and |1⟩. ` +
+              `This is how quantum algorithms encode information — not in probabilities, ` +
+              `but in the phase relationships between amplitudes.`,
+          },
+        };
+      }
+
+      case 'verify_probability': {
+        const triples = [[3,4,5],[4,3,5],[6,8,10],[8,6,10]];
+        const [wta, wtb, wtm] = triples[randInt(0, triples.length - 1)];
+        const wa = r2v(wta / wtm);
+        const wb = r2v(wtb / wtm);
+        const wProb = r2v(wa * wa);
+        const wAngle = ANGLE_DATA[randInt(0, ANGLE_DATA.length - 1)];
+
+        let pta, ptb, ptm;
+        do {
+          [pta, ptb, ptm] = triples[randInt(0, triples.length - 1)];
+        } while (pta === wta && ptb === wtb);
+        const pa = r2v(pta / ptm);
+        const pb = r2v(ptb / ptm);
+        const pProb = r2v(pa * pa);
+        const pAngle = ANGLE_DATA[randInt(0, ANGLE_DATA.length - 1)];
+
+        return {
+          teachingText:
+            `A key property of Rz: it never changes measurement probabilities. ` +
+            `Since Rz only multiplies each amplitude by a phase e^(iφ), and ` +
+            `|e^(iφ)|² = 1, the squared magnitudes stay the same. ` +
+            `P(|0⟩) = |α|² before and after Rz. This is why Rz is called a ` +
+            `"phase gate" — it only affects phases, not probabilities.`,
+          workedExample: {
+            problem: `Apply Rz(${wAngle.label}) to (${wa}, ${wb}). What is P(|0⟩)?`,
+            steps: [
+              `Rz only multiplies each component by a phase factor.`,
+              `|e^(iφ)|² = 1, so probabilities don't change.`,
+              `P(|0⟩) = |${wa}|² = ${wProb}`,
+            ],
+            insight: `Rz is "invisible" to measurement — it cannot change what you observe, only how the state interferes later.`,
+          },
+          tryIt: {
+            question: `Apply Rz(${pAngle.label}) to (${pa}, ${pb}). What is P(|0⟩) after applying Rz?`,
+            answer: pProb,
+            answerType: 'numeric',
+            answerDisplay: `${pProb}`,
+            steps: [
+              `Rz only changes phases, not magnitudes.`,
+              `P(|0⟩) = |α|² = ${pa}² = ${pProb}`,
+            ],
+            whyItMatters:
+              `Understanding which gates change probabilities and which only change ` +
+              `phases is essential. Rz changes phases (invisible to measurement alone), ` +
+              `while Rx and Ry change actual probability distributions.`,
+          },
+        };
+      }
+
+      default: return null;
+    }
+  },
+},
+
+rx_apply: {
+  generate(difficulty, variation) {
+    const ANGLE_DATA = [
+      { label: 'π/6', halfLabel: 'π/12', cosH: 0.97, sinH: 0.26 },
+      { label: 'π/4', halfLabel: 'π/8',  cosH: 0.92, sinH: 0.38 },
+      { label: 'π/3', halfLabel: 'π/6',  cosH: 0.87, sinH: 0.5  },
+      { label: 'π/2', halfLabel: 'π/4',  cosH: 0.71, sinH: 0.71 },
+      { label: 'π',   halfLabel: 'π/2',  cosH: 0,    sinH: 1    },
+    ];
+    const r2v = (n) => Math.round(n * 100) / 100;
+
+    function makeNums(v) {
+      if (v === 'half_pi') return ANGLE_DATA[3];
+      return ANGLE_DATA[randInt(0, ANGLE_DATA.length - 1)];
+    }
+
+    switch (variation) {
+
+      case 'basic':
+      case 'probability_after': {
+        const wa = makeNums(variation);
+        const wp0 = r2v(wa.cosH * wa.cosH);
+        const wp1 = r2v(wa.sinH * wa.sinH);
+
+        let pa;
+        do { pa = makeNums(variation); } while (pa.label === wa.label);
+        const pp0 = r2v(pa.cosH * pa.cosH);
+        const pp1 = r2v(pa.sinH * pa.sinH);
+
+        const teachingMap = {
+          basic:
+            `The Rx gate rotates around the x-axis of the Bloch sphere. ` +
+            `Rx(θ) = [[cos(θ/2), −i·sin(θ/2)], [−i·sin(θ/2), cos(θ/2)]]. ` +
+            `Applied to |0⟩: first component = cos(θ/2), second = −i·sin(θ/2). ` +
+            `The output is complex (note the −i), but the probabilities are real: ` +
+            `P(|0⟩) = cos²(θ/2) and P(|1⟩) = sin²(θ/2).`,
+          probability_after:
+            `When Rx(θ) is applied to |0⟩, the resulting state has amplitudes ` +
+            `(cos(θ/2), −i·sin(θ/2)). To find measurement probabilities, take ` +
+            `the squared magnitude of each component. Since |−i| = 1, we get ` +
+            `P(|0⟩) = cos²(θ/2) and P(|1⟩) = |−i·sin(θ/2)|² = sin²(θ/2). ` +
+            `The factor of −i doesn't affect the probability.`,
+        };
+
+        return {
+          teachingText: teachingMap[variation] || teachingMap['basic'],
+          workedExample: {
+            problem: `Apply Rx(${wa.label}) to |0⟩. What are [P(|0⟩), P(|1⟩)]?`,
+            steps: [
+              `Rx(${wa.label})|0⟩ = (cos(${wa.halfLabel}), −i·sin(${wa.halfLabel}))`,
+              `P(|0⟩) = cos²(${wa.halfLabel}) = ${fmt(wa.cosH)}² = ${fmt(wp0)}`,
+              `P(|1⟩) = sin²(${wa.halfLabel}) = ${fmt(wa.sinH)}² = ${fmt(wp1)}`,
+            ],
+            insight: `Rx changes probabilities — unlike Rz which only changes phases. A rotation of π (180°) completely flips the qubit.`,
+          },
+          tryIt: {
+            question: `Apply Rx(${pa.label}) to |0⟩. What are [P(|0⟩), P(|1⟩)]?\nRx(θ) = [[cos(θ/2), −i·sin(θ/2)], [−i·sin(θ/2), cos(θ/2)]]`,
+            answer: [pp0, pp1],
+            answerType: 'vector',
+            answerDisplay: `(${fmt(pp0)}, ${fmt(pp1)})`,
+            steps: [
+              `Rx(${pa.label})|0⟩ = (cos(${pa.halfLabel}), −i·sin(${pa.halfLabel}))`,
+              `P(|0⟩) = cos²(${pa.halfLabel}) = ${fmt(pa.cosH)}² = ${fmt(pp0)}`,
+              `P(|1⟩) = sin²(${pa.halfLabel}) = ${fmt(pa.sinH)}² = ${fmt(pp1)}`,
+            ],
+            whyItMatters:
+              `Rx allows you to rotate a qubit to any desired probability split ` +
+              `between |0⟩ and |1⟩. On real hardware, Rx is often implemented ` +
+              `as a microwave pulse of calibrated duration — more rotation means ` +
+              `a longer pulse.`,
+          },
+        };
+      }
+
+      case 'half_pi': {
+        const wa = ANGLE_DATA[3]; // π/2
+        const wp0 = r2v(0.71 * 0.71);
+        const wp1 = r2v(0.71 * 0.71);
+
+        let pa;
+        do { pa = ANGLE_DATA[randInt(0, ANGLE_DATA.length - 1)]; } while (pa.label === 'π/2');
+        const pp0 = r2v(pa.cosH * pa.cosH);
+        const pp1 = r2v(pa.sinH * pa.sinH);
+
+        return {
+          teachingText:
+            `Rx(π/2) is special — it creates an equal superposition, similar to ` +
+            `the Hadamard gate. Rx(π/2)|0⟩ = (cos(π/4), −i·sin(π/4)) = (0.71, −0.71i). ` +
+            `The probabilities are P(|0⟩) = P(|1⟩) = 0.50 — a perfect 50/50 split. ` +
+            `The difference from Hadamard is the −i factor on the |1⟩ component.`,
+          workedExample: {
+            problem: `Apply Rx(π/2) to |0⟩. What are [P(|0⟩), P(|1⟩)]?`,
+            steps: [
+              `Rx(π/2)|0⟩ = (cos(π/4), −i·sin(π/4)) = (0.71, −0.71i)`,
+              `P(|0⟩) = 0.71² = ${wp0}`,
+              `P(|1⟩) = |−0.71i|² = 0.71² = ${wp1}`,
+            ],
+            insight: `Rx(π/2) creates an equal superposition, just like H — but with a different phase on the |1⟩ component.`,
+          },
+          tryIt: {
+            question: `Apply Rx(${pa.label}) to |0⟩. What are [P(|0⟩), P(|1⟩)]?\nRx(θ) = [[cos(θ/2), −i·sin(θ/2)], [−i·sin(θ/2), cos(θ/2)]]`,
+            answer: [pp0, pp1],
+            answerType: 'vector',
+            answerDisplay: `(${fmt(pp0)}, ${fmt(pp1)})`,
+            steps: [
+              `Rx(${pa.label})|0⟩ = (cos(${pa.halfLabel}), −i·sin(${pa.halfLabel}))`,
+              `P(|0⟩) = ${fmt(pa.cosH)}² = ${fmt(pp0)}`,
+              `P(|1⟩) = ${fmt(pa.sinH)}² = ${fmt(pp1)}`,
+            ],
+            whyItMatters:
+              `Different rotation angles give different probability splits. ` +
+              `Rx(π/2) gives 50/50, Rx(π) gives 0/100 (a full bit flip), ` +
+              `and smaller angles give gentle tilts away from the starting state.`,
+          },
+        };
+      }
+
+      case 'superposition_input': {
+        const wa = ANGLE_DATA[randInt(0, ANGLE_DATA.length - 1)];
+        let pa;
+        do { pa = ANGLE_DATA[randInt(0, ANGLE_DATA.length - 1)]; } while (pa.label === wa.label);
+
+        return {
+          teachingText:
+            `When Rx acts on an equal superposition (0.71, 0.71), something ` +
+            `interesting happens. Each output component has the form ` +
+            `0.71·(cos(θ/2) − i·sin(θ/2)) = 0.71·e^(−iθ/2). The magnitude ` +
+            `is |0.71·e^(−iθ/2)| = 0.71, so P(|0⟩) = P(|1⟩) = 0.50 regardless ` +
+            `of the angle! Equal superpositions are preserved by Rx.`,
+          workedExample: {
+            problem: `Apply Rx(${wa.label}) to (0.71, 0.71). What are [P(|0⟩), P(|1⟩)]?`,
+            steps: [
+              `Each component = 0.71·e^(−i${wa.halfLabel})`,
+              `|0.71·e^(−i${wa.halfLabel})|² = 0.71² = 0.50`,
+              `Result: P(|0⟩) = 0.50, P(|1⟩) = 0.50`,
+            ],
+            insight: `An equal superposition input stays 50/50 — Rx only changes the phases, not the balance.`,
+          },
+          tryIt: {
+            question: `Apply Rx(${pa.label}) to (0.71, 0.71). What are [P(|0⟩), P(|1⟩)]?\nRx(θ) = [[cos(θ/2), −i·sin(θ/2)], [−i·sin(θ/2), cos(θ/2)]]`,
+            answer: [0.5, 0.5],
+            answerType: 'vector',
+            answerDisplay: '(0.5, 0.5)',
+            steps: [
+              `Both components = 0.71·e^(−i${pa.halfLabel})`,
+              `|0.71·e^(−i${pa.halfLabel})|² = 0.50 for both`,
+              `Result: (0.5, 0.5)`,
+            ],
+            whyItMatters:
+              `This symmetry — equal superpositions staying equal — is related to the ` +
+              `fact that |+⟩ sits on the x-axis of the Bloch sphere, and Rx rotates ` +
+              `around the x-axis. Rotating around the axis you're on doesn't move you!`,
+          },
+        };
+      }
+
+      default: return null;
+    }
+  },
+},
+
+ry_apply: {
+  generate(difficulty, variation) {
+    const ANGLE_DATA = [
+      { label: 'π/6', halfLabel: 'π/12', cosH: 0.97, sinH: 0.26 },
+      { label: 'π/4', halfLabel: 'π/8',  cosH: 0.92, sinH: 0.38 },
+      { label: 'π/3', halfLabel: 'π/6',  cosH: 0.87, sinH: 0.5  },
+      { label: 'π/2', halfLabel: 'π/4',  cosH: 0.71, sinH: 0.71 },
+      { label: 'π',   halfLabel: 'π/2',  cosH: 0,    sinH: 1    },
+    ];
+    const r2v = (n) => Math.round(n * 100) / 100;
+
+    switch (variation) {
+
+      case 'basic':
+      case 'compare_rx_ry': {
+        const wa = ANGLE_DATA[randInt(0, ANGLE_DATA.length - 1)];
+        const wr1 = r2v(wa.cosH);
+        const wr2 = r2v(wa.sinH);
+
+        let pa;
+        do { pa = ANGLE_DATA[randInt(0, ANGLE_DATA.length - 1)]; } while (pa.label === wa.label);
+        const pr1 = r2v(pa.cosH);
+        const pr2 = r2v(pa.sinH);
+
+        const teachingMap = {
+          basic:
+            `The Ry gate rotates around the y-axis of the Bloch sphere. ` +
+            `Ry(θ) = [[cos(θ/2), −sin(θ/2)], [sin(θ/2), cos(θ/2)]]. ` +
+            `Unlike Rx and Rz, Ry uses only real numbers — no imaginary parts! ` +
+            `Applied to |0⟩: (cos(θ/2), sin(θ/2)). This makes Ry the simplest ` +
+            `rotation gate to work with.`,
+          compare_rx_ry:
+            `Rx and Ry both change measurement probabilities the same way: ` +
+            `P(|0⟩) = cos²(θ/2), P(|1⟩) = sin²(θ/2). The difference? Ry produces ` +
+            `real amplitudes while Rx produces complex ones. Ry(θ)|0⟩ = (cos(θ/2), sin(θ/2)) ` +
+            `vs Rx(θ)|0⟩ = (cos(θ/2), −i·sin(θ/2)). On the Bloch sphere, they ` +
+            `rotate around different axes but both tilt the state away from the north pole.`,
+        };
+
+        return {
+          teachingText: teachingMap[variation] || teachingMap['basic'],
+          workedExample: {
+            problem: `Apply Ry(${wa.label}) to |0⟩. What is the output state vector?`,
+            steps: [
+              `Ry(${wa.label})|0⟩ = (cos(${wa.halfLabel}), sin(${wa.halfLabel}))`,
+              `= (${fmt(wr1)}, ${fmt(wr2)})`,
+            ],
+            insight: variation === 'compare_rx_ry'
+              ? `Ry gives the same probabilities as Rx but with real amplitudes — no imaginary parts to track.`
+              : `Ry always produces real outputs from real inputs — it's the "real-valued" rotation gate.`,
+          },
+          tryIt: {
+            question: `Apply Ry(${pa.label}) to |0⟩. What is the output state vector?\nRy(θ) = [[cos(θ/2), −sin(θ/2)], [sin(θ/2), cos(θ/2)]]`,
+            answer: [pr1, pr2],
+            answerType: 'vector',
+            answerDisplay: `(${fmt(pr1)}, ${fmt(pr2)})`,
+            steps: [
+              `Ry(${pa.label})|0⟩ = (cos(${pa.halfLabel}), sin(${pa.halfLabel}))`,
+              `= (${fmt(pr1)}, ${fmt(pr2)})`,
+            ],
+            whyItMatters:
+              `Ry is used in quantum machine learning and variational algorithms ` +
+              `because it can prepare any real-valued state from |0⟩. Combined with ` +
+              `Rz for phases, it can reach any point on the Bloch sphere.`,
+          },
+        };
+      }
+
+      case 'half_pi': {
+        let pa;
+        do { pa = ANGLE_DATA[randInt(0, ANGLE_DATA.length - 1)]; } while (pa.label === 'π/2');
+        const pr1 = r2v(pa.cosH);
+        const pr2 = r2v(pa.sinH);
+
+        return {
+          teachingText:
+            `Ry(π/2) creates an equal superposition with real amplitudes: ` +
+            `Ry(π/2)|0⟩ = (cos(π/4), sin(π/4)) = (0.71, 0.71). ` +
+            `This is the same state as H|0⟩ = |+⟩! The Hadamard gate can be ` +
+            `decomposed as a combination of Ry and Rz rotations. ` +
+            `Ry(π/2) alone gets you halfway — it creates the right probabilities ` +
+            `but with a slightly different phase than Hadamard.`,
+          workedExample: {
+            problem: `Apply Ry(π/2) to |0⟩. What is the output state vector?`,
+            steps: [
+              `Ry(π/2)|0⟩ = (cos(π/4), sin(π/4))`,
+              `= (0.71, 0.71)`,
+            ],
+            insight: `Ry(π/2)|0⟩ = (0.71, 0.71), which equals |+⟩ — the same as H|0⟩!`,
+          },
+          tryIt: {
+            question: `Apply Ry(${pa.label}) to |0⟩. What is the output state vector?\nRy(θ) = [[cos(θ/2), −sin(θ/2)], [sin(θ/2), cos(θ/2)]]`,
+            answer: [pr1, pr2],
+            answerType: 'vector',
+            answerDisplay: `(${fmt(pr1)}, ${fmt(pr2)})`,
+            steps: [
+              `Ry(${pa.label})|0⟩ = (cos(${pa.halfLabel}), sin(${pa.halfLabel}))`,
+              `= (${fmt(pr1)}, ${fmt(pr2)})`,
+            ],
+            whyItMatters:
+              `Different Ry angles let you prepare states with any desired probability ` +
+              `split. Ry(π/3)|0⟩ gives 75%/25%, Ry(π/2) gives 50/50, and Ry(π) ` +
+              `gives a full flip to |1⟩.`,
+          },
+        };
+      }
+
+      case 'create_target_state': {
+        const wa = ANGLE_DATA[randInt(0, ANGLE_DATA.length - 1)];
+        const wUse1 = Math.random() > 0.5;
+        const wr1 = wUse1 ? r2v(-wa.sinH) : r2v(wa.cosH);
+        const wr2 = wUse1 ? r2v(wa.cosH) : r2v(wa.sinH);
+        const wState = wUse1 ? '|1⟩' : '|0⟩';
+
+        let pa, pUse1;
+        do {
+          pa = ANGLE_DATA[randInt(0, ANGLE_DATA.length - 1)];
+          pUse1 = Math.random() > 0.5;
+        } while (pa.label === wa.label && pUse1 === wUse1);
+        const pr1 = pUse1 ? r2v(-pa.sinH) : r2v(pa.cosH);
+        const pr2 = pUse1 ? r2v(pa.cosH) : r2v(pa.sinH);
+        const pState = pUse1 ? '|1⟩' : '|0⟩';
+
+        return {
+          teachingText:
+            `Ry works on both basis states. On |0⟩: Ry(θ)|0⟩ = (cos(θ/2), sin(θ/2)). ` +
+            `On |1⟩: Ry(θ)|1⟩ = (−sin(θ/2), cos(θ/2)). Notice the minus sign on ` +
+            `the first component for |1⟩ — this is the second column of the Ry matrix. ` +
+            `By choosing the right angle and starting state, you can create any ` +
+            `real-valued state on the Bloch sphere.`,
+          workedExample: {
+            problem: `Apply Ry(${wa.label}) to ${wState}. What is the output state vector?`,
+            steps: wUse1 ? [
+              `Ry(${wa.label})|1⟩: first = −sin(${wa.halfLabel}) = ${fmt(wr1)}`,
+              `Second = cos(${wa.halfLabel}) = ${fmt(wr2)}`,
+              `Result: (${fmt(wr1)}, ${fmt(wr2)})`,
+            ] : [
+              `Ry(${wa.label})|0⟩: first = cos(${wa.halfLabel}) = ${fmt(wr1)}`,
+              `Second = sin(${wa.halfLabel}) = ${fmt(wr2)}`,
+              `Result: (${fmt(wr1)}, ${fmt(wr2)})`,
+            ],
+            insight: `Ry on |1⟩ produces a state with a negative first component — the state points partially toward −|0⟩.`,
+          },
+          tryIt: {
+            question: `Apply Ry(${pa.label}) to ${pState}. What is the output state vector?\nRy(θ) = [[cos(θ/2), −sin(θ/2)], [sin(θ/2), cos(θ/2)]]`,
+            answer: [pr1, pr2],
+            answerType: 'vector',
+            answerDisplay: `(${fmt(pr1)}, ${fmt(pr2)})`,
+            steps: pUse1 ? [
+              `Ry(${pa.label})|1⟩: first = −sin(${pa.halfLabel}) = ${fmt(pr1)}`,
+              `Second = cos(${pa.halfLabel}) = ${fmt(pr2)}`,
+            ] : [
+              `Ry(${pa.label})|0⟩: first = cos(${pa.halfLabel}) = ${fmt(pr1)}`,
+              `Second = sin(${pa.halfLabel}) = ${fmt(pr2)}`,
+            ],
+            whyItMatters:
+              `Being able to apply Ry to both |0⟩ and |1⟩ means you can undo ` +
+              `previous rotations or chain multiple rotations together. ` +
+              `This is the foundation of parameterized quantum circuits.`,
+          },
+        };
+      }
+
+      default: return null;
+    }
+  },
+},
+
+euler_decompose: {
+  generate(difficulty, variation) {
+    const ANGLE_DATA = [
+      { label: 'π/6', halfLabel: 'π/12', cosH: 0.97, sinH: 0.26 },
+      { label: 'π/4', halfLabel: 'π/8',  cosH: 0.92, sinH: 0.38 },
+      { label: 'π/3', halfLabel: 'π/6',  cosH: 0.87, sinH: 0.5  },
+      { label: 'π/2', halfLabel: 'π/4',  cosH: 0.71, sinH: 0.71 },
+      { label: 'π',   halfLabel: 'π/2',  cosH: 0,    sinH: 1    },
+    ];
+    const r2v = (n) => Math.round(n * 100) / 100;
+
+    switch (variation) {
+
+      case 'basic': {
+        const wBeta = ANGLE_DATA[randInt(0, ANGLE_DATA.length - 1)];
+        const wAlpha = ANGLE_DATA[randInt(0, ANGLE_DATA.length - 1)];
+        const wGamma = ANGLE_DATA[randInt(0, ANGLE_DATA.length - 1)];
+        const wp0 = r2v(wBeta.cosH * wBeta.cosH);
+        const wp1 = r2v(wBeta.sinH * wBeta.sinH);
+
+        let pBeta, pAlpha, pGamma;
+        do {
+          pBeta = ANGLE_DATA[randInt(0, ANGLE_DATA.length - 1)];
+          pAlpha = ANGLE_DATA[randInt(0, ANGLE_DATA.length - 1)];
+          pGamma = ANGLE_DATA[randInt(0, ANGLE_DATA.length - 1)];
+        } while (pBeta.label === wBeta.label && pAlpha.label === wAlpha.label && pGamma.label === wGamma.label);
+        const pp0 = r2v(pBeta.cosH * pBeta.cosH);
+        const pp1 = r2v(pBeta.sinH * pBeta.sinH);
+
+        return {
+          teachingText:
+            `Any single-qubit gate can be decomposed as Rz(α)·Ry(β)·Rz(γ) ` +
+            `(the Euler decomposition). When applied to |0⟩, something elegant ` +
+            `happens: Rz(γ)|0⟩ only adds a global phase (which doesn't affect ` +
+            `probabilities). Then Ry(β) creates the probability split. Finally, ` +
+            `Rz(α) adds relative phase. So the probabilities depend only on β: ` +
+            `P(|0⟩) = cos²(β/2), P(|1⟩) = sin²(β/2).`,
+          workedExample: {
+            problem: `Apply Rz(${wAlpha.label})·Ry(${wBeta.label})·Rz(${wGamma.label}) to |0⟩. What are [P(|0⟩), P(|1⟩)]?`,
+            steps: [
+              `Rz(${wGamma.label})|0⟩ = (e^(−i${wGamma.halfLabel}), 0) — just a phase`,
+              `Ry(${wBeta.label}) splits: (cos(${wBeta.halfLabel}), sin(${wBeta.halfLabel})) = (${fmt(wBeta.cosH)}, ${fmt(wBeta.sinH)})`,
+              `Rz(${wAlpha.label}) adds phase but doesn't change magnitudes`,
+              `P(|0⟩) = cos²(${wBeta.halfLabel}) = ${fmt(wp0)}, P(|1⟩) = sin²(${wBeta.halfLabel}) = ${fmt(wp1)}`,
+            ],
+            insight: `Only the middle Ry angle determines probabilities — the two Rz gates only control phases.`,
+          },
+          tryIt: {
+            question: `Apply Rz(${pAlpha.label})·Ry(${pBeta.label})·Rz(${pGamma.label}) to |0⟩. What are [P(|0⟩), P(|1⟩)]?`,
+            answer: [pp0, pp1],
+            answerType: 'vector',
+            answerDisplay: `(${fmt(pp0)}, ${fmt(pp1)})`,
+            steps: [
+              `Rz(${pGamma.label})|0⟩ adds a global phase — doesn't affect probabilities`,
+              `Ry(${pBeta.label}) determines the split: cos(${pBeta.halfLabel}) = ${fmt(pBeta.cosH)}, sin(${pBeta.halfLabel}) = ${fmt(pBeta.sinH)}`,
+              `P(|0⟩) = ${fmt(pBeta.cosH)}² = ${fmt(pp0)}, P(|1⟩) = ${fmt(pBeta.sinH)}² = ${fmt(pp1)}`,
+            ],
+            whyItMatters:
+              `The Euler decomposition means any single-qubit gate needs at most ` +
+              `three rotation parameters. Quantum compilers use this to break down ` +
+              `arbitrary gates into hardware-native rotations.`,
+          },
+        };
+      }
+
+      case 'hadamard': {
+        const pa = ANGLE_DATA[randInt(0, ANGLE_DATA.length - 1)];
+        const pBeta = ANGLE_DATA[randInt(0, ANGLE_DATA.length - 1)];
+        const pp0 = r2v(pBeta.cosH * pBeta.cosH);
+        const pp1 = r2v(pBeta.sinH * pBeta.sinH);
+
+        return {
+          teachingText:
+            `The Hadamard gate can be written as H ≈ Rz(π)·Ry(π/2) (up to a ` +
+            `global phase). This means: first rotate π/2 around y (creating a ` +
+            `50/50 superposition), then rotate π around z (adjusting the phase). ` +
+            `Since only Ry affects probabilities, and Ry(π/2) gives cos²(π/4) = 0.50, ` +
+            `Hadamard produces equal probabilities — exactly what we expect.`,
+          workedExample: {
+            problem: `H ≈ Rz(π)·Ry(π/2). Apply to |0⟩. What are [P(|0⟩), P(|1⟩)]?`,
+            steps: [
+              `Ry(π/2)|0⟩ = (cos(π/4), sin(π/4)) = (0.71, 0.71)`,
+              `Rz(π) only changes phases, not magnitudes`,
+              `P(|0⟩) = 0.71² = 0.50, P(|1⟩) = 0.71² = 0.50`,
+            ],
+            insight: `H = Rz(π)·Ry(π/2) shows that the Hadamard is just two rotations in sequence!`,
+          },
+          tryIt: {
+            question: `Apply Rz(${pa.label})·Ry(${pBeta.label}) to |0⟩. What are [P(|0⟩), P(|1⟩)]?`,
+            answer: [pp0, pp1],
+            answerType: 'vector',
+            answerDisplay: `(${fmt(pp0)}, ${fmt(pp1)})`,
+            steps: [
+              `Ry(${pBeta.label})|0⟩ = (cos(${pBeta.halfLabel}), sin(${pBeta.halfLabel})) = (${fmt(pBeta.cosH)}, ${fmt(pBeta.sinH)})`,
+              `Rz(${pa.label}) adds phases — probabilities unchanged`,
+              `P(|0⟩) = ${fmt(pBeta.cosH)}² = ${fmt(pp0)}, P(|1⟩) = ${fmt(pBeta.sinH)}² = ${fmt(pp1)}`,
+            ],
+            whyItMatters:
+              `Decomposing familiar gates into rotations builds intuition. Once you ` +
+              `see H as Rz·Ry, you understand why it creates superposition (Ry) ` +
+              `with the right phase (Rz). This extends to decomposing any gate.`,
+          },
+        };
+      }
+
+      case 'compose_two': {
+        const wAlpha = ANGLE_DATA[randInt(0, ANGLE_DATA.length - 1)];
+        const wBeta = ANGLE_DATA[randInt(0, ANGLE_DATA.length - 1)];
+        const wp0 = r2v(wBeta.cosH * wBeta.cosH);
+        const wp1 = r2v(wBeta.sinH * wBeta.sinH);
+
+        let pAlpha, pBeta;
+        do {
+          pAlpha = ANGLE_DATA[randInt(0, ANGLE_DATA.length - 1)];
+          pBeta = ANGLE_DATA[randInt(0, ANGLE_DATA.length - 1)];
+        } while (pBeta.label === wBeta.label && pAlpha.label === wAlpha.label);
+        const pp0 = r2v(pBeta.cosH * pBeta.cosH);
+        const pp1 = r2v(pBeta.sinH * pBeta.sinH);
+
+        return {
+          teachingText:
+            `When composing Rz·Ry and applying to |0⟩, the key insight is that ` +
+            `Ry determines the probability split and Rz only adds phase. ` +
+            `Step 1: Ry(β)|0⟩ = (cos(β/2), sin(β/2)). Step 2: Rz(α) multiplies ` +
+            `the first component by e^(−iα/2) and the second by e^(iα/2). ` +
+            `Since |e^(iφ)| = 1, the probabilities remain cos²(β/2) and sin²(β/2).`,
+          workedExample: {
+            problem: `Apply Rz(${wAlpha.label})·Ry(${wBeta.label}) to |0⟩. What are [P(|0⟩), P(|1⟩)]?`,
+            steps: [
+              `Ry(${wBeta.label})|0⟩ = (cos(${wBeta.halfLabel}), sin(${wBeta.halfLabel})) = (${fmt(wBeta.cosH)}, ${fmt(wBeta.sinH)})`,
+              `Rz(${wAlpha.label}) adds phase — doesn't change magnitudes`,
+              `P(|0⟩) = cos²(${wBeta.halfLabel}) = ${fmt(wp0)}, P(|1⟩) = sin²(${wBeta.halfLabel}) = ${fmt(wp1)}`,
+            ],
+            insight: `The Rz gate is "invisible" to probability measurements — only Ry changes the outcome distribution.`,
+          },
+          tryIt: {
+            question: `Apply Rz(${pAlpha.label})·Ry(${pBeta.label}) to |0⟩. What are [P(|0⟩), P(|1⟩)]?`,
+            answer: [pp0, pp1],
+            answerType: 'vector',
+            answerDisplay: `(${fmt(pp0)}, ${fmt(pp1)})`,
+            steps: [
+              `Ry(${pBeta.label})|0⟩ = (${fmt(pBeta.cosH)}, ${fmt(pBeta.sinH)})`,
+              `Rz(${pAlpha.label}) only adds phase`,
+              `P(|0⟩) = ${fmt(pBeta.cosH)}² = ${fmt(pp0)}, P(|1⟩) = ${fmt(pBeta.sinH)}² = ${fmt(pp1)}`,
+            ],
+            whyItMatters:
+              `This "Rz is invisible to probabilities" principle is why quantum ` +
+              `compilers can freely insert Rz gates for error correction or ` +
+              `optimization without changing measurement outcomes.`,
+          },
+        };
+      }
+
+      default: return null;
+    }
+  },
+},
+
+// ── Chapter 13: Phase Gates ──────────────────────────────────────────────────
+
+s_gate_apply: {
+  generate(difficulty, variation) {
+    const fmt = (n) => Number.isInteger(n) ? String(n) : n.toFixed(2);
+    const fmtC = (re, im) => {
+      if (im === 0) return `${fmt(re)}`;
+      if (re === 0) {
+        if (im === 1) return 'i';
+        if (im === -1) return '−i';
+        return im > 0 ? `${fmt(im)}i` : `−${fmt(Math.abs(im))}i`;
+      }
+      const sign = im > 0 ? '+' : '−';
+      const mag = Math.abs(im);
+      const imStr = mag === 1 ? 'i' : `${fmt(mag)}i`;
+      return `${fmt(re)} ${sign} ${imStr}`;
+    };
+
+    switch (variation) {
+
+      case 'basic': {
+        const wA = randInt(2, 5);
+        let pA; do { pA = randInt(2, 5); } while (pA === wA);
+
+        return {
+          teachingText:
+            `The S gate (also called the phase gate or √Z gate) adds a 90° phase ` +
+            `rotation to the |1⟩ component. Its matrix is S = [[1,0],[0,i]]. ` +
+            `The |0⟩ amplitude is unchanged, and the |1⟩ amplitude gets multiplied ` +
+            `by i. For example, if |1⟩ has coefficient 3, after S it becomes 3i. ` +
+            `Remember: i is the imaginary unit where i² = −1.`,
+          workedExample: {
+            problem: `Apply S to the |1⟩ coefficient ${wA}`,
+            steps: [
+              `S multiplies the |1⟩ amplitude by i`,
+              `i × ${wA} = ${wA}i`,
+              `As a complex number: (0, ${wA})`,
+            ],
+            insight: `S only affects the |1⟩ component — the |0⟩ part stays the same. This is why it's called a "phase" gate.`,
+          },
+          tryIt: {
+            question: `Apply the S gate to the |1⟩ coefficient ${pA}.\nS multiplies the |1⟩ amplitude by i.\nAnswer as a complex number (re, im):`,
+            answer: [0, pA],
+            answerType: 'complex',
+            answerDisplay: fmtC(0, pA),
+            steps: [
+              `S multiplies |1⟩ by i`,
+              `i × ${pA} = ${pA}i = (0, ${pA})`,
+            ],
+            whyItMatters:
+              `The S gate is a π/2 phase rotation — halfway between no phase change (I) and ` +
+              `a full phase flip (Z). It's essential in quantum error correction and appears ` +
+              `in the Clifford group, which is key to fault-tolerant quantum computing.`,
+          },
+        };
+      }
+
+      case 'superposition': {
+        const h = 0.71;
+        return {
+          teachingText:
+            `When S acts on a superposition state like (1/√2)(|0⟩ + |1⟩), it only ` +
+            `modifies the |1⟩ coefficient. The state (1/√2)|0⟩ + (1/√2)|1⟩ has ` +
+            `|1⟩ coefficient ≈ 0.71. After S: 0.71 → i × 0.71 = 0.71i. ` +
+            `The result is (1/√2)|0⟩ + (i/√2)|1⟩. Measurement probabilities don't ` +
+            `change (|0.71i|² = 0.71² ≈ 0.50), but the phase information differs.`,
+          workedExample: {
+            problem: `Apply S to the |1⟩ coefficient of (1/√2)(|0⟩ + |1⟩). The |1⟩ coefficient is ${h}.`,
+            steps: [
+              `S multiplies |1⟩ by i`,
+              `i × ${h} = ${h}i`,
+              `As a complex number: (0, ${h})`,
+            ],
+            insight: `The measurement probabilities are unchanged: |0.71i|² = 0.50 = |0.71|². Phase gates change "how" a qubit is in superposition, not "how much."`,
+          },
+          tryIt: {
+            question: `Apply S to the |1⟩ component of (1/√2)(|0⟩ + |1⟩).\nThe |1⟩ coefficient is ${h}. What is S × ${h}?\nS multiplies the |1⟩ amplitude by i.\nAnswer as a complex number (re, im):`,
+            answer: [0, 0.71],
+            answerType: 'complex',
+            answerDisplay: fmtC(0, 0.71),
+            steps: [
+              `S multiplies |1⟩ by i`,
+              `i × ${h} = ${h}i = (0, ${h})`,
+            ],
+            whyItMatters:
+              `Phase differences between |0⟩ and |1⟩ are invisible to a single measurement ` +
+              `but become crucial when gates like H convert phase into amplitude differences. ` +
+              `This is the heart of quantum interference.`,
+          },
+        };
+      }
+
+      case 'double_s': {
+        const wA = randInt(2, 5);
+        let pA; do { pA = randInt(2, 5); } while (pA === wA);
+
+        return {
+          teachingText:
+            `What happens when we apply S twice? S multiplies |1⟩ by i, so S² multiplies ` +
+            `by i × i = i² = −1. But multiplying by −1 is exactly what the Z gate does! ` +
+            `So S² = Z. This is why S is sometimes called √Z — it's the "square root" of Z. ` +
+            `The phase hierarchy: T → S → Z → I, where each is the square of the next.`,
+          workedExample: {
+            problem: `Apply S twice to the |1⟩ coefficient ${wA}`,
+            steps: [
+              `First S: i × ${wA} = ${wA}i`,
+              `Second S: i × ${wA}i = ${wA}i² = ${wA}(−1) = ${-wA}`,
+              `Result: (${-wA}, 0)`,
+              `This is the same as applying Z!`,
+            ],
+            insight: `S² = Z. The phase gates form a hierarchy: T² = S, S² = Z, Z² = I.`,
+          },
+          tryIt: {
+            question: `Apply S twice to the |1⟩ coefficient ${pA}.\nWhat is S·S × ${pA}? (complex answer)`,
+            answer: [-pA, 0],
+            answerType: 'complex',
+            answerDisplay: fmtC(-pA, 0),
+            steps: [
+              `First S: i × ${pA} = ${pA}i`,
+              `Second S: i × ${pA}i = ${pA}i² = ${-pA}`,
+              `S² = Z, which negates the |1⟩ component`,
+            ],
+            whyItMatters:
+              `The relationship S² = Z connects the phase gate hierarchy. In circuit ` +
+              `optimization, knowing these identities lets you simplify sequences of ` +
+              `gates into fewer operations.`,
+          },
+        };
+      }
+
+      case 'probability_unchanged': {
+        const wA = randInt(2, 5);
+        let pA; do { pA = randInt(2, 5); } while (pA === wA);
+        const wProb = wA * wA;
+        const pProb = pA * pA;
+
+        return {
+          teachingText:
+            `A key property of all phase gates: they never change measurement probabilities. ` +
+            `The probability of measuring |1⟩ is |β|². If β is real (say β = ${wA}), ` +
+            `then after S: β → iβ = ${wA}i, and |${wA}i|² = ${wA}² = ${wProb}. ` +
+            `The magnitude is unchanged because |i| = 1. This is why phase ` +
+            `gates are "invisible" to a single Z-basis measurement.`,
+          workedExample: {
+            problem: `If the |1⟩ coefficient is ${wA}, what is |S × ${wA}|²?`,
+            steps: [
+              `S × ${wA} = i × ${wA} = ${wA}i`,
+              `|${wA}i|² = ${wA}² = ${wProb}`,
+              `Same as the original |${wA}|² = ${wProb}`,
+            ],
+            insight: `Phase gates have |eigenvalue| = 1, so they preserve probabilities. You need interference (via H) to reveal phase differences.`,
+          },
+          tryIt: {
+            question: `If the |1⟩ coefficient is ${pA}, what is |S × ${pA}|²?\n(The measurement probability after applying S)`,
+            answer: [pProb, 0],
+            answerType: 'complex',
+            answerDisplay: fmtC(pProb, 0),
+            steps: [
+              `S × ${pA} = ${pA}i`,
+              `|${pA}i|² = ${pA}² = ${pProb}`,
+            ],
+            whyItMatters:
+              `This is why quantum algorithms use H gates after phase gates — H converts ` +
+              `phase differences into amplitude differences that can be measured. Without ` +
+              `interference, phase information is hidden.`,
+          },
+        };
+      }
+
+      default: return null;
+    }
+  },
+},
+
+s_dagger_apply: {
+  generate(difficulty, variation) {
+    const fmt = (n) => Number.isInteger(n) ? String(n) : n.toFixed(2);
+    const fmtC = (re, im) => {
+      if (im === 0) return `${fmt(re)}`;
+      if (re === 0) {
+        if (im === 1) return 'i';
+        if (im === -1) return '−i';
+        return im > 0 ? `${fmt(im)}i` : `−${fmt(Math.abs(im))}i`;
+      }
+      const sign = im > 0 ? '+' : '−';
+      const mag = Math.abs(im);
+      const imStr = mag === 1 ? 'i' : `${fmt(mag)}i`;
+      return `${fmt(re)} ${sign} ${imStr}`;
+    };
+
+    switch (variation) {
+
+      case 'basic': {
+        const wA = randInt(2, 5);
+        let pA; do { pA = randInt(2, 5); } while (pA === wA);
+
+        return {
+          teachingText:
+            `S† (S-dagger) is the inverse of the S gate. Where S multiplies |1⟩ by i, ` +
+            `S† multiplies by −i. Its matrix is S† = [[1,0],[0,−i]]. ` +
+            `Applying S then S† (or vice versa) gives the identity: S†S = SS† = I. ` +
+            `The † symbol means "conjugate transpose" — for diagonal phase gates, ` +
+            `it simply negates the phase angle.`,
+          workedExample: {
+            problem: `Apply S† to the |1⟩ coefficient ${wA}`,
+            steps: [
+              `S† multiplies the |1⟩ amplitude by −i`,
+              `(−i) × ${wA} = −${wA}i`,
+              `As a complex number: (0, −${wA})`,
+            ],
+            insight: `S† rotates phase by −90° (clockwise), while S rotates by +90° (counterclockwise). They undo each other.`,
+          },
+          tryIt: {
+            question: `Apply the S† gate to the |1⟩ coefficient ${pA}.\nS† multiplies the |1⟩ amplitude by −i.\nAnswer as a complex number (re, im):`,
+            answer: [0, -pA],
+            answerType: 'complex',
+            answerDisplay: fmtC(0, -pA),
+            steps: [
+              `S† multiplies |1⟩ by −i`,
+              `(−i) × ${pA} = −${pA}i = (0, −${pA})`,
+            ],
+            whyItMatters:
+              `Inverse gates are essential for "uncomputing" — cleaning up temporary ` +
+              `quantum operations. Many quantum algorithms apply a transformation, ` +
+              `extract useful information, then reverse the transformation with the inverse.`,
+          },
+        };
+      }
+
+      case 'undo_s': {
+        const wA = randInt(2, 5);
+        let pA; do { pA = randInt(2, 5); } while (pA === wA);
+
+        return {
+          teachingText:
+            `The defining property of S† is that it undoes S. If you apply S to get ` +
+            `i × β, then S† gives (−i)(iβ) = −i²β = −(−1)β = β. ` +
+            `We're back to the original! This is written as S†S = I. ` +
+            `Every quantum gate has an inverse (quantum operations are reversible), ` +
+            `and for S, that inverse is S†.`,
+          workedExample: {
+            problem: `Apply S then S† to the |1⟩ coefficient ${wA}`,
+            steps: [
+              `First S: i × ${wA} = ${wA}i`,
+              `Then S†: (−i) × ${wA}i = −${wA}i² = −${wA}(−1) = ${wA}`,
+              `We get back ${wA} — the identity!`,
+            ],
+            insight: `S†S = I. Every quantum gate is reversible, and † gives us the inverse.`,
+          },
+          tryIt: {
+            question: `Apply S then S† to the |1⟩ coefficient ${pA}.\nWhat is the result? (complex answer)`,
+            answer: [pA, 0],
+            answerType: 'complex',
+            answerDisplay: fmtC(pA, 0),
+            steps: [
+              `S: i × ${pA} = ${pA}i`,
+              `S†: (−i) × ${pA}i = −${pA}i² = ${pA}`,
+              `S†S = I, result is ${pA}`,
+            ],
+            whyItMatters:
+              `Reversibility is a fundamental requirement of quantum mechanics. Unlike ` +
+              `classical operations (like AND, OR), quantum gates must always have an ` +
+              `inverse. This constraint actually makes quantum computing more powerful ` +
+              `because it preserves information.`,
+          },
+        };
+      }
+
+      case 'superposition': {
+        const h = 0.71;
+        return {
+          teachingText:
+            `Applying S† to a superposition works the same way — only the |1⟩ ` +
+            `coefficient changes. For (1/√2)(|0⟩ + |1⟩), the |1⟩ coefficient ` +
+            `is ≈ 0.71. After S†: 0.71 → (−i)(0.71) = −0.71i. The state ` +
+            `becomes (1/√2)|0⟩ − (i/√2)|1⟩. Again, probabilities don't change: ` +
+            `|−0.71i|² = 0.50.`,
+          workedExample: {
+            problem: `Apply S† to the |1⟩ coefficient of (1/√2)(|0⟩ + |1⟩). The |1⟩ coefficient is ${h}.`,
+            steps: [
+              `S† multiplies |1⟩ by −i`,
+              `(−i) × ${h} = −${h}i`,
+              `As a complex number: (0, −${h})`,
+            ],
+            insight: `S† gives the opposite phase rotation from S. On the Bloch sphere, S rotates +90° around Z and S† rotates −90°.`,
+          },
+          tryIt: {
+            question: `Apply S† to the |1⟩ component of (1/√2)(|0⟩ + |1⟩).\nThe |1⟩ coefficient is ${h}. What is S† × ${h}?\nS† multiplies the |1⟩ amplitude by −i.\nAnswer as a complex number (re, im):`,
+            answer: [0, -0.71],
+            answerType: 'complex',
+            answerDisplay: fmtC(0, -0.71),
+            steps: [
+              `S† multiplies |1⟩ by −i`,
+              `(−i) × ${h} = −${h}i = (0, −${h})`,
+            ],
+            whyItMatters:
+              `The difference between S|+⟩ and S†|+⟩ is invisible to Z-measurement ` +
+              `but visible after applying H. This phase distinction is exploited in ` +
+              `algorithms like quantum phase estimation.`,
+          },
+        };
+      }
+
+      default: return null;
+    }
+  },
+},
+
+t_gate_apply: {
+  generate(difficulty, variation) {
+    const fmt = (n) => Number.isInteger(n) ? String(n) : n.toFixed(2);
+    const fmtC = (re, im) => {
+      if (im === 0) return `${fmt(re)}`;
+      if (re === 0) {
+        if (im === 1) return 'i';
+        if (im === -1) return '−i';
+        return im > 0 ? `${fmt(im)}i` : `−${fmt(Math.abs(im))}i`;
+      }
+      const sign = im > 0 ? '+' : '−';
+      const mag = Math.abs(im);
+      const imStr = mag === 1 ? 'i' : `${fmt(mag)}i`;
+      return `${fmt(re)} ${sign} ${imStr}`;
+    };
+    const tRe = 0.71;
+    const tIm = 0.71;
+
+    switch (variation) {
+
+      case 'basic': {
+        const wA = randInt(2, 4);
+        let pA; do { pA = randInt(2, 4); } while (pA === wA);
+        const wResRe = r2(tRe * wA);
+        const wResIm = r2(tIm * wA);
+        const pResRe = r2(tRe * pA);
+        const pResIm = r2(tIm * pA);
+
+        return {
+          teachingText:
+            `The T gate applies a π/4 (45°) phase rotation to |1⟩. Its matrix is ` +
+            `T = [[1,0],[0,e^(iπ/4)]]. Using Euler's formula, e^(iπ/4) = cos(π/4) + ` +
+            `i·sin(π/4) = 1/√2 + i/√2 ≈ 0.71 + 0.71i. So T multiplies the |1⟩ ` +
+            `coefficient by (0.71 + 0.71i). Unlike S (which gives a pure imaginary ` +
+            `result), T produces a complex number with both real and imaginary parts.`,
+          workedExample: {
+            problem: `Apply T to the |1⟩ coefficient ${wA}`,
+            steps: [
+              `T multiplies |1⟩ by e^(iπ/4) ≈ 0.71 + 0.71i`,
+              `(0.71 + 0.71i) × ${wA}`,
+              `Real part: 0.71 × ${wA} = ${fmt(wResRe)}`,
+              `Imaginary part: 0.71 × ${wA} = ${fmt(wResIm)}`,
+              `Result: (${fmt(wResRe)}, ${fmt(wResIm)})`,
+            ],
+            insight: `T is a "finer" rotation than S — it's a π/4 step where S is π/2. The T gate is special because it's outside the Clifford group, making it essential for universal quantum computation.`,
+          },
+          tryIt: {
+            question: `Apply the T gate to the |1⟩ coefficient ${pA}.\nT multiplies the |1⟩ amplitude by e^(iπ/4) ≈ (0.71 + 0.71i).\nAnswer as a complex number (re, im):`,
+            answer: [pResRe, pResIm],
+            answerType: 'complex',
+            answerDisplay: fmtC(pResRe, pResIm),
+            steps: [
+              `T multiplies |1⟩ by 0.71 + 0.71i`,
+              `Real: 0.71 × ${pA} = ${fmt(pResRe)}`,
+              `Imag: 0.71 × ${pA} = ${fmt(pResIm)}`,
+            ],
+            whyItMatters:
+              `The T gate is the key to universality. The Clifford gates (H, S, CNOT) alone ` +
+              `can be efficiently simulated classically. Adding the T gate makes the gate set ` +
+              `universal — capable of approximating any quantum operation.`,
+          },
+        };
+      }
+
+      case 'compute_phase': {
+        return {
+          teachingText:
+            `To understand T, we need Euler's formula: e^(iθ) = cos θ + i·sin θ. ` +
+            `For the T gate, θ = π/4 (45°). So e^(iπ/4) = cos(π/4) + i·sin(π/4). ` +
+            `Both cos(π/4) and sin(π/4) equal 1/√2 ≈ 0.71. ` +
+            `Therefore e^(iπ/4) ≈ 0.71 + 0.71i. This complex number has magnitude 1 ` +
+            `(it lies on the unit circle), confirming T preserves probabilities.`,
+          workedExample: {
+            problem: `Compute e^(iπ/2) using Euler's formula`,
+            steps: [
+              `e^(iπ/2) = cos(π/2) + i·sin(π/2)`,
+              `cos(π/2) = 0`,
+              `sin(π/2) = 1`,
+              `e^(iπ/2) = 0 + i = i`,
+              `This is the S gate's phase factor!`,
+            ],
+            insight: `Euler's formula maps angles to complex numbers on the unit circle. Each phase gate corresponds to a specific angle: T = π/4, S = π/2, Z = π.`,
+          },
+          tryIt: {
+            question: `The T gate multiplies |1⟩ by e^(iπ/4).\nUsing Euler's formula: e^(iθ) = cos θ + i sin θ.\nWhat is e^(iπ/4)? (complex answer, use 0.71 ≈ 1/√2)`,
+            answer: [0.71, 0.71],
+            answerType: 'complex',
+            answerDisplay: fmtC(0.71, 0.71),
+            steps: [
+              `e^(iπ/4) = cos(π/4) + i·sin(π/4)`,
+              `= 0.71 + 0.71i`,
+            ],
+            whyItMatters:
+              `Euler's formula is the bridge between angles and complex numbers. Every phase ` +
+              `gate is just a rotation on the unit circle in the complex plane. Understanding ` +
+              `this makes the entire phase gate family intuitive.`,
+          },
+        };
+      }
+
+      case 'double_t': {
+        const wA = randInt(2, 5);
+        let pA; do { pA = randInt(2, 5); } while (pA === wA);
+
+        return {
+          teachingText:
+            `What happens when T is applied twice? T multiplies by e^(iπ/4), so T² ` +
+            `multiplies by e^(iπ/4) × e^(iπ/4) = e^(iπ/2) = i. But multiplying by i ` +
+            `is exactly what S does! So T² = S. This is why T is called the √S gate ` +
+            `or π/8 gate (since π/4 is half of π/2). The phase hierarchy: T → S → Z.`,
+          workedExample: {
+            problem: `Apply T twice to the |1⟩ coefficient ${wA}`,
+            steps: [
+              `T² = S (since e^(iπ/4)² = e^(iπ/2) = i)`,
+              `So T² multiplies |1⟩ by i`,
+              `i × ${wA} = ${wA}i = (0, ${wA})`,
+            ],
+            insight: `T² = S, S² = Z, Z² = I. Each gate in the hierarchy is the square root of the next.`,
+          },
+          tryIt: {
+            question: `Apply T twice to the |1⟩ coefficient ${pA}.\nT² = S, which multiplies by i.\nWhat is the result? (complex answer)`,
+            answer: [0, pA],
+            answerType: 'complex',
+            answerDisplay: fmtC(0, pA),
+            steps: [
+              `T² = S`,
+              `S multiplies |1⟩ by i`,
+              `i × ${pA} = ${pA}i = (0, ${pA})`,
+            ],
+            whyItMatters:
+              `This hierarchy means we can build S from two T gates, and Z from four T gates. ` +
+              `In fault-tolerant quantum computing, T gates are the most expensive resource, ` +
+              `so minimizing T-count is a major optimization goal.`,
+          },
+        };
+      }
+
+      case 'quad_t': {
+        const wA = randInt(2, 5);
+        let pA; do { pA = randInt(2, 5); } while (pA === wA);
+
+        return {
+          teachingText:
+            `Continuing the chain: T⁴ = (T²)² = S² = Z. So four T gates equal one Z gate. ` +
+            `T⁴ multiplies |1⟩ by e^(iπ/4)⁴ = e^(iπ) = −1, which is exactly Z's effect. ` +
+            `Going further: T⁸ = Z² = I (identity). So the T gate generates a cyclic ` +
+            `group of order 8: {I, T, T², T³, T⁴, T⁵, T⁶, T⁷} = {I, T, S, T³, Z, T⁵, S†, T†}.`,
+          workedExample: {
+            problem: `Apply T four times to the |1⟩ coefficient ${wA}`,
+            steps: [
+              `T⁴ = Z (since e^(iπ/4)⁴ = e^(iπ) = −1)`,
+              `Z multiplies |1⟩ by −1`,
+              `(−1) × ${wA} = ${-wA}`,
+              `Result: (${-wA}, 0)`,
+            ],
+            insight: `T⁴ = Z. The T gate steps around the unit circle in 45° increments; four steps = 180° = Z.`,
+          },
+          tryIt: {
+            question: `Apply T four times to the |1⟩ coefficient ${pA}.\nT⁴ = Z, which multiplies by −1.\nWhat is the result? (complex answer)`,
+            answer: [-pA, 0],
+            answerType: 'complex',
+            answerDisplay: fmtC(-pA, 0),
+            steps: [
+              `T⁴ = Z`,
+              `Z multiplies |1⟩ by −1`,
+              `(−1) × ${pA} = ${-pA}`,
+            ],
+            whyItMatters:
+              `Understanding T⁴ = Z helps you simplify circuits. If you see four T gates ` +
+              `in a row, you can replace them with a single Z — saving three gate operations. ` +
+              `This kind of algebraic simplification is critical for practical quantum computing.`,
+          },
+        };
+      }
+
+      case 'superposition': {
+        const h = 0.71;
+        const resRe = r2(tRe * h);  // 0.50
+        const resIm = r2(tIm * h);  // 0.50
+
+        return {
+          teachingText:
+            `When T acts on a superposition, only the |1⟩ coefficient picks up the ` +
+            `phase factor. For (1/√2)(|0⟩ + |1⟩), the |1⟩ coefficient is ≈ 0.71. ` +
+            `After T: 0.71 × (0.71 + 0.71i) = (0.50 + 0.50i). The result is a ` +
+            `complex amplitude. Its magnitude |0.50 + 0.50i|² = 0.25 + 0.25 = 0.50, ` +
+            `so the probability of measuring |1⟩ is still 50%.`,
+          workedExample: {
+            problem: `Apply T to the |1⟩ coefficient of (1/√2)(|0⟩ + |1⟩). The |1⟩ coefficient is ${h}.`,
+            steps: [
+              `T multiplies |1⟩ by 0.71 + 0.71i`,
+              `(0.71 + 0.71i) × ${h}`,
+              `Real: 0.71 × ${h} = ${fmt(resRe)}`,
+              `Imag: 0.71 × ${h} = ${fmt(resIm)}`,
+              `Result: (${fmt(resRe)}, ${fmt(resIm)})`,
+            ],
+            insight: `|0.50 + 0.50i|² = 0.25 + 0.25 = 0.50. Probability unchanged — phase gates never affect measurement outcomes alone.`,
+          },
+          tryIt: {
+            question: `Apply T to the |1⟩ component of (1/√2)(|0⟩ + |1⟩).\nThe |1⟩ coefficient is ${h}. What is T × ${h}?\nT multiplies by e^(iπ/4) ≈ (0.71 + 0.71i).\nAnswer as a complex number (re, im):`,
+            answer: [resRe, resIm],
+            answerType: 'complex',
+            answerDisplay: fmtC(resRe, resIm),
+            steps: [
+              `(0.71 + 0.71i) × ${h}`,
+              `Real: 0.71 × ${h} = ${fmt(resRe)}`,
+              `Imag: 0.71 × ${h} = ${fmt(resIm)}`,
+            ],
+            whyItMatters:
+              `The T gate on a superposition creates a subtle phase that's invisible to ` +
+              `direct measurement. Quantum algorithms exploit these phases through interference ` +
+              `— applying H after T converts the phase difference into a measurable amplitude difference.`,
+          },
+        };
+      }
+
+      default: return null;
+    }
+  },
+},
+
+t_dagger_apply: {
+  generate(difficulty, variation) {
+    const fmt = (n) => Number.isInteger(n) ? String(n) : n.toFixed(2);
+    const fmtC = (re, im) => {
+      if (im === 0) return `${fmt(re)}`;
+      if (re === 0) {
+        if (im === 1) return 'i';
+        if (im === -1) return '−i';
+        return im > 0 ? `${fmt(im)}i` : `−${fmt(Math.abs(im))}i`;
+      }
+      const sign = im > 0 ? '+' : '−';
+      const mag = Math.abs(im);
+      const imStr = mag === 1 ? 'i' : `${fmt(mag)}i`;
+      return `${fmt(re)} ${sign} ${imStr}`;
+    };
+    const tdRe = 0.71;
+    const tdIm = -0.71;
+
+    switch (variation) {
+
+      case 'basic': {
+        const wA = randInt(2, 4);
+        let pA; do { pA = randInt(2, 4); } while (pA === wA);
+        const wResRe = r2(tdRe * wA);
+        const wResIm = r2(tdIm * wA);
+        const pResRe = r2(tdRe * pA);
+        const pResIm = r2(tdIm * pA);
+
+        return {
+          teachingText:
+            `T† (T-dagger) is the inverse of T. It applies a −π/4 (−45°) phase rotation. ` +
+            `Its matrix is T† = [[1,0],[0,e^(−iπ/4)]]. Using Euler's formula, ` +
+            `e^(−iπ/4) = cos(−π/4) + i·sin(−π/4) = 0.71 − 0.71i. ` +
+            `So T† multiplies the |1⟩ coefficient by (0.71 − 0.71i). ` +
+            `Applying T then T† returns to the original state: T†T = I.`,
+          workedExample: {
+            problem: `Apply T† to the |1⟩ coefficient ${wA}`,
+            steps: [
+              `T† multiplies |1⟩ by e^(−iπ/4) ≈ 0.71 − 0.71i`,
+              `(0.71 − 0.71i) × ${wA}`,
+              `Real part: 0.71 × ${wA} = ${fmt(wResRe)}`,
+              `Imaginary part: (−0.71) × ${wA} = ${fmt(wResIm)}`,
+              `Result: (${fmt(wResRe)}, ${fmt(wResIm)})`,
+            ],
+            insight: `T† rotates −45° while T rotates +45°. They're mirror images on the unit circle.`,
+          },
+          tryIt: {
+            question: `Apply the T† gate to the |1⟩ coefficient ${pA}.\nT† multiplies the |1⟩ amplitude by e^(−iπ/4) ≈ (0.71 − 0.71i).\nAnswer as a complex number (re, im):`,
+            answer: [pResRe, pResIm],
+            answerType: 'complex',
+            answerDisplay: fmtC(pResRe, pResIm),
+            steps: [
+              `T† multiplies |1⟩ by 0.71 − 0.71i`,
+              `Real: 0.71 × ${pA} = ${fmt(pResRe)}`,
+              `Imag: (−0.71) × ${pA} = ${fmt(pResIm)}`,
+            ],
+            whyItMatters:
+              `T† is used frequently in circuit decompositions. When compiling a quantum ` +
+              `algorithm into basic gates, T and T† often appear in pairs to create precise ` +
+              `phase rotations needed for algorithms like Shor's factoring.`,
+          },
+        };
+      }
+
+      case 'undo_t': {
+        const wA = randInt(2, 5);
+        let pA; do { pA = randInt(2, 5); } while (pA === wA);
+
+        return {
+          teachingText:
+            `T†T = I: applying T then T† returns to the original state. ` +
+            `T multiplies by e^(iπ/4), T† multiplies by e^(−iπ/4). ` +
+            `Combined: e^(iπ/4) × e^(−iπ/4) = e^0 = 1. This is the fundamental ` +
+            `property of inverse gates. In quantum circuits, T† "undoes" whatever ` +
+            `T did, and vice versa.`,
+          workedExample: {
+            problem: `Apply T then T† to the |1⟩ coefficient ${wA}`,
+            steps: [
+              `T: e^(iπ/4) × ${wA} ≈ (0.71 + 0.71i) × ${wA} = (${fmt(r2(0.71 * wA))}, ${fmt(r2(0.71 * wA))})`,
+              `T†: e^(−iπ/4) × (${fmt(r2(0.71 * wA))} + ${fmt(r2(0.71 * wA))}i)`,
+              `e^(iπ/4) × e^(−iπ/4) = 1, so the result is ${wA}`,
+            ],
+            insight: `T†T = I. For any quantum gate U, U†U = I. This is the mathematical expression of quantum reversibility.`,
+          },
+          tryIt: {
+            question: `Apply T then T† to the |1⟩ coefficient ${pA}.\nWhat is the result? (complex answer)`,
+            answer: [pA, 0],
+            answerType: 'complex',
+            answerDisplay: fmtC(pA, 0),
+            steps: [
+              `T multiplies by e^(iπ/4), T† multiplies by e^(−iπ/4)`,
+              `e^(iπ/4) × e^(−iπ/4) = 1`,
+              `Result: ${pA}`,
+            ],
+            whyItMatters:
+              `Quantum error correction relies on being able to undo operations. If a T ` +
+              `gate is applied in error, T† can correct it. This inverse relationship ` +
+              `is foundational to all quantum error-correcting codes.`,
+          },
+        };
+      }
+
+      case 'superposition': {
+        const h = 0.71;
+        const resRe = r2(tdRe * h);  // 0.50
+        const resIm = r2(tdIm * h);  // -0.50
+
+        return {
+          teachingText:
+            `T† on a superposition state works like T but with the opposite phase ` +
+            `rotation. For |1⟩ coefficient 0.71: T† × 0.71 = (0.71 − 0.71i)(0.71) ` +
+            `= (0.50 − 0.50i). The magnitude is |0.50 − 0.50i|² = 0.25 + 0.25 = 0.50. ` +
+            `Again, probabilities are preserved. The only difference from T is the ` +
+            `sign of the imaginary part.`,
+          workedExample: {
+            problem: `Apply T† to the |1⟩ coefficient of (1/√2)(|0⟩ + |1⟩). The |1⟩ coefficient is ${h}.`,
+            steps: [
+              `T† multiplies |1⟩ by 0.71 − 0.71i`,
+              `(0.71 − 0.71i) × ${h}`,
+              `Real: 0.71 × ${h} = ${fmt(resRe)}`,
+              `Imag: (−0.71) × ${h} = ${fmt(resIm)}`,
+              `Result: (${fmt(resRe)}, ${fmt(resIm)})`,
+            ],
+            insight: `Compare T|+⟩ = 0.50 + 0.50i with T†|+⟩ = 0.50 − 0.50i. They're complex conjugates — same magnitude, opposite phase.`,
+          },
+          tryIt: {
+            question: `Apply T† to the |1⟩ component of (1/√2)(|0⟩ + |1⟩).\nThe |1⟩ coefficient is ${h}. What is T† × ${h}?\nT† multiplies by e^(−iπ/4) ≈ (0.71 − 0.71i).\nAnswer as a complex number (re, im):`,
+            answer: [resRe, resIm],
+            answerType: 'complex',
+            answerDisplay: fmtC(resRe, resIm),
+            steps: [
+              `(0.71 − 0.71i) × ${h}`,
+              `Real: 0.71 × ${h} = ${fmt(resRe)}`,
+              `Imag: (−0.71) × ${h} = ${fmt(resIm)}`,
+            ],
+            whyItMatters:
+              `T and T† appear as conjugate pairs in many quantum algorithms. In quantum ` +
+              `phase estimation, the pattern T...T† creates controlled phase rotations ` +
+              `that extract eigenvalue information — the basis of Shor's algorithm.`,
+          },
+        };
+      }
+
+      default: return null;
+    }
+  },
+},
+
+phase_family: {
+  generate(difficulty, variation) {
+    switch (variation) {
+
+      case 'basic': {
+        // identify_gate: P(angle) → name
+        const wGates = [
+          { angle: 'π', result: 'Z', phase: 'e^(iπ) = −1' },
+          { angle: 'π/2', result: 'S', phase: 'e^(iπ/2) = i' },
+          { angle: 'π/4', result: 'T', phase: 'e^(iπ/4) ≈ 0.71 + 0.71i' },
+        ];
+        const wPick = wGates[randInt(0, wGates.length - 1)];
+        let pPick;
+        do { pPick = wGates[randInt(0, wGates.length - 1)]; } while (pPick.result === wPick.result);
+
+        return {
+          teachingText:
+            `All single-qubit phase gates belong to one family: P(θ) = [[1,0],[0,e^(iθ)]]. ` +
+            `The angle θ determines the gate. The named gates are special cases: ` +
+            `T = P(π/4), S = P(π/2), Z = P(π). At θ = 0 we get the identity I. ` +
+            `Each gate multiplies the |1⟩ coefficient by e^(iθ): T by e^(iπ/4), ` +
+            `S by e^(iπ/2) = i, and Z by e^(iπ) = −1.`,
+          workedExample: {
+            problem: `What named gate is P(${wPick.angle})?`,
+            steps: [
+              `P(${wPick.angle}) = [[1,0],[0,${wPick.phase}]]`,
+              `The phase factor ${wPick.phase} corresponds to the ${wPick.result} gate`,
+              `Answer: ${wPick.result}`,
+            ],
+            insight: `The phase family P(θ) unifies T, S, and Z. They differ only in the angle of rotation around the Z-axis of the Bloch sphere.`,
+          },
+          tryIt: {
+            question: `The phase gate P(θ) = [[1,0],[0,e^(iθ)]].\nWhat named gate is P(${pPick.angle})?`,
+            answer: pPick.result,
+            answerType: 'gate_name',
+            answerDisplay: pPick.result,
+            steps: [
+              `P(${pPick.angle}) applies phase ${pPick.phase}`,
+              `This is the ${pPick.result} gate`,
+            ],
+            whyItMatters:
+              `Understanding the phase family reveals that T, S, and Z aren't separate ` +
+              `gates — they're points on a continuous dial. Quantum algorithms can use ` +
+              `arbitrary P(θ) rotations, decomposed into T and T† for hardware implementation.`,
+          },
+        };
+      }
+
+      case 'sequence_to_gate': {
+        const wSeqs = [
+          { seq: 'T·T', result: 'S', explain: 'T² = S: e^(iπ/4) × e^(iπ/4) = e^(iπ/2) = i' },
+          { seq: 'S·S', result: 'Z', explain: 'S² = Z: i × i = −1' },
+          { seq: 'T·T·T·T', result: 'Z', explain: 'T⁴ = Z: e^(iπ/4)⁴ = e^(iπ) = −1' },
+        ];
+        const pSeqs = [
+          { seq: 'T·T·S', result: 'Z', explain: 'T²·S = S·S = Z' },
+          { seq: 'S·T·T', result: 'Z', explain: 'S·T² = S·S = Z' },
+          { seq: 'S·S', result: 'Z', explain: 'S² = Z: i × i = −1' },
+          { seq: 'T·T', result: 'S', explain: 'T² = S: e^(iπ/4)² = e^(iπ/2) = i' },
+          { seq: 'T·T·T·T', result: 'Z', explain: 'T⁴ = Z: e^(iπ/4)⁴ = e^(iπ) = −1' },
+        ];
+        const wPick = wSeqs[randInt(0, wSeqs.length - 1)];
+        let pPick;
+        do { pPick = pSeqs[randInt(0, pSeqs.length - 1)]; } while (pPick.seq === wPick.seq);
+
+        return {
+          teachingText:
+            `Phase gates compose by adding angles: P(θ₁)·P(θ₂) = P(θ₁ + θ₂). ` +
+            `This gives us the key identities: T·T = P(π/4 + π/4) = P(π/2) = S. ` +
+            `S·S = P(π/2 + π/2) = P(π) = Z. T⁴ = P(4·π/4) = P(π) = Z. ` +
+            `And T·T·S = S·S = Z. These relationships let us simplify gate sequences.`,
+          workedExample: {
+            problem: `What single gate is equivalent to ${wPick.seq}?`,
+            steps: [
+              wPick.explain,
+              `Answer: ${wPick.result}`,
+            ],
+            insight: `Phase gates compose by adding angles. This makes simplification straightforward: just add up the π/4 steps.`,
+          },
+          tryIt: {
+            question: `What single gate is equivalent to ${pPick.seq}?`,
+            answer: pPick.result,
+            answerType: 'gate_name',
+            answerDisplay: pPick.result,
+            steps: [
+              pPick.explain,
+            ],
+            whyItMatters:
+              `Gate sequence simplification is a core step in quantum circuit optimization. ` +
+              `Reducing T·T to S saves a gate, and reducing T·T·T·T to Z saves three. ` +
+              `In fault-tolerant quantum computing, each T gate requires expensive "magic ` +
+              `state distillation," so every saved T gate matters.`,
+          },
+        };
+      }
+
+      case 'find_angle': {
+        const wGates = [
+          { name: 'T', angle: 'π/4', factor: 'e^(iπ/4) ≈ 0.71 + 0.71i' },
+          { name: 'S', angle: 'π/2', factor: 'e^(iπ/2) = i' },
+          { name: 'Z', angle: 'π', factor: 'e^(iπ) = −1' },
+        ];
+        const wPick = wGates[randInt(0, wGates.length - 1)];
+        let pPick;
+        do { pPick = wGates[randInt(0, wGates.length - 1)]; } while (pPick.name === wPick.name);
+
+        return {
+          teachingText:
+            `Each named phase gate corresponds to a specific angle in P(θ): ` +
+            `T = P(π/4), meaning T applies a 45° phase. S = P(π/2), a 90° phase. ` +
+            `Z = P(π), a 180° phase (sign flip). The angle determines the phase ` +
+            `factor e^(iθ): at π/4 it's (0.71 + 0.71i), at π/2 it's i, at π it's −1.`,
+          workedExample: {
+            problem: `Which named gate is P(${wPick.angle})?`,
+            steps: [
+              `P(${wPick.angle}) applies phase factor ${wPick.factor}`,
+              `This is the ${wPick.name} gate`,
+            ],
+            insight: `The phase angles form a geometric progression: π/4, π/2, π. Each doubling of the angle squares the phase factor.`,
+          },
+          tryIt: {
+            question: `Which named gate equals P(${pPick.angle})?\nP(θ) = [[1,0],[0,e^(iθ)]]`,
+            answer: pPick.name,
+            answerType: 'gate_name',
+            answerDisplay: pPick.name,
+            steps: [
+              `P(${pPick.angle}) applies phase ${pPick.factor}`,
+              `This is the ${pPick.name} gate`,
+            ],
+            whyItMatters:
+              `Knowing the angle of each gate helps you reason about compositions. ` +
+              `If you need a total phase of π, you can achieve it with one Z, two S gates, ` +
+              `or four T gates — whichever is most convenient for your circuit architecture.`,
+          },
+        };
+      }
+
+      default: return null;
+    }
+  },
+},
+
+// ── Chapter 14: Multi-Qubit Gates ────────────────────────────────────────────
+
+cz_apply: {
+  generate(difficulty, variation) {
+    const labels = ['|00⟩','|01⟩','|10⟩','|11⟩'];
+    const diag = [1, 1, 1, -1];
+
+    switch (variation) {
+
+      case 'basic_00': {
+        // CZ on |00⟩ or |01⟩ — no change
+        const wi = randInt(0, 1);
+        const pi = 1 - wi;
+        const wOut = [0,0,0,0]; wOut[wi] = 1;
+        const pOut = [0,0,0,0]; pOut[pi] = 1;
+        return {
+          teachingText:
+            `The Controlled-Z (CZ) gate applies a phase flip of −1 to ONLY the |11⟩ component ` +
+            `of a two-qubit state. Its matrix is diag(1, 1, 1, −1).\n\n` +
+            `CZ|00⟩ = |00⟩\nCZ|01⟩ = |01⟩\nCZ|10⟩ = |10⟩\nCZ|11⟩ = −|11⟩\n\n` +
+            `Unlike CNOT, CZ doesn't flip any qubit — it only adds a minus sign when both qubits are |1⟩.`,
+          workedExample: {
+            problem: `Apply CZ to ${labels[wi]}. Result as a 4-vector`,
+            steps: [
+              `CZ = diag(1,1,1,−1). Only the |11⟩ coefficient is negated.`,
+              `${labels[wi]} has no |11⟩ component.`,
+              `Result: ${fmtVec4(wOut)}`,
+            ],
+            insight: `CZ only affects |11⟩. Any state without a |11⟩ component passes through unchanged.`,
+          },
+          tryIt: {
+            question: `Apply CZ to ${labels[pi]}. Result as a 4-vector:`,
+            answer: pOut,
+            answerType: 'vector4',
+            answerDisplay: fmtVec4(pOut),
+            steps: [
+              `CZ = diag(1,1,1,−1).`,
+              `${labels[pi]} has no |11⟩ component, so nothing changes.`,
+              `Answer: ${fmtVec4(pOut)}`,
+            ],
+            whyItMatters:
+              `CZ is one of the most important entangling gates in practice. Many superconducting ` +
+              `quantum processors use CZ as their native two-qubit gate because it is symmetric ` +
+              `— it doesn't matter which qubit is "control" and which is "target."`,
+          },
+        };
+      }
+
+      case 'basic_11': {
+        // CZ|11⟩ = −|11⟩ vs CZ|10⟩ = |10⟩
+        const wPick11 = randInt(0, 1) === 0;
+        const wIdx = wPick11 ? 3 : 2;
+        const pIdx = wPick11 ? 2 : 3;
+        const wOut = [0,0,0,0]; wOut[wIdx] = diag[wIdx];
+        const pOut = [0,0,0,0]; pOut[pIdx] = diag[pIdx];
+        return {
+          teachingText:
+            `CZ negates the amplitude of |11⟩ and leaves all other basis states unchanged.\n\n` +
+            `CZ|10⟩ = |10⟩  (only one qubit is |1⟩ — no sign change)\n` +
+            `CZ|11⟩ = −|11⟩  (both qubits are |1⟩ — sign flips!)\n\n` +
+            `Think of CZ as: "if both qubits are |1⟩, multiply the amplitude by −1."`,
+          workedExample: {
+            problem: `Apply CZ to ${labels[wIdx]}. Result as a 4-vector`,
+            steps: [
+              `CZ = diag(1,1,1,−1).`,
+              wIdx === 3
+                ? `|11⟩: both qubits |1⟩, so multiply by −1 → −|11⟩`
+                : `|10⟩: only first qubit is |1⟩, no sign change`,
+              `Result: ${fmtVec4(wOut)}`,
+            ],
+            insight: `CZ is a phase gate — it never changes which basis states are present, only their signs.`,
+          },
+          tryIt: {
+            question: `Apply CZ to ${labels[pIdx]}. Result as a 4-vector:`,
+            answer: pOut,
+            answerType: 'vector4',
+            answerDisplay: fmtVec4(pOut),
+            steps: [
+              `CZ = diag(1,1,1,−1).`,
+              pIdx === 3
+                ? `|11⟩: both qubits |1⟩ → multiply by −1`
+                : `|10⟩: not both |1⟩ → no change`,
+              `Answer: ${fmtVec4(pOut)}`,
+            ],
+            whyItMatters:
+              `Unlike CNOT which flips bits, CZ only changes phases. This makes it a "diagonal" ` +
+              `gate in the computational basis — it never creates superpositions, only adjusts signs. ` +
+              `This property makes CZ especially useful in phase-kickback techniques used in ` +
+              `quantum algorithms like Grover's search.`,
+          },
+        };
+      }
+
+      case 'superposition': {
+        const supCases = [
+          { inVec: [0.71, 0, 0, 0.71], outVec: [0.71, 0, 0, -0.71],
+            inLabel: '0.71|00⟩ + 0.71|11⟩', outLabel: '0.71|00⟩ − 0.71|11⟩' },
+          { inVec: [0.5, 0.5, 0.5, 0.5], outVec: [0.5, 0.5, 0.5, -0.5],
+            inLabel: '0.5(|00⟩+|01⟩+|10⟩+|11⟩)', outLabel: '0.5|00⟩+0.5|01⟩+0.5|10⟩−0.5|11⟩' },
+        ];
+        const wi = randInt(0, supCases.length - 1);
+        const pi = 1 - wi;
+        const w = supCases[wi], p = supCases[pi];
+        return {
+          teachingText:
+            `CZ on superpositions: apply the diagonal to each component. Only the |11⟩ ` +
+            `amplitude gets negated — all others stay the same.\n\n` +
+            `If the state is a|00⟩ + b|01⟩ + c|10⟩ + d|11⟩, then:\n` +
+            `CZ gives a|00⟩ + b|01⟩ + c|10⟩ − d|11⟩\n\n` +
+            `Just flip the sign of the last component!`,
+          workedExample: {
+            problem: `Apply CZ to ${fmtVec4(w.inVec)}`,
+            steps: [
+              `Input: ${w.inLabel}`,
+              `CZ negates only the |11⟩ coefficient`,
+              `Result: ${fmtVec4(w.outVec)}`,
+            ],
+            insight: `CZ on a superposition is simple: negate the 4th component (the |11⟩ amplitude) and leave the rest alone.`,
+          },
+          tryIt: {
+            question: `Apply CZ to ${fmtVec4(p.inVec)}. Result:`,
+            answer: p.outVec,
+            answerType: 'vector4',
+            answerDisplay: fmtVec4(p.outVec),
+            steps: [
+              `Input: ${p.inLabel}`,
+              `Negate only the |11⟩ coefficient`,
+              `Answer: ${fmtVec4(p.outVec)}`,
+            ],
+            whyItMatters:
+              `CZ acting on Bell states converts between them — for example, CZ turns |Φ+⟩ ` +
+              `into a state with opposite phase on |11⟩. This phase manipulation is central to ` +
+              `error correction codes and the Deutsch-Jozsa algorithm.`,
+          },
+        };
+      }
+
+      case 'symmetry': {
+        // Show CZ is symmetric: it doesn't matter which qubit is "control"
+        const wIdx = randInt(0, 3);
+        let pIdx;
+        do { pIdx = randInt(0, 3); } while (pIdx === wIdx);
+        const wOut = [0,0,0,0]; wOut[wIdx] = diag[wIdx];
+        const pOut = [0,0,0,0]; pOut[pIdx] = diag[pIdx];
+        return {
+          teachingText:
+            `A remarkable property of CZ: it is completely symmetric between the two qubits. ` +
+            `Unlike CNOT (which has a distinct control and target), CZ treats both qubits equally.\n\n` +
+            `This means CZ_{AB} = CZ_{BA} — swapping which qubit is "first" or "second" ` +
+            `doesn't change the gate. The matrix diag(1,1,1,−1) is the same regardless ` +
+            `of qubit ordering.`,
+          workedExample: {
+            problem: `Apply CZ to ${labels[wIdx]}. Result as a 4-vector`,
+            steps: [
+              `CZ = diag(1,1,1,−1), symmetric in both qubits.`,
+              `${labels[wIdx]} coefficient multiplied by ${diag[wIdx]}`,
+              `Result: ${fmtVec4(wOut)}`,
+            ],
+            insight: `CZ is symmetric — neither qubit is special. This simplifies circuit design because you don't need to track which qubit is "control."`,
+          },
+          tryIt: {
+            question: `Apply CZ to ${labels[pIdx]}. Result as a 4-vector:`,
+            answer: pOut,
+            answerType: 'vector4',
+            answerDisplay: fmtVec4(pOut),
+            steps: [
+              `CZ = diag(1,1,1,−1)`,
+              `${labels[pIdx]} coefficient × ${diag[pIdx]}`,
+              `Answer: ${fmtVec4(pOut)}`,
+            ],
+            whyItMatters:
+              `CZ's symmetry is why many quantum hardware platforms prefer it as their native ` +
+              `two-qubit gate. When you don't need to distinguish control from target, circuit ` +
+              `compilation becomes simpler and more flexible.`,
+          },
+        };
+      }
+
+      default: return null;
+    }
+  },
+},
+
+swap_apply: {
+  generate(difficulty, variation) {
+    const labels = ['|00⟩','|01⟩','|10⟩','|11⟩'];
+    const swappedLabels = ['|00⟩','|10⟩','|01⟩','|11⟩'];
+
+    switch (variation) {
+
+      case 'basic_basis': {
+        // SWAP|01⟩=|10⟩ and SWAP|10⟩=|01⟩
+        const wPick01 = randInt(0, 1) === 0;
+        const wIdx = wPick01 ? 1 : 2;
+        const pIdx = wPick01 ? 2 : 1;
+        const wOut = [0,0,0,0]; wOut[wIdx === 1 ? 2 : 1] = 1;
+        const pOut = [0,0,0,0]; pOut[pIdx === 1 ? 2 : 1] = 1;
+        return {
+          teachingText:
+            `The SWAP gate exchanges two qubits: the first becomes the second, and vice versa.\n\n` +
+            `SWAP|00⟩ = |00⟩  (both same, no visible change)\n` +
+            `SWAP|01⟩ = |10⟩  (qubits swapped!)\n` +
+            `SWAP|10⟩ = |01⟩  (qubits swapped!)\n` +
+            `SWAP|11⟩ = |11⟩  (both same, no visible change)\n\n` +
+            `In vector form: SWAP maps (a, b, c, d) → (a, c, b, d) — it swaps the middle two components.`,
+          workedExample: {
+            problem: `Apply SWAP to ${labels[wIdx]}. Result as a 4-vector`,
+            steps: [
+              `SWAP exchanges the two qubits.`,
+              `${labels[wIdx]} → ${swappedLabels[wIdx]}`,
+              `Result: ${fmtVec4(wOut)}`,
+            ],
+            insight: `SWAP literally swaps the qubit labels. The vector rule is simple: swap positions 1 and 2 (0-indexed).`,
+          },
+          tryIt: {
+            question: `Apply SWAP to ${labels[pIdx]}. Result as a 4-vector:`,
+            answer: pOut,
+            answerType: 'vector4',
+            answerDisplay: fmtVec4(pOut),
+            steps: [
+              `SWAP exchanges qubits: ${labels[pIdx]} → ${swappedLabels[pIdx]}`,
+              `Answer: ${fmtVec4(pOut)}`,
+            ],
+            whyItMatters:
+              `SWAP gates are essential when qubits need to interact but aren't physically adjacent. ` +
+              `On real quantum hardware, qubits can only interact with their neighbors, so SWAP ` +
+              `routes information across the chip — like passing a note across a classroom.`,
+          },
+        };
+      }
+
+      case 'both_same': {
+        // SWAP|00⟩=|00⟩ or SWAP|11⟩=|11⟩
+        const wPick00 = randInt(0, 1) === 0;
+        const wIdx = wPick00 ? 0 : 3;
+        const pIdx = wPick00 ? 3 : 0;
+        const wOut = [0,0,0,0]; wOut[wIdx] = 1;
+        const pOut = [0,0,0,0]; pOut[pIdx] = 1;
+        return {
+          teachingText:
+            `When both qubits are in the same state, SWAP has no visible effect:\n\n` +
+            `SWAP|00⟩ = |00⟩ — swapping two |0⟩ qubits gives two |0⟩ qubits\n` +
+            `SWAP|11⟩ = |11⟩ — swapping two |1⟩ qubits gives two |1⟩ qubits\n\n` +
+            `The qubits ARE swapped, but since they're identical, the state looks the same.`,
+          workedExample: {
+            problem: `Apply SWAP to ${labels[wIdx]}. Result as a 4-vector`,
+            steps: [
+              `Both qubits are the same in ${labels[wIdx]}.`,
+              `Swapping identical qubits: ${labels[wIdx]} → ${labels[wIdx]}`,
+              `Result: ${fmtVec4(wOut)}`,
+            ],
+            insight: `SWAP on identical qubits is like swapping two identical objects — nothing changes.`,
+          },
+          tryIt: {
+            question: `Apply SWAP to ${labels[pIdx]}. Result as a 4-vector:`,
+            answer: pOut,
+            answerType: 'vector4',
+            answerDisplay: fmtVec4(pOut),
+            steps: [
+              `Both qubits identical in ${labels[pIdx]}`,
+              `Swap changes nothing: ${labels[pIdx]} → ${labels[pIdx]}`,
+              `Answer: ${fmtVec4(pOut)}`,
+            ],
+            whyItMatters:
+              `Even though SWAP|00⟩ = |00⟩ and SWAP|11⟩ = |11⟩ look trivial, understanding ` +
+              `which states are unchanged by a gate is critical for circuit analysis. ` +
+              `These "fixed points" help you predict circuit behavior quickly.`,
+          },
+        };
+      }
+
+      case 'superposition': {
+        const supCases = [
+          { inVec: [0, 1, 0, 0], outVec: [0, 0, 1, 0],
+            inLabel: '|01⟩', outLabel: '|10⟩' },
+          { inVec: [0.5, 0.87, 0, 0], outVec: [0.5, 0, 0.87, 0],
+            inLabel: '0.5|00⟩ + 0.87|01⟩', outLabel: '0.5|00⟩ + 0.87|10⟩' },
+        ];
+        const wi = randInt(0, supCases.length - 1);
+        const pi = 1 - wi;
+        const w = supCases[wi], p = supCases[pi];
+        return {
+          teachingText:
+            `SWAP on a general state (a, b, c, d) gives (a, c, b, d) — the middle ` +
+            `two components swap places.\n\n` +
+            `Why? Because |01⟩ ↔ |10⟩ under SWAP, so the coefficients for those ` +
+            `basis states trade positions. The |00⟩ and |11⟩ coefficients stay put.`,
+          workedExample: {
+            problem: `Apply SWAP to ${fmtVec4(w.inVec)}`,
+            steps: [
+              `SWAP rule: (a, b, c, d) → (a, c, b, d)`,
+              `Input: ${w.inLabel}`,
+              `Swap middle two: ${fmtVec4(w.outVec)}`,
+            ],
+            insight: `The SWAP rule in vector form is dead simple: swap positions 1 and 2 (the |01⟩ and |10⟩ amplitudes).`,
+          },
+          tryIt: {
+            question: `Apply SWAP to ${fmtVec4(p.inVec)}. Result:`,
+            answer: p.outVec,
+            answerType: 'vector4',
+            answerDisplay: fmtVec4(p.outVec),
+            steps: [
+              `SWAP: (a, b, c, d) → (a, c, b, d)`,
+              `Answer: ${fmtVec4(p.outVec)}`,
+            ],
+            whyItMatters:
+              `SWAP on superpositions shows that quantum gates are linear: they transform each ` +
+              `basis component independently. This linearity is what makes quantum parallelism ` +
+              `possible — a gate applied to a superposition processes all branches simultaneously.`,
+          },
+        };
+      }
+
+      case 'three_cnots': {
+        // SWAP = CNOT₁₂·CNOT₂₁·CNOT₁₂
+        const wPick = randInt(0, 1) === 0;
+        const wInput = wPick ? '|01⟩' : '|10⟩';
+        const pInput = wPick ? '|10⟩' : '|01⟩';
+        const wOut = wPick ? [0, 0, 1, 0] : [0, 1, 0, 0];
+        const pOut = wPick ? [0, 1, 0, 0] : [0, 0, 1, 0];
+        const wSteps = wPick
+          ? [`CNOT₁₂|01⟩ = |01⟩ (ctrl=0)`, `CNOT₂₁|01⟩ = |11⟩ (ctrl=1, flip 1st)`, `CNOT₁₂|11⟩ = |10⟩ (ctrl=1, flip 2nd)`]
+          : [`CNOT₁₂|10⟩ = |11⟩ (ctrl=1)`, `CNOT₂₁|11⟩ = |01⟩ (ctrl=1, flip 1st)`, `CNOT₁₂|01⟩ = |01⟩ (ctrl=0)`];
+        const pSteps = wPick
+          ? [`CNOT₁₂|10⟩ = |11⟩ (ctrl=1)`, `CNOT₂₁|11⟩ = |01⟩ (ctrl=1, flip 1st)`, `CNOT₁₂|01⟩ = |01⟩ (ctrl=0)`]
+          : [`CNOT₁₂|01⟩ = |01⟩ (ctrl=0)`, `CNOT₂₁|01⟩ = |11⟩ (ctrl=1, flip 1st)`, `CNOT₁₂|11⟩ = |10⟩ (ctrl=1, flip 2nd)`];
+        return {
+          teachingText:
+            `SWAP can be built from three CNOT gates:\n\n` +
+            `SWAP = CNOT₁₂ · CNOT₂₁ · CNOT₁₂\n\n` +
+            `where CNOT₁₂ has qubit 1 as control and CNOT₂₁ has qubit 2 as control. ` +
+            `This decomposition matters because many quantum hardware platforms can't ` +
+            `perform SWAP directly — they must build it from CNOTs.`,
+          workedExample: {
+            problem: `SWAP = CNOT₁₂·CNOT₂₁·CNOT₁₂. Apply SWAP to ${wInput}`,
+            steps: [
+              `Step 1: ${wSteps[0]}`,
+              `Step 2: ${wSteps[1]}`,
+              `Step 3: ${wSteps[2]}`,
+              `Final: ${wInput} → SWAP gives ${fmtVec4(wOut)}`,
+            ],
+            insight: `Three CNOTs make a SWAP. This is a fundamental circuit identity used constantly in quantum compiling.`,
+          },
+          tryIt: {
+            question: `SWAP = CNOT₁₂·CNOT₂₁·CNOT₁₂. Apply SWAP to ${pInput}. Result:`,
+            answer: pOut,
+            answerType: 'vector4',
+            answerDisplay: fmtVec4(pOut),
+            steps: [
+              `Step 1: ${pSteps[0]}`,
+              `Step 2: ${pSteps[1]}`,
+              `Step 3: ${pSteps[2]}`,
+              `Answer: ${fmtVec4(pOut)}`,
+            ],
+            whyItMatters:
+              `The SWAP = 3 CNOTs identity is one of the most important in quantum circuit compilation. ` +
+              `Since CNOT is the native two-qubit gate on most hardware, every SWAP costs 3 expensive ` +
+              `two-qubit operations. Minimizing SWAPs is a key optimization in quantum compilers.`,
+          },
+        };
+      }
+
+      default: return null;
+    }
+  },
+},
+
+toffoli_apply: {
+  generate(difficulty, variation) {
+    const labels8 = ['|000⟩','|001⟩','|010⟩','|011⟩','|100⟩','|101⟩','|110⟩','|111⟩'];
+    function fmtVec8(arr) { return `(${arr.join(', ')})`; }
+
+    switch (variation) {
+
+      case 'both_controls_1': {
+        // |110⟩→|111⟩ or |111⟩→|110⟩
+        const wPick = randInt(0, 1) === 0;
+        const wIdx = wPick ? 6 : 7;
+        const pIdx = wPick ? 7 : 6;
+        const wOutIdx = wIdx === 6 ? 7 : 6;
+        const pOutIdx = pIdx === 6 ? 7 : 6;
+        const wOut = [0,0,0,0,0,0,0,0]; wOut[wOutIdx] = 1;
+        const pOut = [0,0,0,0,0,0,0,0]; pOut[pOutIdx] = 1;
+        return {
+          teachingText:
+            `The Toffoli gate (also called CCX or CCNOT) is a 3-qubit gate. ` +
+            `It flips the target qubit (3rd) ONLY when BOTH control qubits (1st and 2nd) are |1⟩.\n\n` +
+            `|110⟩ → |111⟩  (both controls |1⟩, target flips 0→1)\n` +
+            `|111⟩ → |110⟩  (both controls |1⟩, target flips 1→0)\n\n` +
+            `All other basis states are unchanged. In an 8-element vector, Toffoli only swaps positions 6 and 7.`,
+          workedExample: {
+            problem: `Apply Toffoli to ${labels8[wIdx]}. Result as an 8-vector`,
+            steps: [
+              `Both controls are |1⟩ in ${labels8[wIdx]}`,
+              `Target flips: ${labels8[wIdx]} → ${labels8[wOutIdx]}`,
+              `Result: ${fmtVec8(wOut)}`,
+            ],
+            insight: `Toffoli is like a classical AND gate: the target flips only when control₁ AND control₂ are both |1⟩.`,
+          },
+          tryIt: {
+            question: `Apply Toffoli to ${labels8[pIdx]}. Result as an 8-vector:`,
+            answer: pOut,
+            answerType: 'vector8',
+            answerDisplay: fmtVec8(pOut),
+            steps: [
+              `Both controls |1⟩ in ${labels8[pIdx]}, so target flips`,
+              `${labels8[pIdx]} → ${labels8[pOutIdx]}`,
+              `Answer: ${fmtVec8(pOut)}`,
+            ],
+            whyItMatters:
+              `The Toffoli gate is universal for classical computation — any Boolean function can ` +
+              `be built from Toffoli gates alone. Combined with Hadamard, it also becomes universal ` +
+              `for quantum computation. It's the bridge between classical and quantum logic.`,
+          },
+        };
+      }
+
+      case 'one_control_0': {
+        // Only one control is |1⟩ — no flip
+        const wChoices = [2, 3, 4, 5]; // |010⟩,|011⟩,|100⟩,|101⟩
+        const wi = randInt(0, wChoices.length - 1);
+        let pi;
+        do { pi = randInt(0, wChoices.length - 1); } while (pi === wi);
+        const wIdx = wChoices[wi];
+        const pIdx = wChoices[pi];
+        const wOut = [0,0,0,0,0,0,0,0]; wOut[wIdx] = 1;
+        const pOut = [0,0,0,0,0,0,0,0]; pOut[pIdx] = 1;
+        return {
+          teachingText:
+            `Toffoli requires BOTH controls to be |1⟩. If even one control is |0⟩, ` +
+            `the target qubit is NOT flipped — the state passes through unchanged.\n\n` +
+            `|010⟩ → |010⟩  (only 2nd control is |1⟩ — not enough)\n` +
+            `|100⟩ → |100⟩  (only 1st control is |1⟩ — not enough)\n` +
+            `|101⟩ → |101⟩  (only 1st control is |1⟩)\n` +
+            `|011⟩ → |011⟩  (only 2nd control is |1⟩)`,
+          workedExample: {
+            problem: `Apply Toffoli to ${labels8[wIdx]}. Result as an 8-vector`,
+            steps: [
+              `Check controls in ${labels8[wIdx]}:`,
+              `Not both controls are |1⟩, so no flip occurs.`,
+              `Result: ${fmtVec8(wOut)}`,
+            ],
+            insight: `Toffoli is an AND gate — one |1⟩ is not enough. Both controls must be |1⟩ to flip the target.`,
+          },
+          tryIt: {
+            question: `Apply Toffoli to ${labels8[pIdx]}. Result as an 8-vector:`,
+            answer: pOut,
+            answerType: 'vector8',
+            answerDisplay: fmtVec8(pOut),
+            steps: [
+              `${labels8[pIdx]}: not both controls are |1⟩`,
+              `No flip — state unchanged`,
+              `Answer: ${fmtVec8(pOut)}`,
+            ],
+            whyItMatters:
+              `Knowing when a gate does nothing is just as important as knowing when it acts. ` +
+              `In quantum error correction, carefully tracking which states are affected by ` +
+              `each gate determines whether errors propagate or stay contained.`,
+          },
+        };
+      }
+
+      case 'both_controls_0': {
+        // |000⟩ or |001⟩ — neither control is |1⟩
+        const wIdx = randInt(0, 1);
+        const pIdx = 1 - wIdx;
+        const wOut = [0,0,0,0,0,0,0,0]; wOut[wIdx] = 1;
+        const pOut = [0,0,0,0,0,0,0,0]; pOut[pIdx] = 1;
+        return {
+          teachingText:
+            `When both controls are |0⟩, Toffoli does absolutely nothing:\n\n` +
+            `|000⟩ → |000⟩\n|001⟩ → |001⟩\n\n` +
+            `The target qubit is completely unaffected. This is the "trivial" case — ` +
+            `Toffoli only activates when both controls are |1⟩.`,
+          workedExample: {
+            problem: `Apply Toffoli to ${labels8[wIdx]}. Result as an 8-vector`,
+            steps: [
+              `Both controls are |0⟩ in ${labels8[wIdx]}.`,
+              `No flip — state passes through unchanged.`,
+              `Result: ${fmtVec8(wOut)}`,
+            ],
+            insight: `Both controls |0⟩ = nothing happens. Toffoli is dormant unless both controls are engaged.`,
+          },
+          tryIt: {
+            question: `Apply Toffoli to ${labels8[pIdx]}. Result as an 8-vector:`,
+            answer: pOut,
+            answerType: 'vector8',
+            answerDisplay: fmtVec8(pOut),
+            steps: [
+              `Both controls |0⟩ in ${labels8[pIdx]}`,
+              `State unchanged`,
+              `Answer: ${fmtVec8(pOut)}`,
+            ],
+            whyItMatters:
+              `Toffoli acts as a conditional-conditional NOT. In quantum algorithms, this ` +
+              `"double condition" lets you implement arithmetic operations like addition ` +
+              `and multiplication, where carry bits depend on multiple inputs.`,
+          },
+        };
+      }
+
+      case 'superposition_controls': {
+        const supCases = [
+          { inVec: [0.71, 0, 0, 0, 0, 0, 0.71, 0], outVec: [0.71, 0, 0, 0, 0, 0, 0, 0.71],
+            inLabel: '0.71|000⟩ + 0.71|110⟩', outLabel: '0.71|000⟩ + 0.71|111⟩',
+            explain: '|000⟩ unchanged (controls not |1⟩|1⟩), |110⟩ → |111⟩ (both controls |1⟩)' },
+          { inVec: [0, 0, 0, 0, 0.71, 0, 0, 0.71], outVec: [0, 0, 0, 0, 0.71, 0, 0.71, 0],
+            inLabel: '0.71|100⟩ + 0.71|111⟩', outLabel: '0.71|100⟩ + 0.71|110⟩',
+            explain: '|100⟩ unchanged (only 1st control is |1⟩), |111⟩ → |110⟩ (both controls |1⟩)' },
+        ];
+        const wi = randInt(0, supCases.length - 1);
+        const pi = 1 - wi;
+        const w = supCases[wi], p = supCases[pi];
+        return {
+          teachingText:
+            `Toffoli on superpositions: apply the gate rule to each basis component separately. ` +
+            `Only terms where both controls are |1⟩ (indices 6 and 7) get swapped.\n\n` +
+            `In an 8-vector (a,b,c,d,e,f,g,h), Toffoli only swaps positions 6 and 7 ` +
+            `(the |110⟩ and |111⟩ amplitudes). Everything else stays put.`,
+          workedExample: {
+            problem: `Apply Toffoli to ${fmtVec8(w.inVec)}`,
+            steps: [
+              `Input: ${w.inLabel}`,
+              w.explain,
+              `Result: ${fmtVec8(w.outVec)}`,
+            ],
+            insight: `Toffoli on a superposition: just swap positions 6 and 7 in the 8-vector. All other positions are untouched.`,
+          },
+          tryIt: {
+            question: `Apply Toffoli to ${fmtVec8(p.inVec)}. Result:`,
+            answer: p.outVec,
+            answerType: 'vector8',
+            answerDisplay: fmtVec8(p.outVec),
+            steps: [
+              `Input: ${p.inLabel}`,
+              p.explain,
+              `Answer: ${fmtVec8(p.outVec)}`,
+            ],
+            whyItMatters:
+              `Toffoli on superpositions is how quantum arithmetic works. Shor's factoring algorithm ` +
+              `uses Toffoli-like operations on superpositions to compute modular exponentiation ` +
+              `on all possible inputs simultaneously — the heart of its exponential speedup.`,
+          },
+        };
+      }
+
+      default: return null;
+    }
+  },
+},
+
+controlled_gate: {
+  generate(difficulty, variation) {
+
+    switch (variation) {
+
+      case 'controlled_h': {
+        // CH: if control=|1⟩, apply H to target
+        const cases = [
+          { input: '|10⟩', outVec: [0, 0, 0.71, 0.71], explain:
+            'Control=|1⟩, apply H to target |0⟩: H|0⟩ = (0.71, 0.71). Result: (0, 0, 0.71, 0.71)' },
+          { input: '|11⟩', outVec: [0, 0, 0.71, -0.71], explain:
+            'Control=|1⟩, apply H to target |1⟩: H|1⟩ = (0.71, −0.71). Result: (0, 0, 0.71, −0.71)' },
+          { input: '|00⟩', outVec: [1, 0, 0, 0], explain:
+            'Control=|0⟩, no gate applied. |00⟩ unchanged.' },
+          { input: '|01⟩', outVec: [0, 1, 0, 0], explain:
+            'Control=|0⟩, no gate applied. |01⟩ unchanged.' },
+        ];
+        const wi = randInt(0, cases.length - 1);
+        let pi;
+        do { pi = randInt(0, cases.length - 1); } while (pi === wi);
+        const w = cases[wi], p = cases[pi];
+        return {
+          teachingText:
+            `A Controlled-H (CH) gate applies Hadamard to the target qubit ONLY when ` +
+            `the control qubit is |1⟩. If the control is |0⟩, nothing happens.\n\n` +
+            `CH|00⟩ = |00⟩\nCH|01⟩ = |01⟩\n` +
+            `CH|10⟩ = |1⟩⊗H|0⟩ = |1⟩⊗(0.71, 0.71) = (0, 0, 0.71, 0.71)\n` +
+            `CH|11⟩ = |1⟩⊗H|1⟩ = |1⟩⊗(0.71, −0.71) = (0, 0, 0.71, −0.71)\n\n` +
+            `The general pattern: Controlled-U applies U to the target when the control is |1⟩.`,
+          workedExample: {
+            problem: `Apply CH to ${w.input}. Result as a 4-vector`,
+            steps: [
+              `CH: if control=|1⟩, apply H to target.`,
+              w.explain,
+              `Result: ${fmtVec4(w.outVec)}`,
+            ],
+            insight: `Controlled-U gates are the building blocks of quantum algorithms. The control qubit acts as a switch.`,
+          },
+          tryIt: {
+            question: `Apply Controlled-H (CH) to ${p.input}. Result:`,
+            answer: p.outVec,
+            answerType: 'vector4',
+            answerDisplay: fmtVec4(p.outVec),
+            steps: [
+              `CH: control determines whether H is applied.`,
+              p.explain,
+              `Answer: ${fmtVec4(p.outVec)}`,
+            ],
+            whyItMatters:
+              `Controlled-H creates conditional superpositions — the target enters a superposition ` +
+              `only when the control permits it. This conditional behavior is essential for ` +
+              `algorithms like quantum phase estimation, where you need selective interference.`,
+          },
+        };
+      }
+
+      case 'controlled_s': {
+        // CS: if control=|1⟩, apply S to target. S|0⟩=|0⟩, S|1⟩=i|1⟩
+        // Keep real-valued: test on states where S has no effect or control=|0⟩
+        const cases = [
+          { input: '|10⟩', outVec: [0, 0, 1, 0], explain:
+            'Control=|1⟩, S applied to target |0⟩: S|0⟩ = |0⟩ (unchanged). Result: |10⟩ = (0, 0, 1, 0)' },
+          { input: '|00⟩', outVec: [1, 0, 0, 0], explain:
+            'Control=|0⟩, nothing happens. Result: |00⟩ = (1, 0, 0, 0)' },
+          { input: '|01⟩', outVec: [0, 1, 0, 0], explain:
+            'Control=|0⟩, nothing happens. Result: |01⟩ = (0, 1, 0, 0)' },
+        ];
+        const wi = randInt(0, cases.length - 1);
+        let pi;
+        do { pi = randInt(0, cases.length - 1); } while (pi === wi);
+        const w = cases[wi], p = cases[pi];
+        return {
+          teachingText:
+            `A Controlled-S (CS) gate applies the S (phase) gate to the target ONLY when ` +
+            `the control is |1⟩. Recall S = [[1,0],[0,i]]:\n\n` +
+            `S|0⟩ = |0⟩ (no change — S only affects the |1⟩ component)\n` +
+            `S|1⟩ = i|1⟩ (multiplies by i)\n\n` +
+            `CS|00⟩ = |00⟩, CS|01⟩ = |01⟩ (control=|0⟩, nothing happens)\n` +
+            `CS|10⟩ = |10⟩ (control=|1⟩, but S|0⟩=|0⟩)\n` +
+            `CS|11⟩ = i|11⟩ (control=|1⟩, S|1⟩=i|1⟩ — picks up phase i)`,
+          workedExample: {
+            problem: `Apply CS to ${w.input}. Result as a 4-vector`,
+            steps: [
+              `CS: if control=|1⟩, apply S to target.`,
+              w.explain,
+              `Result: ${fmtVec4(w.outVec)}`,
+            ],
+            insight: `CS on |10⟩ does nothing visible because S|0⟩ = |0⟩. The interesting case is |11⟩, where S adds a phase of i.`,
+          },
+          tryIt: {
+            question: `Apply Controlled-S (CS) to ${p.input}. Result:`,
+            answer: p.outVec,
+            answerType: 'vector4',
+            answerDisplay: fmtVec4(p.outVec),
+            steps: [
+              `CS: control determines whether S is applied.`,
+              p.explain,
+              `Answer: ${fmtVec4(p.outVec)}`,
+            ],
+            whyItMatters:
+              `CS is used in quantum Fourier transform circuits, which are at the heart of ` +
+              `Shor's factoring algorithm. The controlled phase rotations in QFT get ` +
+              `progressively smaller: CZ, CS, CT, etc.`,
+          },
+        };
+      }
+
+      case 'controlled_vs_uncontrolled': {
+        // Compare controlled vs uncontrolled behavior
+        const cases = [
+          { input: '|00⟩', gate: 'CH', outVec: [1, 0, 0, 0], explain:
+            'CH|00⟩: control=|0⟩, so H is NOT applied. State unchanged: (1, 0, 0, 0)' },
+          { input: '|10⟩', gate: 'CH', outVec: [0, 0, 0.71, 0.71], explain:
+            'CH|10⟩: control=|1⟩, so H IS applied to target |0⟩. Result: (0, 0, 0.71, 0.71)' },
+          { input: '|11⟩', gate: 'CZ', outVec: [0, 0, 0, -1], explain:
+            'CZ|11⟩ = −|11⟩. Both qubits |1⟩, so phase −1 applied. Result: (0, 0, 0, −1)' },
+          { input: '|01⟩', gate: 'CZ', outVec: [0, 1, 0, 0], explain:
+            'CZ|01⟩ = |01⟩. No |11⟩ component, so CZ does nothing. Result: (0, 1, 0, 0)' },
+        ];
+        const wi = randInt(0, cases.length - 1);
+        let pi;
+        do { pi = randInt(0, cases.length - 1); } while (pi === wi);
+        const w = cases[wi], p = cases[pi];
+        return {
+          teachingText:
+            `The key idea behind ALL controlled gates: the gate U is applied to the ` +
+            `target qubit ONLY when the control qubit is |1⟩. If the control is |0⟩, ` +
+            `the state passes through unchanged.\n\n` +
+            `CNOT = Controlled-X: flips target when control=|1⟩\n` +
+            `CZ = Controlled-Z: phase-flips when control=|1⟩\n` +
+            `CH = Controlled-H: puts target in superposition when control=|1⟩\n\n` +
+            `In all cases: control=|0⟩ means "do nothing."`,
+          workedExample: {
+            problem: `Apply ${w.gate} to ${w.input}. Result as a 4-vector`,
+            steps: [
+              `${w.gate}: controlled gate, check control qubit.`,
+              w.explain,
+              `Result: ${fmtVec4(w.outVec)}`,
+            ],
+            insight: `All controlled gates share the same pattern: check control → if |1⟩ apply U, if |0⟩ do nothing.`,
+          },
+          tryIt: {
+            question: `Apply ${p.gate} to ${p.input}. Result:`,
+            answer: p.outVec,
+            answerType: 'vector4',
+            answerDisplay: fmtVec4(p.outVec),
+            steps: [
+              `${p.gate}: check control qubit`,
+              p.explain,
+              `Answer: ${fmtVec4(p.outVec)}`,
+            ],
+            whyItMatters:
+              `Controlled gates are what make quantum computing powerful. They create correlations ` +
+              `between qubits — the control qubit determines what happens to the target. This ` +
+              `conditional logic, combined with superposition, enables quantum parallelism.`,
+          },
+        };
+      }
+
+      default: return null;
+    }
+  },
+},
+
+// ── Chapter 15: Quantum Teleportation ────────────────────────────────────────
+
+teleportation_concept: {
+  generate(difficulty, variation) {
+    const items = {
+      why_not_copy: {
+        q: 'Why can\'t Alice simply copy |ψ⟩ and send the copy to Bob?',
+        choices: [
+          'Copying would take too long',
+          'The no-cloning theorem forbids copying an unknown quantum state',
+          'Bob\'s qubit would interfere with the copy',
+          'Quantum states can only travel at the speed of light',
+        ],
+        answer: 'B', display: 'B) The no-cloning theorem forbids copying an unknown quantum state',
+        steps: [
+          'The no-cloning theorem forbids duplicating an arbitrary unknown quantum state.',
+          'Teleportation gets around this by destroying the original.',
+        ],
+      },
+      why_not_measure: {
+        q: 'Why can\'t Alice just measure |ψ⟩ and send the result to Bob?',
+        choices: [
+          'Measurement takes too much energy',
+          'Measurement destroys the superposition — Bob would only get a basis state',
+          'Classical bits cannot travel between Alice and Bob',
+          'Measurement always gives the same result',
+        ],
+        answer: 'B', display: 'B) Measurement destroys the superposition — Bob would only get a basis state',
+        steps: [
+          'Measuring collapses |ψ⟩ = α|0⟩ + β|1⟩ to |0⟩ or |1⟩.',
+          'The amplitudes α and β are lost permanently.',
+        ],
+      },
+      what_is_shared: {
+        q: 'What resource must Alice and Bob share before teleportation can begin?',
+        choices: [
+          'A classical communication channel only',
+          'A shared Bell pair (entangled qubits)',
+          'A copy of the state |ψ⟩',
+          'A quantum computer',
+        ],
+        answer: 'B', display: 'B) A shared Bell pair (entangled qubits)',
+        steps: [
+          'Teleportation requires a pre-shared entangled pair, typically |Φ+⟩.',
+          'Alice holds one qubit, Bob holds the other. They also need 2 classical bits.',
+        ],
+      },
+    };
+
+    const poolMap = {
+      why_not_copy: ['why_not_copy'],
+      why_not_measure: ['why_not_measure'],
+      what_is_shared: ['what_is_shared'],
+    };
+    const pool = poolMap[variation] || ['why_not_copy', 'why_not_measure', 'what_is_shared'];
+
+    const wKey = pool[randInt(0, pool.length - 1)];
+    let pKey;
+    do { pKey = pool[randInt(0, pool.length - 1)]; } while (pKey === wKey && pool.length > 1);
+    const w = items[wKey], p = items[pKey];
+
+    const teachingMap = {
+      why_not_copy:
+        `Quantum teleportation transfers the exact quantum state |ψ⟩ from Alice to ` +
+        `Bob — without physically moving the qubit. But why not just copy it?\n\n` +
+        `The no-cloning theorem (1982) proves that no quantum operation can duplicate ` +
+        `an unknown quantum state. There is no "quantum photocopier." This is fundamentally ` +
+        `different from classical information, which can be copied freely.\n\n` +
+        `Teleportation solves this by destroying the original state at Alice's end while ` +
+        `recreating it at Bob's end — the state is transferred, not copied.`,
+      why_not_measure:
+        `A natural idea: Alice could measure |ψ⟩ = α|0⟩ + β|1⟩ and send the result ` +
+        `to Bob as classical bits. But this fails.\n\n` +
+        `Measurement collapses the superposition — Alice gets 0 or 1, losing all ` +
+        `information about α and β. A single measurement cannot reveal a quantum state. ` +
+        `Even with many copies, Alice cannot determine α and β exactly (quantum state ` +
+        `tomography requires many measurements).\n\n` +
+        `Teleportation preserves the full quantum state without ever measuring it directly.`,
+      what_is_shared:
+        `Quantum teleportation requires two resources:\n\n` +
+        `1. A shared Bell pair — Alice and Bob each hold one qubit of |Φ+⟩ = (1/√2)(|00⟩ + |11⟩). ` +
+        `This entangled pair is the "quantum channel."\n\n` +
+        `2. A classical communication channel — Alice sends 2 bits to Bob after her measurement.\n\n` +
+        `The Bell pair provides the quantum correlations, and the classical bits tell Bob ` +
+        `which correction to apply. Neither resource alone is sufficient.`,
+    };
+
+    return {
+      teachingText: teachingMap[variation] || teachingMap['why_not_copy'],
+      workedExample: {
+        problem: w.q,
+        steps: [...w.steps, `Answer: ${w.display}`],
+        insight: `Teleportation uses entanglement and classical communication to transfer quantum states without violating the no-cloning theorem.`,
+      },
+      tryIt: {
+        question: p.q,
+        choices: p.choices,
+        answer: p.answer,
+        answerType: 'choice',
+        answerDisplay: p.display,
+        steps: p.steps,
+        whyItMatters:
+          `Quantum teleportation is not science fiction — it was first demonstrated in 1997 ` +
+          `and has since been performed over 1,400 km via satellite. It is a key primitive in ` +
+          `quantum networking, error correction, and distributed quantum computing.`,
+      },
+    };
+  },
+},
+
+teleport_setup: {
+  generate(difficulty, variation) {
+    const s = 0.71; // 1/√2
+
+    const allPairs = [
+      { a: 1, b: 0, label: '|0⟩' },
+      { a: 0, b: 1, label: '|1⟩' },
+      { a: s, b: s, label: '|+⟩' },
+      { a: s, b: -s, label: '|−⟩' },
+    ];
+
+    function makeVec8(alpha, beta) {
+      return [r2(alpha*s), 0, 0, r2(alpha*s), r2(beta*s), 0, 0, r2(beta*s)];
+    }
+
+    switch (variation) {
+
+      case 'basic': {
+        const wAns = [s, 0, 0, s, 0, 0, 0, 0];
+        const pAns = [0, 0, 0, 0, s, 0, 0, s];
+        return {
+          teachingText:
+            `The teleportation protocol begins with three qubits:\n\n` +
+            `• Qubit A: Alice's state |ψ⟩ that she wants to send\n` +
+            `• Qubits B,C: A shared Bell pair |Φ+⟩ = (1/√2)(|00⟩ + |11⟩)\n\n` +
+            `The initial 3-qubit state is |ψ⟩_A ⊗ |Φ+⟩_BC. To write this as an 8-vector, ` +
+            `use the basis order |000⟩, |001⟩, |010⟩, |011⟩, |100⟩, |101⟩, |110⟩, |111⟩.\n\n` +
+            `For |ψ⟩ = |0⟩:\n` +
+            `|0⟩ ⊗ |Φ+⟩ = |0⟩ ⊗ (1/√2)(|00⟩ + |11⟩) = (1/√2)(|000⟩ + |011⟩)\n` +
+            `= (0.71, 0, 0, 0.71, 0, 0, 0, 0)`,
+          workedExample: {
+            problem: `Write |0⟩ ⊗ |Φ+⟩ as an 8-vector`,
+            steps: [
+              `|0⟩ ⊗ |Φ+⟩ = |0⟩ ⊗ (1/√2)(|00⟩ + |11⟩)`,
+              `= (1/√2)|000⟩ + (1/√2)|011⟩`,
+              `8-vector: (${wAns.join(', ')})`,
+            ],
+            insight: `The first qubit (|ψ⟩) only occupies the |0xx⟩ slots because it is |0⟩. The Bell pair spreads across the 2nd and 3rd positions.`,
+          },
+          tryIt: {
+            question: `Write |1⟩ ⊗ |Φ+⟩ as an 8-vector.\n|Φ+⟩ = (1/√2)(|00⟩ + |11⟩). Basis order: |000⟩,|001⟩,...,|111⟩.`,
+            answer: pAns,
+            answerType: 'vector8',
+            answerDisplay: `(${pAns.join(', ')})`,
+            steps: [
+              `|1⟩ ⊗ |Φ+⟩ = |1⟩ ⊗ (1/√2)(|00⟩ + |11⟩)`,
+              `= (1/√2)|100⟩ + (1/√2)|111⟩`,
+              `8-vector: (${pAns.join(', ')})`,
+            ],
+            whyItMatters:
+              `Setting up the initial 3-qubit state is the first step of teleportation. ` +
+              `Understanding how tensor products distribute across basis states is essential ` +
+              `for following the rest of the protocol.`,
+          },
+        };
+      }
+
+      case 'general': {
+        const wPick = allPairs[2]; // |+⟩
+        const pPick = allPairs[3]; // |−⟩
+        const wAns = makeVec8(wPick.a, wPick.b);
+        const pAns = makeVec8(pPick.a, pPick.b);
+        return {
+          teachingText:
+            `For a general state |ψ⟩ = α|0⟩ + β|1⟩, the initial 3-qubit state is:\n\n` +
+            `(α|0⟩ + β|1⟩) ⊗ (1/√2)(|00⟩ + |11⟩)\n` +
+            `= (α/√2)|000⟩ + (α/√2)|011⟩ + (β/√2)|100⟩ + (β/√2)|111⟩\n\n` +
+            `The α terms fill the |0xx⟩ slots, the β terms fill the |1xx⟩ slots. ` +
+            `Only the |x00⟩ and |x11⟩ positions are nonzero (from the Bell pair structure).`,
+          workedExample: {
+            problem: `Write ${wPick.label} ⊗ |Φ+⟩ as an 8-vector (α = ${fmt(wPick.a)}, β = ${fmt(wPick.b)})`,
+            steps: [
+              `α/√2 = ${fmt(wPick.a)} × 0.71 = ${fmt(r2(wPick.a * s))}`,
+              `β/√2 = ${fmt(wPick.b)} × 0.71 = ${fmt(r2(wPick.b * s))}`,
+              `Nonzero at positions 0,3 (from α) and 4,7 (from β)`,
+              `8-vector: (${wAns.join(', ')})`,
+            ],
+            insight: `The Bell pair's structure (only |00⟩ and |11⟩ terms) means only 4 of the 8 components are nonzero.`,
+          },
+          tryIt: {
+            question: `Write ${pPick.label} ⊗ |Φ+⟩ as an 8-vector.\nα = ${fmt(pPick.a)}, β = ${fmt(pPick.b)}. Round to 0.01.`,
+            answer: pAns,
+            answerType: 'vector8',
+            answerDisplay: `(${pAns.join(', ')})`,
+            steps: [
+              `α/√2 = ${fmt(pPick.a)} × 0.71 = ${fmt(r2(pPick.a * s))}`,
+              `β/√2 = ${fmt(pPick.b)} × 0.71 = ${fmt(r2(pPick.b * s))}`,
+              `8-vector: (${pAns.join(', ')})`,
+            ],
+            whyItMatters:
+              `With a general |ψ⟩, the initial state encodes both amplitudes α and β ` +
+              `spread across the 8 basis states. The protocol must transfer both of these ` +
+              `complex numbers to Bob — which seems impossible since Alice can only send 2 classical bits.`,
+          },
+        };
+      }
+
+      default: return null;
+    }
+  },
+},
+
+teleport_alice_ops: {
+  generate(difficulty, variation) {
+    const s = 0.71;
+
+    switch (variation) {
+
+      case 'cnot_step': {
+        const cases = [
+          { in: '(0.71, 0, 0.71, 0)', out: [s, 0, 0, s], outLabel: '(0.71, 0, 0, 0.71)',
+            explain: '|00⟩→|00⟩ (control=0, no flip), |10⟩→|11⟩ (control=1, flip)' },
+          { in: '(0, 0.71, 0, 0.71)', out: [0, s, s, 0], outLabel: '(0, 0.71, 0.71, 0)',
+            explain: '|01⟩→|01⟩ (control=0, no flip), |11⟩→|10⟩ (control=1, flip)' },
+        ];
+        const wi = randInt(0, 1);
+        const pi = 1 - wi;
+        const w = cases[wi], p = cases[pi];
+        return {
+          teachingText:
+            `In the teleportation protocol, Alice applies two operations to her qubits ` +
+            `(qubits A and B of the 3-qubit system). The first step is CNOT.\n\n` +
+            `Alice uses her ψ-qubit (A) as the control and her Bell qubit (B) as the target. ` +
+            `CNOT flips the target when the control is |1⟩:\n` +
+            `|00⟩→|00⟩, |01⟩→|01⟩, |10⟩→|11⟩, |11⟩→|10⟩\n\n` +
+            `This entangles Alice's original state with the Bell pair, spreading the ` +
+            `information about |ψ⟩ across all three qubits.`,
+          workedExample: {
+            problem: `Apply CNOT to ${w.in}`,
+            steps: [
+              `Decompose: the state has components at specific basis states`,
+              w.explain,
+              `Result: ${w.outLabel}`,
+            ],
+            insight: `The CNOT creates correlations between Alice's ψ-qubit and her Bell qubit, beginning to "spread" the quantum information.`,
+          },
+          tryIt: {
+            question: `Alice applies CNOT (ψ-qubit controls Bell qubit) to ${p.in}.\nResult as a 4-vector:`,
+            answer: p.out,
+            answerType: 'vector4',
+            answerDisplay: p.outLabel,
+            steps: [
+              p.explain,
+              `Result: ${p.outLabel}`,
+            ],
+            whyItMatters:
+              `The CNOT is the first of Alice's two operations. It entangles her original state ` +
+              `with the shared Bell pair — a crucial step that allows the measurement outcome ` +
+              `to encode information about |ψ⟩.`,
+          },
+        };
+      }
+
+      case 'hadamard_step': {
+        const cases = [
+          { in: '(0.71, 0, 0, 0.71)', out: [0.5, 0.5, 0.5, -0.5],
+            steps: [
+              'H on first qubit: |0⟩→(|0⟩+|1⟩)/√2, |1⟩→(|0⟩−|1⟩)/√2',
+              '0.71|00⟩ → 0.5|00⟩ + 0.5|10⟩',
+              '0.71|11⟩ → 0.5|01⟩ − 0.5|11⟩',
+              'Result: (0.5, 0.5, 0.5, -0.5)',
+            ]},
+          { in: '(0, 0.71, 0.71, 0)', out: [0.5, -0.5, 0.5, 0.5],
+            steps: [
+              'H on first qubit: |0⟩→(|0⟩+|1⟩)/√2, |1⟩→(|0⟩−|1⟩)/√2',
+              '0.71|01⟩ → 0.5|01⟩ + 0.5|11⟩',
+              '0.71|10⟩ → 0.5|00⟩ − 0.5|10⟩',
+              'Result: (0.5, -0.5, 0.5, 0.5)',
+            ]},
+        ];
+        const wi = randInt(0, 1);
+        const pi = 1 - wi;
+        const w = cases[wi], p = cases[pi];
+        return {
+          teachingText:
+            `After the CNOT, Alice applies H⊗I — Hadamard on her ψ-qubit, identity on the Bell qubit.\n\n` +
+            `H transforms the computational basis into superposition:\n` +
+            `H|0⟩ = (|0⟩ + |1⟩)/√2,  H|1⟩ = (|0⟩ − |1⟩)/√2\n\n` +
+            `H⊗I acts only on the first qubit of each basis state:\n` +
+            `|0x⟩ → (1/√2)(|0x⟩ + |1x⟩),  |1x⟩ → (1/√2)(|0x⟩ − |1x⟩)\n\n` +
+            `After this step, all four measurement outcomes (00, 01, 10, 11) become equally likely.`,
+          workedExample: {
+            problem: `Apply H⊗I to ${w.in}`,
+            steps: w.steps,
+            insight: `The Hadamard creates an equal superposition of all four measurement outcomes, each correlated with a specific transformation of Bob's qubit.`,
+          },
+          tryIt: {
+            question: `Apply H⊗I to ${p.in}.\nResult as a 4-vector:`,
+            answer: p.out,
+            answerType: 'vector4',
+            answerDisplay: `(${p.out.join(', ')})`,
+            steps: p.steps,
+            whyItMatters:
+              `The Hadamard is the second and final operation Alice performs. After this, ` +
+              `the 3-qubit state is in a form where measuring Alice's qubits projects ` +
+              `Bob's qubit into one of four states, each correctable with Pauli gates.`,
+          },
+        };
+      }
+
+      case 'full_alice': {
+        const cases = [
+          { in: '(0.71, 0, 0.71, 0)', out: [0.5, 0.5, 0.5, -0.5],
+            steps: [
+              'CNOT: |00⟩→|00⟩, |10⟩→|11⟩ → (0.71, 0, 0, 0.71)',
+              'H⊗I: 0.71|00⟩ → 0.5|00⟩+0.5|10⟩, 0.71|11⟩ → 0.5|01⟩−0.5|11⟩',
+              'Result: (0.5, 0.5, 0.5, -0.5)',
+            ]},
+          { in: '(0, 0.71, 0, 0.71)', out: [0.5, -0.5, 0.5, 0.5],
+            steps: [
+              'CNOT: |01⟩→|01⟩, |11⟩→|10⟩ → (0, 0.71, 0.71, 0)',
+              'H⊗I: 0.71|01⟩ → 0.5|01⟩+0.5|11⟩, 0.71|10⟩ → 0.5|00⟩−0.5|10⟩',
+              'Result: (0.5, -0.5, 0.5, 0.5)',
+            ]},
+        ];
+        const wi = randInt(0, 1);
+        const pi = 1 - wi;
+        const w = cases[wi], p = cases[pi];
+        return {
+          teachingText:
+            `Alice performs both operations in sequence: CNOT then H⊗I.\n\n` +
+            `Starting from the 2-qubit portion (Alice's qubits after tensoring with |ψ⟩):\n` +
+            `1. CNOT: entangles ψ-qubit with Bell qubit\n` +
+            `2. H⊗I: puts ψ-qubit into superposition\n\n` +
+            `The combined effect prepares the state for measurement. Each of the four ` +
+            `measurement outcomes (00, 01, 10, 11) occurs with probability 1/4 and ` +
+            `leaves Bob's qubit in a known transformation of |ψ⟩.`,
+          workedExample: {
+            problem: `Apply CNOT then H⊗I to ${w.in}`,
+            steps: w.steps,
+            insight: `CNOT + H is the reverse of the Bell state circuit (H + CNOT). Alice is essentially "un-doing" entanglement to extract classical information.`,
+          },
+          tryIt: {
+            question: `Apply CNOT then H⊗I to ${p.in}.\nFinal 4-vector:`,
+            answer: p.out,
+            answerType: 'vector4',
+            answerDisplay: `(${p.out.join(', ')})`,
+            steps: p.steps,
+            whyItMatters:
+              `The CNOT-then-H sequence is sometimes called the "Bell measurement" circuit. ` +
+              `It reverses the Bell state creation (H-then-CNOT), projecting onto the Bell basis. ` +
+              `This is a fundamental primitive in quantum information processing.`,
+          },
+        };
+      }
+
+      default: return null;
+    }
+  },
+},
+
+teleport_measurement: {
+  generate(difficulty, variation) {
+    const items = {
+      outcome_00: {
+        q: 'Alice measures 00. What correction does Bob apply?',
+        choices: ['No gate needed (identity)', 'X gate', 'Z gate', 'X then Z'],
+        answer: 'A', display: 'A) No gate needed (identity)',
+        steps: ['Outcome 00 → Bob has |ψ⟩ already.', 'No correction needed.'],
+      },
+      outcome_01: {
+        q: 'Alice measures 01. What correction does Bob apply?',
+        choices: ['No gate needed (identity)', 'X gate', 'Z gate', 'X then Z'],
+        answer: 'B', display: 'B) X gate',
+        steps: ['Outcome 01 → Bob has X|ψ⟩ (bit-flipped).', 'Apply X to undo: X·X|ψ⟩ = |ψ⟩.'],
+      },
+      outcome_10: {
+        q: 'Alice measures 10. What correction does Bob apply?',
+        choices: ['No gate needed (identity)', 'X gate', 'Z gate', 'X then Z'],
+        answer: 'C', display: 'C) Z gate',
+        steps: ['Outcome 10 → Bob has Z|ψ⟩ (phase-flipped).', 'Apply Z to undo: Z·Z|ψ⟩ = |ψ⟩.'],
+      },
+      outcome_11: {
+        q: 'Alice measures 11. What correction does Bob apply?',
+        choices: ['No gate needed (identity)', 'X gate', 'Z gate', 'X then Z'],
+        answer: 'D', display: 'D) X then Z',
+        steps: ['Outcome 11 → Bob has ZX|ψ⟩.', 'Apply X then Z to undo: Z·X·ZX|ψ⟩ = |ψ⟩.'],
+      },
+    };
+
+    const poolMap = {
+      outcome_00: ['outcome_00'],
+      outcome_01: ['outcome_01'],
+      outcome_10: ['outcome_10'],
+      outcome_11: ['outcome_11'],
+    };
+    const pool = poolMap[variation] || ['outcome_00', 'outcome_01', 'outcome_10', 'outcome_11'];
+
+    const wKey = pool[randInt(0, pool.length - 1)];
+    let pKey;
+    do { pKey = pool[randInt(0, pool.length - 1)]; } while (pKey === wKey && pool.length > 1);
+    const w = items[wKey], p = items[pKey];
+
+    const teachingMap = {
+      outcome_00:
+        `After Alice measures her two qubits, she gets one of four outcomes: 00, 01, 10, or 11. ` +
+        `She sends these 2 classical bits to Bob.\n\n` +
+        `The correction table:\n` +
+        `• 00 → No gate needed (Bob already has |ψ⟩)\n` +
+        `• 01 → Apply X (undo bit-flip)\n` +
+        `• 10 → Apply Z (undo phase-flip)\n` +
+        `• 11 → Apply X then Z (undo both)\n\n` +
+        `Outcome 00 is the lucky case — the state teleported perfectly with no correction.`,
+      outcome_01:
+        `When Alice measures 01, Bob's qubit is in the state X|ψ⟩ — the bit-flipped version.\n\n` +
+        `For |ψ⟩ = α|0⟩ + β|1⟩, X|ψ⟩ = β|0⟩ + α|1⟩. The amplitudes are swapped.\n\n` +
+        `Bob fixes this by applying X again: X·X|ψ⟩ = I|ψ⟩ = |ψ⟩, because X² = I.`,
+      outcome_10:
+        `When Alice measures 10, Bob's qubit is in the state Z|ψ⟩ — the phase-flipped version.\n\n` +
+        `For |ψ⟩ = α|0⟩ + β|1⟩, Z|ψ⟩ = α|0⟩ − β|1⟩. The sign of the |1⟩ component is flipped.\n\n` +
+        `Bob fixes this by applying Z again: Z·Z|ψ⟩ = I|ψ⟩ = |ψ⟩, because Z² = I.`,
+      outcome_11:
+        `When Alice measures 11, Bob's qubit is in the state ZX|ψ⟩ — both bit-flipped and phase-flipped.\n\n` +
+        `Bob must undo both: first apply X (to fix the bit-flip), then Z (to fix the phase-flip).\n` +
+        `Z·X·ZX|ψ⟩ = |ψ⟩.\n\n` +
+        `Each Pauli gate is its own inverse (X² = Z² = I), making the correction simple.`,
+    };
+
+    return {
+      teachingText: teachingMap[variation] || teachingMap['outcome_00'],
+      workedExample: {
+        problem: w.q,
+        steps: [...w.steps, `Answer: ${w.display}`],
+        insight: `The 2 classical bits Alice sends encode which of four Pauli corrections Bob needs. This is why teleportation cannot be faster than light — Bob must wait for the classical message.`,
+      },
+      tryIt: {
+        question: p.q,
+        choices: p.choices,
+        answer: p.answer,
+        answerType: 'choice',
+        answerDisplay: p.display,
+        steps: p.steps,
+        whyItMatters:
+          `The correction step is what makes teleportation work. Without it, Bob would have ` +
+          `a random transformation of |ψ⟩. The 2 classical bits are essential — this is why ` +
+          `teleportation does not violate the no-faster-than-light rule.`,
+      },
+    };
+  },
+},
+
+teleport_correction: {
+  generate(difficulty, variation) {
+    const states = [
+      { a: 0.87, b: 0.5 },
+      { a: 0.5, b: 0.87 },
+      { a: 0.71, b: 0.71 },
+      { a: 0.71, b: -0.71 },
+      { a: 1, b: 0 },
+      { a: 0, b: 1 },
+    ];
+
+    function pick2() {
+      const wi = randInt(0, states.length - 1);
+      let pi;
+      do { pi = randInt(0, states.length - 1); } while (pi === wi);
+      return [states[wi], states[pi]];
+    }
+
+    switch (variation) {
+
+      case 'apply_x': {
+        const [ws, ps] = pick2();
+        const wBob = [r2(ws.b), r2(ws.a)];
+        const wAns = [r2(ws.a), r2(ws.b)];
+        const pBob = [r2(ps.b), r2(ps.a)];
+        const pAns = [r2(ps.a), r2(ps.b)];
+        return {
+          teachingText:
+            `When Alice measures 01, Bob's qubit is X|ψ⟩ — the amplitudes are swapped.\n\n` +
+            `X gate: (a, b) → (b, a)\n\n` +
+            `If |ψ⟩ = (α, β), then Bob has (β, α). Applying X swaps them back:\n` +
+            `X · (β, α) = (α, β) = |ψ⟩\n\n` +
+            `This works because X is its own inverse: X² = I.`,
+          workedExample: {
+            problem: `Bob has ${fmtVec(wBob)} = X|ψ⟩. Apply X to recover |ψ⟩`,
+            steps: [
+              `X swaps: (${wBob.join(', ')}) → (${wAns.join(', ')})`,
+              `Bob recovers |ψ⟩ = ${fmtVec(wAns)}`,
+            ],
+            insight: `X is its own inverse, so applying it twice returns to the original state.`,
+          },
+          tryIt: {
+            question: `Bob has (${pBob.join(', ')}) which is X|ψ⟩.\nApply X to recover |ψ⟩:`,
+            answer: pAns,
+            answerType: 'vector',
+            answerDisplay: fmtVec(pAns),
+            steps: [
+              `X swaps: (${pBob.join(', ')}) → (${pAns.join(', ')})`,
+            ],
+            whyItMatters:
+              `The X correction is the simplest case — just swap the two amplitudes. ` +
+              `In a real quantum computer, this is a single gate operation that takes nanoseconds.`,
+          },
+        };
+      }
+
+      case 'apply_z': {
+        const [ws, ps] = pick2();
+        const wBob = [r2(ws.a), r2(-ws.b)];
+        const wAns = [r2(ws.a), r2(ws.b)];
+        const pBob = [r2(ps.a), r2(-ps.b)];
+        const pAns = [r2(ps.a), r2(ps.b)];
+        return {
+          teachingText:
+            `When Alice measures 10, Bob's qubit is Z|ψ⟩ — the phase is flipped.\n\n` +
+            `Z gate: (a, b) → (a, -b)\n\n` +
+            `If |ψ⟩ = (α, β), then Bob has (α, -β). Applying Z negates the second component again:\n` +
+            `Z · (α, -β) = (α, β) = |ψ⟩\n\n` +
+            `Like X, Z is its own inverse: Z² = I.`,
+          workedExample: {
+            problem: `Bob has ${fmtVec(wBob)} = Z|ψ⟩. Apply Z to recover |ψ⟩`,
+            steps: [
+              `Z negates second: (${wBob.join(', ')}) → (${wAns.join(', ')})`,
+              `Bob recovers |ψ⟩ = ${fmtVec(wAns)}`,
+            ],
+            insight: `Z only affects the |1⟩ component — it is a phase gate, leaving the |0⟩ amplitude untouched.`,
+          },
+          tryIt: {
+            question: `Bob has (${pBob.join(', ')}) which is Z|ψ⟩.\nApply Z to recover |ψ⟩:`,
+            answer: pAns,
+            answerType: 'vector',
+            answerDisplay: fmtVec(pAns),
+            steps: [
+              `Z negates second: (${pBob.join(', ')}) → (${pAns.join(', ')})`,
+            ],
+            whyItMatters:
+              `The Z correction fixes a phase error. Phase errors are invisible if you only ` +
+              `measure in the computational basis — but they matter for quantum computation. ` +
+              `This is why classical measurement alone cannot replace teleportation.`,
+          },
+        };
+      }
+
+      case 'apply_zx': {
+        // ZX|ψ⟩ = Z·X·(a,b) = Z·(b,a) = (b,-a). To recover: apply Z then X.
+        // Z·(b,-a) = (b,a). X·(b,a) = (a,b). Done.
+        const scenarios = [
+          { psi: [0.87, 0.5], bob: [0.5, -0.87], afterZ: [0.5, 0.87], result: [0.87, 0.5] },
+          { psi: [0.5, 0.87], bob: [0.87, -0.5], afterZ: [0.87, 0.5], result: [0.5, 0.87] },
+        ];
+        const wi = randInt(0, 1);
+        const pi = 1 - wi;
+        const w = scenarios[wi], p = scenarios[pi];
+        return {
+          teachingText:
+            `When Alice measures 11, Bob has ZX|ψ⟩ — both bit-flipped and phase-flipped.\n\n` +
+            `ZX|ψ⟩ = Z·X·(α, β) = Z·(β, α) = (β, -α)\n\n` +
+            `To recover |ψ⟩, Bob applies Z then X:\n` +
+            `• Z: (β, -α) → (β, α)\n` +
+            `• X: (β, α) → (α, β) = |ψ⟩\n\n` +
+            `This undoes both errors in sequence.`,
+          workedExample: {
+            problem: `Bob has (${w.bob.join(', ')}) = ZX|ψ⟩. Apply Z then X`,
+            steps: [
+              `Z: (${w.bob.join(', ')}) → (${w.afterZ.join(', ')})`,
+              `X: (${w.afterZ.join(', ')}) → (${w.result.join(', ')})`,
+              `Bob recovers |ψ⟩ = (${w.result.join(', ')})`,
+            ],
+            insight: `The order matters: Z fixes the phase first, then X fixes the bit-flip.`,
+          },
+          tryIt: {
+            question: `Bob has (${p.bob.join(', ')}) which is ZX|ψ⟩.\nApply Z then X. Final state:`,
+            answer: p.result,
+            answerType: 'vector',
+            answerDisplay: fmtVec(p.result),
+            steps: [
+              `Z: (${p.bob.join(', ')}) → (${p.afterZ.join(', ')})`,
+              `X: (${p.afterZ.join(', ')}) → (${p.result.join(', ')})`,
+            ],
+            whyItMatters:
+              `The double correction (outcome 11) uses both Pauli gates. Despite needing two ` +
+              `operations, it is still a simple correction — the beauty of teleportation ` +
+              `is that only Pauli gates are ever needed.`,
+          },
+        };
+      }
+
+      case 'full_protocol': {
+        const scenarios = [
+          { outcome: '01', bobHas: [0.5, 0.87], gate: 'X', result: [0.87, 0.5],
+            steps: ['Outcome 01 → apply X', 'X: (0.5, 0.87) → (0.87, 0.5)'] },
+          { outcome: '10', bobHas: [0.87, -0.5], gate: 'Z', result: [0.87, 0.5],
+            steps: ['Outcome 10 → apply Z', 'Z: (0.87, -0.5) → (0.87, 0.5)'] },
+          { outcome: '01', bobHas: [0.71, -0.71], gate: 'X', result: [-0.71, 0.71],
+            steps: ['Outcome 01 → apply X', 'X: (0.71, -0.71) → (-0.71, 0.71)'] },
+          { outcome: '10', bobHas: [0.5, -0.87], gate: 'Z', result: [0.5, 0.87],
+            steps: ['Outcome 10 → apply Z', 'Z: (0.5, -0.87) → (0.5, 0.87)'] },
+        ];
+        const wi = randInt(0, scenarios.length - 1);
+        let pi;
+        do { pi = randInt(0, scenarios.length - 1); } while (pi === wi);
+        const w = scenarios[wi], p = scenarios[pi];
+        return {
+          teachingText:
+            `In the full protocol, Alice tells Bob her 2-bit measurement result, ` +
+            `and Bob looks up the correction:\n\n` +
+            `• 00 → I (do nothing)\n` +
+            `• 01 → X (swap amplitudes)\n` +
+            `• 10 → Z (negate second component)\n` +
+            `• 11 → Z then X (both corrections)\n\n` +
+            `Given the measurement outcome and Bob's current state, apply the ` +
+            `correct gate to recover |ψ⟩.`,
+          workedExample: {
+            problem: `Alice measured ${w.outcome}. Bob has (${w.bobHas.join(', ')}). Apply ${w.gate}`,
+            steps: [...w.steps, `|ψ⟩ = (${w.result.join(', ')})`],
+            insight: `Regardless of Alice's measurement outcome, Bob can always recover |ψ⟩ with at most two single-qubit gates.`,
+          },
+          tryIt: {
+            question: `Alice measured ${p.outcome}. Bob has (${p.bobHas.join(', ')}).\nApply ${p.gate} to recover |ψ⟩:`,
+            answer: p.result,
+            answerType: 'vector',
+            answerDisplay: fmtVec(p.result),
+            steps: p.steps,
+            whyItMatters:
+              `This is the final step of quantum teleportation. Bob receives 2 classical bits, ` +
+              `applies the corresponding correction, and recovers the exact quantum state Alice ` +
+              `wanted to send. The protocol is complete.`,
+          },
+        };
+      }
+
+      default: return null;
+    }
+  },
+},
+
+// ── Chapter 16: Deutsch-Jozsa Algorithm ─────────────────────────────────────
+
+dj_problem_type: {
+  generate(difficulty, variation) {
+    const items = {
+      identify_constant: {
+        q: 'A function f maps {0,1}→{0,1}. Given f(0) = 1, f(1) = 1, is f constant or balanced?',
+        choices: ['Constant', 'Balanced', 'Neither', 'Cannot determine'],
+        answer: 'A', display: 'A) Constant',
+        steps: [
+          'A constant function returns the same value for all inputs.',
+          'f(0) = 1 and f(1) = 1 — both outputs are the same.',
+          'Therefore f is constant.',
+        ],
+      },
+      identify_balanced: {
+        q: 'A function f maps {0,1}→{0,1}. Given f(0) = 0, f(1) = 1, is f constant or balanced?',
+        choices: ['Constant', 'Balanced', 'Neither', 'Cannot determine'],
+        answer: 'B', display: 'B) Balanced',
+        steps: [
+          'A balanced function returns 0 for exactly half of inputs and 1 for the other half.',
+          'f(0) = 0 and f(1) = 1 — the outputs differ.',
+          'For a 1-bit function, this means f is balanced.',
+        ],
+      },
+      classical_queries: {
+        q: 'How many queries to f does a classical computer need (worst case) to determine if a 1-bit function is constant or balanced?',
+        choices: ['1', '2', '3', '4'],
+        answer: 'B', display: 'B) 2',
+        steps: [
+          'Classically, you must check f(0) and f(1) to compare.',
+          'You need 2 queries — checking only one tells you nothing.',
+        ],
+      },
+      quantum_queries: {
+        q: 'How many queries does the Deutsch-Jozsa algorithm need to determine if a 1-bit function is constant or balanced?',
+        choices: ['1', '2', '3', '0'],
+        answer: 'A', display: 'A) 1',
+        steps: [
+          'Deutsch-Jozsa queries the oracle exactly once.',
+          'Superposition + interference extract global info about f in one shot.',
+        ],
+      },
+    };
+
+    const varMap = {
+      identify_constant: ['identify_constant', 'identify_balanced'],
+      identify_balanced: ['identify_balanced', 'identify_constant'],
+      classical_queries: ['classical_queries', 'quantum_queries'],
+      quantum_queries: ['quantum_queries', 'classical_queries'],
+      basic: ['identify_constant', 'identify_balanced'],
+    };
+    const [wKey, pKey] = varMap[variation] || varMap['basic'];
+    const w = items[wKey], p = items[pKey];
+
+    const teachingMap = {
+      identify_constant:
+        `The Deutsch-Jozsa problem asks: given a function f: {0,1}→{0,1}, is f ` +
+        `constant (same output for all inputs) or balanced (different outputs for different inputs)?\n\n` +
+        `For 1-bit functions, there are exactly 4 possibilities:\n` +
+        `• Constant: f(0)=0,f(1)=0 or f(0)=1,f(1)=1\n` +
+        `• Balanced: f(0)=0,f(1)=1 or f(0)=1,f(1)=0\n\n` +
+        `If both outputs match → constant. If they differ → balanced.`,
+      identify_balanced:
+        `A balanced function returns 0 for exactly half of its inputs and 1 for the other half. ` +
+        `For a 1-bit function f: {0,1}→{0,1}, balanced means f(0) ≠ f(1).\n\n` +
+        `The key insight: for n-bit functions, there are 2^n inputs. A balanced function ` +
+        `returns 0 on exactly 2^(n−1) of them and 1 on the rest.`,
+      classical_queries:
+        `Classically, to determine if f is constant or balanced, you must query f on enough ` +
+        `inputs to be certain. For a 1-bit function, you need both f(0) and f(1) — that is 2 queries.\n\n` +
+        `For an n-bit function, the worst case is even worse: you might need to check ` +
+        `2^(n−1) + 1 inputs before you can be sure. That is exponentially many queries!`,
+      quantum_queries:
+        `The Deutsch-Jozsa algorithm solves this with a single query to the oracle. ` +
+        `It prepares a superposition, queries once, and uses interference to determine ` +
+        `constant vs balanced with certainty.\n\n` +
+        `This is one of the first demonstrations that quantum computers can be ` +
+        `exponentially faster than classical ones for specific problems.`,
+    };
+
+    return {
+      teachingText: teachingMap[variation] || teachingMap['identify_constant'],
+      workedExample: {
+        problem: w.q,
+        steps: [...w.steps, `Answer: ${w.display}`],
+        insight: `Constant means all outputs equal; balanced means outputs split evenly between 0 and 1.`,
+      },
+      tryIt: {
+        question: p.q,
+        choices: p.choices,
+        answer: p.answer,
+        answerType: 'choice',
+        answerDisplay: p.display,
+        steps: p.steps,
+        whyItMatters:
+          `The Deutsch-Jozsa problem is the simplest example where a quantum algorithm ` +
+          `provably outperforms any classical algorithm. Understanding constant vs balanced ` +
+          `functions is the foundation for this quantum speedup.`,
+      },
+    };
+  },
+},
+
+dj_oracle: {
+  generate(difficulty, variation) {
+    const items = {
+      constant_0: {
+        q: 'For f(x) = 0 (constant), what gate(s) does the oracle U_f apply?',
+        choices: ['Identity (do nothing)', 'X gate on ancilla', 'CNOT (control=input, target=ancilla)', 'X on ancilla, then CNOT'],
+        answer: 'A', display: 'A) Identity (do nothing)',
+        steps: [
+          'U_f|x⟩|y⟩ = |x⟩|y ⊕ f(x)⟩. With f(x)=0: y ⊕ 0 = y.',
+          'The ancilla is unchanged — oracle is identity.',
+        ],
+      },
+      constant_1: {
+        q: 'For f(x) = 1 (constant), what gate(s) does the oracle U_f apply?',
+        choices: ['Identity (do nothing)', 'X gate on ancilla', 'CNOT (control=input, target=ancilla)', 'X on ancilla, then CNOT'],
+        answer: 'B', display: 'B) X gate on ancilla',
+        steps: [
+          'U_f|x⟩|y⟩ = |x⟩|y ⊕ 1⟩ = |x⟩|NOT(y)⟩.',
+          'Ancilla always flipped regardless of x — this is X on ancilla.',
+        ],
+      },
+      balanced_identity: {
+        q: 'For f(x) = x (balanced), what gate implements the oracle U_f?',
+        choices: ['Identity (do nothing)', 'X gate on ancilla', 'CNOT (control=input, target=ancilla)', 'X on ancilla, then CNOT'],
+        answer: 'C', display: 'C) CNOT (control=input, target=ancilla)',
+        steps: [
+          'U_f|x⟩|y⟩ = |x⟩|y ⊕ x⟩.',
+          'Ancilla flips when x=1 — this is CNOT with input as control.',
+        ],
+      },
+      balanced_not: {
+        q: 'For f(x) = NOT(x) (balanced), what gate(s) implement the oracle U_f?',
+        choices: ['Identity (do nothing)', 'X gate on ancilla', 'CNOT (control=input, target=ancilla)', 'X on ancilla, then CNOT'],
+        answer: 'D', display: 'D) X on ancilla, then CNOT',
+        steps: [
+          'U_f|x⟩|y⟩ = |x⟩|y ⊕ NOT(x)⟩ = |x⟩|y ⊕ 1 ⊕ x⟩.',
+          'First X (flip ancilla), then CNOT: (y⊕1)⊕x = y ⊕ NOT(x). ✓',
+        ],
+      },
+    };
+
+    const varMap = {
+      constant_0: ['constant_0', 'constant_1'],
+      constant_1: ['constant_1', 'constant_0'],
+      balanced_identity: ['balanced_identity', 'balanced_not'],
+      balanced_not: ['balanced_not', 'balanced_identity'],
+      basic: ['constant_0', 'balanced_identity'],
+    };
+    const [wKey, pKey] = varMap[variation] || varMap['basic'];
+    const w = items[wKey], p = items[pKey];
+
+    const teachingMap = {
+      constant_0:
+        `An oracle U_f encodes a function f into a quantum circuit. The rule is:\n` +
+        `U_f|x⟩|y⟩ = |x⟩|y ⊕ f(x)⟩\n\n` +
+        `For f(x) = 0 (constant zero), y ⊕ 0 = y, so the oracle does nothing — it is the identity.\n` +
+        `For f(x) = 1 (constant one), y ⊕ 1 = NOT(y), so the oracle applies X to the ancilla.`,
+      constant_1:
+        `When f(x) = 1 for all x, the oracle flips the ancilla regardless of the input. ` +
+        `This is simply an X gate on the ancilla qubit. The input register is untouched.\n\n` +
+        `Key insight: constant oracles do not create any correlation between input and ancilla.`,
+      balanced_identity:
+        `For f(x) = x, the oracle flips the ancilla only when x = 1. This is a CNOT gate ` +
+        `with the input qubit as control and the ancilla as target.\n\n` +
+        `U_f|0⟩|y⟩ = |0⟩|y⟩ (no flip)\n` +
+        `U_f|1⟩|y⟩ = |1⟩|y ⊕ 1⟩ (flip)`,
+      balanced_not:
+        `For f(x) = NOT(x), we need y ⊕ NOT(x) = y ⊕ (1 ⊕ x) = (y ⊕ 1) ⊕ x.\n\n` +
+        `Implementation: first apply X to ancilla (y → y⊕1), then CNOT (y⊕1 → y⊕1⊕x).\n` +
+        `This correctly computes y ⊕ NOT(x) for both x = 0 and x = 1.`,
+    };
+
+    return {
+      teachingText: teachingMap[variation] || teachingMap['constant_0'],
+      workedExample: {
+        problem: w.q,
+        steps: [...w.steps, `Answer: ${w.display}`],
+        insight: `Each 1-bit Boolean function maps to a specific oracle circuit. Constant functions use only the ancilla; balanced functions use CNOT.`,
+      },
+      tryIt: {
+        question: p.q,
+        choices: p.choices,
+        answer: p.answer,
+        answerType: 'choice',
+        answerDisplay: p.display,
+        steps: p.steps,
+        whyItMatters:
+          `Understanding how functions become quantum circuits is essential. ` +
+          `The oracle is the "black box" that Deutsch-Jozsa queries — different functions ` +
+          `produce different phase patterns that interference can detect.`,
+      },
+    };
+  },
+},
+
+dj_trace: {
+  generate(difficulty, variation) {
+    const s = 0.71; // 1/√2
+    const h = 0.5;  // 1/2
+
+    switch (variation) {
+
+      case 'after_hadamards': {
+        return {
+          teachingText:
+            `The Deutsch-Jozsa circuit starts with |0⟩|1⟩ = |01⟩. The first step applies H ` +
+            `to both qubits:\n\n` +
+            `H|0⟩ = (|0⟩ + |1⟩)/√2 = |+⟩\n` +
+            `H|1⟩ = (|0⟩ − |1⟩)/√2 = |−⟩\n\n` +
+            `The tensor product gives:\n` +
+            `|+⟩|−⟩ = (1/2)(|00⟩ − |01⟩ + |10⟩ − |11⟩) = (0.5, −0.5, 0.5, −0.5)`,
+          workedExample: {
+            problem: 'Compute H|0⟩ ⊗ H|1⟩ as a 4-vector.',
+            steps: [
+              'H|0⟩ = (0.71, 0.71), H|1⟩ = (0.71, −0.71)',
+              'Tensor product: (0.71×0.71, 0.71×(−0.71), 0.71×0.71, 0.71×(−0.71))',
+              '= (0.5, −0.5, 0.5, −0.5)',
+            ],
+            insight: `H⊗H creates the uniform superposition that lets the oracle act on all inputs simultaneously.`,
+          },
+          tryIt: {
+            question: `The DJ circuit starts with |01⟩. After H⊗H, what is the 4-vector state?\nBasis: |00⟩,|01⟩,|10⟩,|11⟩. Round to 0.01.`,
+            answer: [h, -h, h, -h],
+            answerType: 'vector4',
+            answerDisplay: '(0.5, -0.5, 0.5, -0.5)',
+            steps: [
+              'H|0⟩ = (0.71, 0.71), H|1⟩ = (0.71, −0.71)',
+              'H|0⟩ ⊗ H|1⟩ = (0.5, −0.5, 0.5, −0.5)',
+            ],
+            whyItMatters:
+              `This superposition state is the key to quantum parallelism — the oracle ` +
+              `will evaluate f on both inputs simultaneously.`,
+          },
+        };
+      }
+
+      case 'after_oracle': {
+        const doConstFirst = Math.random() > 0.5;
+        const wName = doConstFirst ? 'f(x)=0 (identity)' : 'f(x)=x (CNOT)';
+        const wVec = doConstFirst ? [h, -h, h, -h] : [h, -h, -h, h];
+        const wExplain = doConstFirst
+          ? 'f(x)=0 oracle is identity — state unchanged: (0.5, -0.5, 0.5, -0.5)'
+          : 'CNOT swaps |10⟩↔|11⟩ coefficients: (0.5, -0.5, -0.5, 0.5)';
+        const pName = doConstFirst ? 'f(x)=x (CNOT)' : 'f(x)=0 (identity)';
+        const pVec = doConstFirst ? [h, -h, -h, h] : [h, -h, h, -h];
+        const pExplain = doConstFirst
+          ? 'CNOT: |10⟩→|11⟩ and |11⟩→|10⟩, so swap those coefficients.'
+          : 'Identity oracle: state unchanged.';
+
+        return {
+          teachingText:
+            `After H⊗H the state is (0.5, −0.5, 0.5, −0.5). Now the oracle U_f acts:\n\n` +
+            `• Constant f(x)=0 (identity): no change → (0.5, −0.5, 0.5, −0.5)\n` +
+            `• Balanced f(x)=x (CNOT): swaps |10⟩ and |11⟩ amplitudes → (0.5, −0.5, −0.5, 0.5)\n\n` +
+            `The CNOT maps |10⟩→|11⟩ and |11⟩→|10⟩, which swaps the last two components' coefficients.`,
+          workedExample: {
+            problem: `After H⊗H, apply the oracle for ${wName}. What is the state?`,
+            steps: [
+              'After H⊗H: (0.5, -0.5, 0.5, -0.5)',
+              wExplain,
+              `Result: (${wVec.join(', ')})`,
+            ],
+            insight: `The oracle imprints information about f into the phase pattern of the state.`,
+          },
+          tryIt: {
+            question: `After H⊗H on |01⟩, apply the oracle for ${pName}. What is the 4-vector?\nBasis: |00⟩,|01⟩,|10⟩,|11⟩.`,
+            answer: pVec,
+            answerType: 'vector4',
+            answerDisplay: `(${pVec.join(', ')})`,
+            steps: [
+              'After H⊗H: (0.5, -0.5, 0.5, -0.5)',
+              pExplain,
+              `Result: (${pVec.join(', ')})`,
+            ],
+            whyItMatters:
+              `The oracle creates different amplitude patterns for constant and balanced functions. ` +
+              `The final Hadamard will convert these patterns into distinguishable measurement outcomes.`,
+          },
+        };
+      }
+
+      case 'constant_trace': {
+        return {
+          teachingText:
+            `Let us trace the full DJ circuit with a constant oracle f(x) = 0:\n\n` +
+            `1. Start: |01⟩ = (0, 1, 0, 0)\n` +
+            `2. H⊗H: (0.5, −0.5, 0.5, −0.5)\n` +
+            `3. Oracle (identity): (0.5, −0.5, 0.5, −0.5)\n` +
+            `4. H⊗I: Apply H to first qubit only.\n\n` +
+            `For H⊗I, group by first qubit:\n` +
+            `|0x⟩ terms: coeffs (0.5, −0.5). H|0⟩ = (|0⟩+|1⟩)/√2\n` +
+            `|1x⟩ terms: coeffs (0.5, −0.5). H|1⟩ = (|0⟩−|1⟩)/√2\n` +
+            `|00⟩: 0.5×0.71 + 0.5×0.71 = 0.71\n` +
+            `|01⟩: −0.5×0.71 + (−0.5)×0.71 = −0.71\n` +
+            `|10⟩: 0.5×0.71 − 0.5×0.71 = 0\n` +
+            `|11⟩: −0.5×0.71 − (−0.5)×0.71 = 0\n` +
+            `Final: (0.71, −0.71, 0, 0) = |0⟩|−⟩\n` +
+            `Measure first qubit → 0 → f is constant!`,
+          workedExample: {
+            problem: 'Trace DJ with constant oracle f(x)=0. What is the final 4-vector?',
+            steps: [
+              '|01⟩ → H⊗H → (0.5, -0.5, 0.5, -0.5)',
+              'Identity oracle: unchanged.',
+              'H⊗I: |00⟩=0.71, |01⟩=−0.71, |10⟩=0, |11⟩=0',
+              'Final: (0.71, -0.71, 0, 0)',
+            ],
+            insight: `When f is constant, the |0⟩ and |1⟩ components of the first qubit interfere constructively at |0⟩.`,
+          },
+          tryIt: {
+            question: `Trace the full DJ circuit: |01⟩ → H⊗H → identity oracle (f=0) → H⊗I.\nGive the final 4-vector. Round to 0.01.`,
+            answer: [s, -s, 0, 0],
+            answerType: 'vector4',
+            answerDisplay: '(0.71, -0.71, 0, 0)',
+            steps: [
+              '|01⟩ → H⊗H → (0.5, -0.5, 0.5, -0.5)',
+              'Identity: unchanged.',
+              'H⊗I: (0.71, -0.71, 0, 0) → first qubit is |0⟩ → constant.',
+            ],
+            whyItMatters:
+              `The measurement outcome |0⟩ on the first qubit deterministically tells us f is constant. ` +
+              `No classical algorithm can do this in one query.`,
+          },
+        };
+      }
+
+      case 'balanced_trace': {
+        return {
+          teachingText:
+            `Now trace the DJ circuit with a balanced oracle f(x) = x (CNOT):\n\n` +
+            `1. Start: |01⟩ = (0, 1, 0, 0)\n` +
+            `2. H⊗H: (0.5, −0.5, 0.5, −0.5)\n` +
+            `3. CNOT oracle: |10⟩↔|11⟩ swap → (0.5, −0.5, −0.5, 0.5)\n` +
+            `4. H⊗I:\n` +
+            `|00⟩: 0.5×0.71 + (−0.5)×0.71 = 0\n` +
+            `|01⟩: (−0.5)×0.71 + 0.5×0.71 = 0\n` +
+            `|10⟩: 0.5×0.71 − (−0.5)×0.71 = 0.71\n` +
+            `|11⟩: (−0.5)×0.71 − 0.5×0.71 = −0.71\n` +
+            `Final: (0, 0, 0.71, −0.71) = |1⟩|−⟩\n` +
+            `Measure first qubit → 1 → f is balanced!`,
+          workedExample: {
+            problem: 'Trace DJ with balanced oracle f(x)=x (CNOT). What is the final 4-vector?',
+            steps: [
+              '|01⟩ → H⊗H → (0.5, -0.5, 0.5, -0.5)',
+              'CNOT: swap |10⟩↔|11⟩ → (0.5, -0.5, -0.5, 0.5)',
+              'H⊗I: |00⟩=0, |01⟩=0, |10⟩=0.71, |11⟩=−0.71',
+              'Final: (0, 0, 0.71, -0.71)',
+            ],
+            insight: `When f is balanced, the phases cause destructive interference at |0⟩ and constructive at |1⟩.`,
+          },
+          tryIt: {
+            question: `Trace the full DJ circuit: |01⟩ → H⊗H → CNOT (f(x)=x) → H⊗I.\nGive the final 4-vector. Round to 0.01.`,
+            answer: [0, 0, s, -s],
+            answerType: 'vector4',
+            answerDisplay: '(0, 0, 0.71, -0.71)',
+            steps: [
+              '|01⟩ → H⊗H → (0.5, -0.5, 0.5, -0.5)',
+              'CNOT: (0.5, -0.5, -0.5, 0.5)',
+              'H⊗I: (0, 0, 0.71, -0.71) → first qubit is |1⟩ → balanced.',
+            ],
+            whyItMatters:
+              `Measuring |1⟩ on the first qubit deterministically identifies f as balanced. ` +
+              `This is the heart of the Deutsch-Jozsa algorithm.`,
+          },
+        };
+      }
+
+      default: return null;
+    }
+  },
+},
+
+phase_kickback: {
+  generate(difficulty, variation) {
+    const items = {
+      basic: {
+        q: 'When U_f acts on |x⟩|−⟩, the result is (−1)^f(x)|x⟩|−⟩. What is this phenomenon called?',
+        choices: ['Quantum tunneling', 'Phase kickback', 'Entanglement swapping', 'Decoherence'],
+        answer: 'B', display: 'B) Phase kickback',
+        steps: [
+          'U_f|x⟩|−⟩ = (−1)^f(x)|x⟩|−⟩.',
+          'The phase "kicks back" from the ancilla onto the input.',
+          'This is called phase kickback.',
+        ],
+      },
+      constant_phase: {
+        q: 'If f is constant with f(x)=0 for all x, what is U_f|+⟩|−⟩?',
+        choices: ['|+⟩|−⟩', '−|+⟩|−⟩', '|−⟩|−⟩', '|+⟩|+⟩'],
+        answer: 'A', display: 'A) |+⟩|−⟩',
+        steps: [
+          'f(x)=0 for all x, so (−1)^f(x) = +1.',
+          'U_f|+⟩|−⟩ = |+⟩|−⟩ — no phase change.',
+        ],
+      },
+      balanced_phase: {
+        q: 'If f(x)=x (balanced), what is U_f|+⟩|−⟩?',
+        choices: ['|+⟩|−⟩', '|−⟩|−⟩', '−|+⟩|−⟩', '|1⟩|−⟩'],
+        answer: 'B', display: 'B) |−⟩|−⟩',
+        steps: [
+          '|+⟩ = (|0⟩+|1⟩)/√2.',
+          'U_f|0⟩|−⟩ = (−1)^0|0⟩|−⟩ = |0⟩|−⟩',
+          'U_f|1⟩|−⟩ = (−1)^1|1⟩|−⟩ = −|1⟩|−⟩',
+          'Result: (|0⟩−|1⟩)/√2 ⊗ |−⟩ = |−⟩|−⟩',
+        ],
+      },
+      interference: {
+        q: 'After phase kickback, applying H to the input causes interference. For a balanced function, this is:',
+        choices: ['Constructive — amplifies |0⟩', 'Destructive — cancels |0⟩, amplifies |1⟩', 'No interference occurs', 'Random — depends on measurement'],
+        answer: 'B', display: 'B) Destructive — cancels |0⟩, amplifies |1⟩',
+        steps: [
+          'For f(x)=x, after kickback: input is |−⟩.',
+          'H|−⟩ = |1⟩. Destructive interference cancels |0⟩.',
+        ],
+      },
+    };
+
+    const varMap = {
+      basic: ['basic', 'constant_phase'],
+      constant_phase: ['constant_phase', 'balanced_phase'],
+      balanced_phase: ['balanced_phase', 'constant_phase'],
+      interference: ['interference', 'balanced_phase'],
+    };
+    const [wKey, pKey] = varMap[variation] || varMap['basic'];
+    const w = items[wKey], p = items[pKey];
+
+    const teachingMap = {
+      basic:
+        `Phase kickback is the key trick behind Deutsch-Jozsa (and many other quantum algorithms).\n\n` +
+        `When the ancilla is in state |−⟩ = (|0⟩−|1⟩)/√2, applying U_f gives:\n` +
+        `U_f|x⟩|−⟩ = |x⟩(|f(x)⊕0⟩ − |f(x)⊕1⟩)/√2\n\n` +
+        `If f(x)=0: result is |x⟩(|0⟩−|1⟩)/√2 = (+1)|x⟩|−⟩\n` +
+        `If f(x)=1: result is |x⟩(|1⟩−|0⟩)/√2 = (−1)|x⟩|−⟩\n\n` +
+        `The ancilla stays as |−⟩, but a phase of (−1)^f(x) appears on the input register. ` +
+        `The function's output has been encoded as a phase!`,
+      constant_phase:
+        `For a constant function (say f(x)=0), every input gets phase (+1). ` +
+        `So U_f|+⟩|−⟩ = |+⟩|−⟩ — the input state is unchanged.\n\n` +
+        `For f(x)=1 (also constant), every input gets phase (−1): ` +
+        `U_f|+⟩|−⟩ = −|+⟩|−⟩. This global phase is undetectable, ` +
+        `so the input state is effectively unchanged.`,
+      balanced_phase:
+        `For a balanced function like f(x)=x:\n` +
+        `U_f|0⟩|−⟩ = (+1)|0⟩|−⟩ (since f(0)=0)\n` +
+        `U_f|1⟩|−⟩ = (−1)|1⟩|−⟩ (since f(1)=1)\n\n` +
+        `Applied to |+⟩ = (|0⟩+|1⟩)/√2:\n` +
+        `U_f|+⟩|−⟩ = (|0⟩−|1⟩)/√2 ⊗ |−⟩ = |−⟩|−⟩\n\n` +
+        `The balanced function flips |+⟩ to |−⟩!`,
+      interference:
+        `The final step of Deutsch-Jozsa is applying H to the input qubit:\n\n` +
+        `• Constant: input is |+⟩ → H|+⟩ = |0⟩ (constructive at |0⟩)\n` +
+        `• Balanced: input is |−⟩ → H|−⟩ = |1⟩ (destructive at |0⟩, constructive at |1⟩)\n\n` +
+        `Interference converts the phase difference into a measurement difference. ` +
+        `Measure |0⟩ = constant, measure |1⟩ = balanced. One query, certain answer.`,
+    };
+
+    return {
+      teachingText: teachingMap[variation] || teachingMap['basic'],
+      workedExample: {
+        problem: w.q,
+        steps: [...w.steps, `Answer: ${w.display}`],
+        insight: `Phase kickback converts function evaluation into a relative phase — the ancilla is unchanged but the input register picks up (−1)^f(x).`,
+      },
+      tryIt: {
+        question: p.q,
+        choices: p.choices,
+        answer: p.answer,
+        answerType: 'choice',
+        answerDisplay: p.display,
+        steps: p.steps,
+        whyItMatters:
+          `Phase kickback is not unique to Deutsch-Jozsa — it is the central trick in ` +
+          `Grover's search, Shor's factoring, quantum phase estimation, and most quantum algorithms. ` +
+          `Mastering it here prepares you for everything that follows.`,
+      },
+    };
+  },
+},
+
+dj_generalize: {
+  generate(difficulty, variation) {
+    switch (variation) {
+
+      case 'classical_cost': {
+        const nVals = [2, 3, 4, 5];
+        const wN = nVals[randInt(0, nVals.length - 1)];
+        const wCost = Math.pow(2, wN - 1) + 1;
+        let pN;
+        do { pN = nVals[randInt(0, nVals.length - 1)]; } while (pN === wN);
+        const pCost = Math.pow(2, pN - 1) + 1;
+        return {
+          teachingText:
+            `For an n-bit function f: {0,1}^n → {0,1}, a classical computer must query f enough ` +
+            `times to distinguish constant from balanced.\n\n` +
+            `Worst case: the first 2^(n−1) queries could all return the same value (this is ` +
+            `consistent with both constant and balanced). One more query settles it.\n\n` +
+            `Classical worst case = 2^(n−1) + 1 queries.\n` +
+            `For n=3: 2^2 + 1 = 5. For n=10: 2^9 + 1 = 513.`,
+          workedExample: {
+            problem: `For n=${wN}, how many classical queries in the worst case?`,
+            steps: [
+              `Worst case: 2^(n−1) + 1 = 2^(${wN}−1) + 1`,
+              `= 2^${wN-1} + 1 = ${wCost}`,
+            ],
+            insight: `The worst case grows exponentially with n — this is exactly the gap that Deutsch-Jozsa exploits.`,
+          },
+          tryIt: {
+            question: `For an n=${pN} bit function, what is the worst-case number of classical queries to determine constant vs balanced?`,
+            answer: pCost,
+            answerType: 'numeric',
+            answerDisplay: String(pCost),
+            steps: [
+              `2^(${pN}−1) + 1 = 2^${pN-1} + 1 = ${pCost}`,
+            ],
+            whyItMatters:
+              `The exponential classical cost is what makes Deutsch-Jozsa remarkable — ` +
+              `quantum mechanics reduces this to a single query for any n.`,
+          },
+        };
+      }
+
+      case 'quantum_cost': {
+        const nVals = [2, 5, 10, 100];
+        const wN = nVals[randInt(0, nVals.length - 1)];
+        let pN;
+        do { pN = nVals[randInt(0, nVals.length - 1)]; } while (pN === wN);
+        return {
+          teachingText:
+            `The Deutsch-Jozsa algorithm uses exactly 1 oracle query, regardless of n.\n\n` +
+            `The algorithm:\n` +
+            `1. Prepare n input qubits as |0⟩^⊗n and 1 ancilla as |1⟩\n` +
+            `2. Apply H to all qubits → uniform superposition\n` +
+            `3. Apply oracle U_f once\n` +
+            `4. Apply H^⊗n to input qubits\n` +
+            `5. Measure input qubits\n\n` +
+            `If all zeros → constant. If any non-zero → balanced.\n` +
+            `One query. Deterministic. Works for any n.`,
+          workedExample: {
+            problem: `For n=${wN}, how many quantum queries?`,
+            steps: [
+              `Deutsch-Jozsa always uses exactly 1 query.`,
+              `Classical would need up to ${Math.pow(2, wN - 1) + 1} queries.`,
+            ],
+            insight: `The quantum speedup is exponential: from O(2^n) classical queries to O(1) quantum.`,
+          },
+          tryIt: {
+            question: `For n=${pN}, how many queries does Deutsch-Jozsa need?`,
+            answer: 1,
+            answerType: 'numeric',
+            answerDisplay: '1',
+            steps: [
+              `Always 1, regardless of n.`,
+              `Classical for n=${pN}: up to ${Math.pow(2, pN - 1) + 1} queries.`,
+            ],
+            whyItMatters:
+              `This constant-vs-exponential gap was the first proof that quantum computers ` +
+              `can be exponentially faster than classical ones for certain problems.`,
+          },
+        };
+      }
+
+      case 'speedup_factor': {
+        const wItems = {
+          q: 'What type of speedup does Deutsch-Jozsa achieve?',
+          choices: ['Constant', 'Polynomial', 'Exponential', 'Logarithmic'],
+          answer: 'C', display: 'C) Exponential',
+          steps: [
+            'Classical: O(2^n) queries. Quantum: O(1).',
+            'Speedup from 2^n to 1 is exponential.',
+          ],
+        };
+        const pItems = {
+          q: 'The Deutsch-Jozsa algorithm achieves what type of speedup over classical computation?',
+          choices: ['Constant', 'Polynomial', 'Exponential', 'Logarithmic'],
+          answer: 'C', display: 'C) Exponential',
+          steps: [
+            'Classical: O(2^(n−1)+1) queries.',
+            'Quantum: 1 query.',
+            'The speedup is exponential.',
+          ],
+        };
+        return {
+          teachingText:
+            `Deutsch-Jozsa demonstrates an exponential quantum speedup:\n\n` +
+            `• Classical: O(2^(n−1) + 1) = O(2^n) queries\n` +
+            `• Quantum: O(1) — exactly 1 query\n\n` +
+            `This was historically the first quantum algorithm to show an exponential advantage ` +
+            `(Deutsch 1985 for n=1, Deutsch & Jozsa 1992 for general n).\n\n` +
+            `Note: Deutsch-Jozsa solves a promise problem (f is guaranteed to be constant OR balanced). ` +
+            `The practical significance is mainly pedagogical, but the techniques (phase kickback, ` +
+            `interference) are used in all major quantum algorithms.`,
+          workedExample: {
+            problem: wItems.q,
+            steps: [...wItems.steps, `Answer: ${wItems.display}`],
+            insight: `Deutsch-Jozsa was the spark that ignited the field of quantum computing.`,
+          },
+          tryIt: {
+            question: pItems.q,
+            choices: pItems.choices,
+            answer: pItems.answer,
+            answerType: 'choice',
+            answerDisplay: pItems.display,
+            steps: pItems.steps,
+            whyItMatters:
+              `While Deutsch-Jozsa itself has limited practical use, the exponential speedup ` +
+              `it demonstrates inspired the search for more practical quantum algorithms like ` +
+              `Shor's (factoring) and Grover's (search).`,
+          },
+        };
+      }
+
+      default: return null;
+    }
+  },
+},
+
+// ── Chapter 17: Grover's Search Algorithm ────────────────────────────────────
+
+grover_problem: {
+  generate(difficulty, variation) {
+    const teachingMap = {
+      classical_cost:
+        `Imagine searching an unsorted phone book for a specific name. Classically, ` +
+        `you have no choice but to check entries one by one. On average, you will check ` +
+        `half the entries before finding the one you want.\n\n` +
+        `For a database of N items, classical search takes O(N) time — on average N/2 lookups. ` +
+        `This is the best any classical algorithm can do on unsorted data.`,
+      quantum_cost:
+        `Grover's algorithm (1996) searches an unsorted database of N items in only O(√N) steps ` +
+        `— a quadratic speedup over classical search.\n\n` +
+        `The key idea: start in an equal superposition of all items, then repeatedly apply two ` +
+        `operations — the oracle (marks the target) and the diffusion operator (amplifies the ` +
+        `marked item). After about (π/4)√N iterations, measuring gives the target with high probability.`,
+      speedup:
+        `The speedup from Grover's algorithm is quadratic: O(√N) vs O(N).\n\n` +
+        `For a million items: classical needs ~500,000 lookups, Grover needs ~785 iterations. ` +
+        `The speedup factor is roughly √N/2 — impressive, but not exponential. Still, for ` +
+        `large databases this is enormously valuable.`,
+    };
+
+    switch (variation) {
+
+      case 'classical_cost': {
+        const wN = [8, 16, 32][randInt(0, 2)];
+        const wAns = wN / 2;
+        let pN;
+        do { pN = [8, 16, 32, 64][randInt(0, 3)]; } while (pN === wN);
+        const pAns = pN / 2;
+        return {
+          teachingText: teachingMap.classical_cost,
+          workedExample: {
+            problem: `Database of ${wN} items. Average classical lookups?`,
+            steps: [
+              `Classical search checks one item at a time.`,
+              `Average: ${wN}/2 = ${wAns} lookups.`,
+            ],
+            insight: `Classical search is O(N) — there is no shortcut without structure in the data.`,
+          },
+          tryIt: {
+            question: `A database has ${pN} items. On average, how many lookups does a classical search need to find one marked item?`,
+            answer: pAns,
+            answerType: 'numeric',
+            answerDisplay: `${pAns}`,
+            steps: [
+              `Classical search checks items one by one.`,
+              `Average: ${pN}/2 = ${pAns} lookups.`,
+            ],
+            whyItMatters:
+              `Understanding the classical baseline is essential — Grover's speedup is only ` +
+              `meaningful relative to this O(N) cost. Quadratic speedup matters most when N is large.`,
+          },
+        };
+      }
+
+      case 'quantum_cost': {
+        const wN = 16, wSqrt = 4, wIters = 3;
+        const pCases = [{ N: 64, sqrt: 8, iters: 6 }, { N: 256, sqrt: 16, iters: 13 }];
+        const p = pCases[randInt(0, pCases.length - 1)];
+        return {
+          teachingText: teachingMap.quantum_cost,
+          workedExample: {
+            problem: `Database of ${wN} items. How many Grover iterations?`,
+            steps: [
+              `√${wN} = ${wSqrt}`,
+              `Iterations ≈ (π/4) × ${wSqrt} = ${(Math.PI/4*wSqrt).toFixed(2)} ≈ ${wIters}`,
+            ],
+            insight: `The formula (π/4)√N gives the optimal number of iterations — too few or too many reduces success probability.`,
+          },
+          tryIt: {
+            question: `A database has ${p.N} items. Approximately how many Grover iterations are needed? (Round to nearest integer.)`,
+            answer: p.iters,
+            answerType: 'numeric',
+            answerDisplay: `${p.iters}`,
+            steps: [
+              `√${p.N} = ${p.sqrt}`,
+              `Iterations ≈ (π/4) × ${p.sqrt} = ${(Math.PI/4*p.sqrt).toFixed(2)} ≈ ${p.iters}`,
+            ],
+            whyItMatters:
+              `Grover's O(√N) scaling means that doubling the database size only increases ` +
+              `the search time by a factor of √2 ≈ 1.41. This is the power of quantum parallelism.`,
+          },
+        };
+      }
+
+      case 'speedup': {
+        const wN = 1000000, wClass = 500000, wQuant = Math.round(Math.PI/4*1000), wSpeed = Math.round(wClass/wQuant);
+        const pCases = [
+          { exp: 4, N: 10000, classical: 5000, quantum: Math.round(Math.PI/4*100) },
+          { exp: 8, N: 100000000, classical: 50000000, quantum: Math.round(Math.PI/4*10000) },
+        ];
+        const p = pCases[randInt(0, pCases.length - 1)];
+        const pSpeed = Math.round(p.classical / p.quantum);
+        return {
+          teachingText: teachingMap.speedup,
+          workedExample: {
+            problem: `N = 10^6. Classical: ${wClass.toLocaleString()}. Grover: ~${wQuant.toLocaleString()}. Speedup?`,
+            steps: [
+              `Speedup = ${wClass.toLocaleString()} / ${wQuant.toLocaleString()} ≈ ${wSpeed}`,
+            ],
+            insight: `The speedup grows as √N — large but not exponential.`,
+          },
+          tryIt: {
+            question: `A database has 10^${p.exp} = ${p.N.toLocaleString()} items. Classical: ~${p.classical.toLocaleString()} lookups. Grover: ~${p.quantum.toLocaleString()} iterations. What is the approximate speedup factor? (Round to nearest integer.)`,
+            answer: pSpeed,
+            answerType: 'numeric',
+            answerDisplay: `${pSpeed}`,
+            steps: [
+              `Speedup = ${p.classical.toLocaleString()} / ${p.quantum.toLocaleString()} ≈ ${pSpeed}`,
+            ],
+            whyItMatters:
+              `Even a quadratic speedup is transformative at scale. For cryptography, Grover's ` +
+              `algorithm effectively halves the key length — a 256-bit key provides only 128-bit ` +
+              `security against a quantum adversary.`,
+          },
+        };
+      }
+
+      default: return null;
+    }
+  },
+},
+
+grover_oracle: {
+  generate(difficulty, variation) {
+    const labels = ['|00⟩', '|01⟩', '|10⟩', '|11⟩'];
+
+    const teachingMap = {
+      basic_2qubit:
+        `The oracle is a black box that "knows" the answer. Given an equal superposition ` +
+        `of all items, the oracle flips the sign (phase) of the marked item's amplitude.\n\n` +
+        `For 2 qubits (N = 4 items), the equal superposition is:\n` +
+        `|s⟩ = ½|00⟩ + ½|01⟩ + ½|10⟩ + ½|11⟩ = (0.5, 0.5, 0.5, 0.5)\n\n` +
+        `If the marked item is |11⟩, the oracle produces:\n` +
+        `(0.5, 0.5, 0.5, −0.5)\n\n` +
+        `Only the sign changes — the magnitude stays the same. This is a phase flip.`,
+      mark_specific:
+        `The oracle can mark any item, not just |11⟩. The operation is the same: ` +
+        `flip the sign of the marked item's amplitude, leave everything else unchanged.\n\n` +
+        `Mathematically, the oracle applies: O|x⟩ = (−1)^f(x)|x⟩ where f(x) = 1 for ` +
+        `the marked item and 0 for all others.`,
+      phase_flip_only:
+        `A crucial property of the oracle: it only changes the phase (sign), not the ` +
+        `probability. Before the oracle, each item has probability |0.5|² = 0.25. After ` +
+        `the oracle, the marked item has amplitude −0.5, but probability |−0.5|² = 0.25 — ` +
+        `unchanged!\n\n` +
+        `The phase flip is invisible to measurement. It only becomes useful when combined ` +
+        `with the diffusion operator, which converts the phase difference into an amplitude difference.`,
+    };
+
+    function makeOracleProblem(markedIdx) {
+      const ans = [0.5, 0.5, 0.5, 0.5];
+      ans[markedIdx] = -0.5;
+      return {
+        question: `Equal superposition: (0.5, 0.5, 0.5, 0.5) for ${labels.join(', ')}.\nThe oracle marks ${labels[markedIdx]}. What is the state after the oracle? (4-vector)`,
+        answer: ans,
+        answerDisplay: `(${ans.join(', ')})`,
+        steps: [
+          `Oracle flips the sign of the marked item's amplitude.`,
+          `${labels[markedIdx]} at index ${markedIdx}: 0.5 → −0.5`,
+          `Result: (${ans.join(', ')})`,
+        ],
+      };
+    }
+
+    switch (variation) {
+
+      case 'basic_2qubit':
+      case 'basic': {
+        const w = makeOracleProblem(3);
+        let pIdx;
+        do { pIdx = randInt(0, 3); } while (pIdx === 3);
+        const p = makeOracleProblem(pIdx);
+        return {
+          teachingText: teachingMap.basic_2qubit,
+          workedExample: {
+            problem: w.question,
+            steps: w.steps,
+            insight: `The oracle is the only part of Grover's algorithm that "knows" the answer. Everything else is generic.`,
+          },
+          tryIt: {
+            question: p.question,
+            answer: p.answer,
+            answerType: 'vector4',
+            answerDisplay: p.answerDisplay,
+            steps: p.steps,
+            whyItMatters:
+              `The oracle encodes the search problem. In a real quantum computer, designing efficient ` +
+              `oracles is one of the main challenges of applying Grover's algorithm.`,
+          },
+        };
+      }
+
+      case 'mark_specific': {
+        const wIdx = randInt(0, 2);
+        const w = makeOracleProblem(wIdx);
+        let pIdx;
+        do { pIdx = randInt(0, 3); } while (pIdx === wIdx);
+        const p = makeOracleProblem(pIdx);
+        return {
+          teachingText: teachingMap.mark_specific,
+          workedExample: {
+            problem: w.question,
+            steps: w.steps,
+            insight: `The oracle can mark any item — the rest of Grover's algorithm does not need to know which one.`,
+          },
+          tryIt: {
+            question: p.question,
+            answer: p.answer,
+            answerType: 'vector4',
+            answerDisplay: p.answerDisplay,
+            steps: p.steps,
+            whyItMatters:
+              `This generality is what makes Grover's algorithm universal — it works for any ` +
+              `search problem that can be expressed as an oracle.`,
+          },
+        };
+      }
+
+      case 'phase_flip_only': {
+        const wIdx = randInt(0, 3);
+        const w = makeOracleProblem(wIdx);
+        let pIdx;
+        do { pIdx = randInt(0, 3); } while (pIdx === wIdx);
+        const p = makeOracleProblem(pIdx);
+        return {
+          teachingText: teachingMap.phase_flip_only,
+          workedExample: {
+            problem: w.question,
+            steps: w.steps,
+            insight: `Phase is hidden from measurement — only interference can reveal it.`,
+          },
+          tryIt: {
+            question: p.question,
+            answer: p.answer,
+            answerType: 'vector4',
+            answerDisplay: p.answerDisplay,
+            steps: p.steps,
+            whyItMatters:
+              `This is a deep quantum principle: phase information is invisible to direct measurement ` +
+              `but can be extracted through interference. Grover's diffusion operator does exactly this.`,
+          },
+        };
+      }
+
+      default: return null;
+    }
+  },
+},
+
+grover_diffusion: {
+  generate(difficulty, variation) {
+    const labels = ['|00⟩', '|01⟩', '|10⟩', '|11⟩'];
+
+    const teachingMap = {
+      compute_mean:
+        `After the oracle flips the phase of the marked item, the diffusion operator ` +
+        `amplifies the marked item by reflecting all amplitudes about their mean.\n\n` +
+        `Step 1: Compute the mean of all amplitudes.\n` +
+        `Step 2: Reflect each amplitude about the mean: new[i] = 2 × mean − old[i].\n\n` +
+        `This "inversion about the mean" is the heart of Grover's algorithm. Items below ` +
+        `the mean get boosted; items above get reduced.`,
+      reflect_about_mean:
+        `The reflection formula is: new amplitude = 2 × mean − old amplitude.\n\n` +
+        `After the oracle, the marked item has a negative amplitude (below the mean), ` +
+        `so reflection pushes it above the mean. The unmarked items have positive amplitudes ` +
+        `(above the mean), so reflection pushes them below.\n\n` +
+        `Each iteration, the marked item's amplitude grows while the others shrink.`,
+      after_one_iteration:
+        `One complete Grover iteration = oracle + diffusion.\n\n` +
+        `For N = 4 (2 qubits), start with (0.5, 0.5, 0.5, 0.5):\n` +
+        `1. Oracle marks one item: e.g. (0.5, 0.5, 0.5, −0.5)\n` +
+        `2. Mean = (0.5 + 0.5 + 0.5 − 0.5)/4 = 0.25\n` +
+        `3. Diffusion: unmarked → 2(0.25) − 0.5 = 0, marked → 2(0.25) + 0.5 = 1\n` +
+        `4. Result: (0, 0, 0, 1) — found with certainty!\n\n` +
+        `N = 4 is special: one iteration suffices.`,
+      amplitude_growth:
+        `The marked item's amplitude grows with each iteration. Starting at 1/√N, ` +
+        `it increases by roughly 2/√N per iteration (for large N).\n\n` +
+        `For N = 4: amplitude starts at 0.5, and after 1 iteration reaches 1.0. ` +
+        `This is the maximum — further iterations would reduce it (the algorithm "overshoots").`,
+    };
+
+    switch (variation) {
+
+      case 'compute_mean': {
+        const wIdx = 3;
+        const wAmps = [0.5, 0.5, 0.5, -0.5];
+        const wMean = r2((wAmps[0]+wAmps[1]+wAmps[2]+wAmps[3])/4);
+        let pIdx;
+        do { pIdx = randInt(0, 3); } while (pIdx === wIdx);
+        const pAmps = [0.5, 0.5, 0.5, 0.5];
+        pAmps[pIdx] = -0.5;
+        const pMean = r2((pAmps[0]+pAmps[1]+pAmps[2]+pAmps[3])/4);
+        return {
+          teachingText: teachingMap.compute_mean,
+          workedExample: {
+            problem: `Amplitudes after oracle: (${wAmps.join(', ')}). Mean?`,
+            steps: [
+              `Mean = (${wAmps.join(' + ')})/4`,
+              `= ${r2(wAmps[0]+wAmps[1]+wAmps[2]+wAmps[3])}/4 = ${wMean}`,
+            ],
+            insight: `The mean tells us the "center" that the diffusion operator reflects about.`,
+          },
+          tryIt: {
+            question: `After the oracle, the amplitudes are (${pAmps.join(', ')}). What is the mean of these amplitudes?`,
+            answer: pMean,
+            answerType: 'numeric',
+            answerDisplay: `${pMean}`,
+            steps: [
+              `Mean = (${pAmps.join(' + ')})/4`,
+              `= ${r2(pAmps[0]+pAmps[1]+pAmps[2]+pAmps[3])}/4 = ${pMean}`,
+            ],
+            whyItMatters:
+              `Computing the mean is the first step of the diffusion operator. The marked item's ` +
+              `negative amplitude pulls the mean down, setting up the reflection that will amplify it.`,
+          },
+        };
+      }
+
+      case 'reflect_about_mean': {
+        const wAmps = [0.5, 0.5, 0.5, -0.5];
+        const wMean = 0.25;
+        const wNew = r2(2*wMean - (-0.5));
+        let pIdx = randInt(0, 2);
+        const pAmps = [0.5, 0.5, 0.5, 0.5];
+        pAmps[pIdx] = -0.5;
+        const pMean = r2((pAmps[0]+pAmps[1]+pAmps[2]+pAmps[3])/4);
+        const pOld = -0.5;
+        const pNew = r2(2*pMean - pOld);
+        return {
+          teachingText: teachingMap.reflect_about_mean,
+          workedExample: {
+            problem: `Mean = ${wMean}. Marked amplitude = −0.5. Reflect: 2 × ${wMean} − (−0.5) = ?`,
+            steps: [
+              `new = 2 × ${wMean} − (−0.5)`,
+              `= ${r2(2*wMean)} + 0.5 = ${wNew}`,
+            ],
+            insight: `The marked item jumps from −0.5 to +1.0 in one reflection (for N=4).`,
+          },
+          tryIt: {
+            question: `The mean amplitude is ${pMean}. The marked item's amplitude is ${pOld}. After reflection (2 × mean − amplitude), what is the new amplitude?`,
+            answer: pNew,
+            answerType: 'numeric',
+            answerDisplay: `${pNew}`,
+            steps: [
+              `new = 2 × ${pMean} − (${pOld})`,
+              `= ${r2(2*pMean)} − (${pOld})`,
+              `= ${pNew}`,
+            ],
+            whyItMatters:
+              `Reflection about the mean is the mathematical mechanism behind amplitude amplification. ` +
+              `It is used not just in Grover's algorithm but in many other quantum algorithms.`,
+          },
+        };
+      }
+
+      case 'after_one_iteration': {
+        const wIdx = 3;
+        const wAfterOracle = [0.5, 0.5, 0.5, -0.5];
+        const wMean = 0.25;
+        const wResult = [0, 0, 0, 1];
+        let pIdx;
+        do { pIdx = randInt(0, 3); } while (pIdx === wIdx);
+        const pAfterOracle = [0.5, 0.5, 0.5, 0.5];
+        pAfterOracle[pIdx] = -0.5;
+        const pMean = r2((pAfterOracle[0]+pAfterOracle[1]+pAfterOracle[2]+pAfterOracle[3])/4);
+        const pResult = pAfterOracle.map(a => r2(2*pMean - a));
+        return {
+          teachingText: teachingMap.after_one_iteration,
+          workedExample: {
+            problem: `Oracle marks ${labels[wIdx]}. Start: (0.5, 0.5, 0.5, 0.5). Full iteration?`,
+            steps: [
+              `After oracle: (${wAfterOracle.join(', ')})`,
+              `Mean = ${wMean}`,
+              `Diffusion: each new[i] = 2 × ${wMean} − old[i]`,
+              `Unmarked: 2(${wMean}) − 0.5 = 0`,
+              `Marked: 2(${wMean}) − (−0.5) = 1`,
+              `Result: (${wResult.join(', ')})`,
+            ],
+            insight: `For N = 4, one iteration gives 100% probability — a perfect search.`,
+          },
+          tryIt: {
+            question: `2-qubit Grover: start (0.5, 0.5, 0.5, 0.5), oracle marks ${labels[pIdx]}. After one full iteration (oracle + diffusion), what is the state? (4-vector)`,
+            answer: pResult,
+            answerType: 'vector4',
+            answerDisplay: `(${pResult.join(', ')})`,
+            steps: [
+              `After oracle: (${pAfterOracle.join(', ')})`,
+              `Mean = ${pMean}`,
+              `Unmarked: 2(${pMean}) − 0.5 = ${r2(2*pMean - 0.5)}`,
+              `Marked: 2(${pMean}) − (−0.5) = ${r2(2*pMean + 0.5)}`,
+              `Result: (${pResult.join(', ')})`,
+            ],
+            whyItMatters:
+              `One iteration on N = 4 demonstrates the full power of Grover's algorithm in miniature. ` +
+              `For larger N, you need more iterations but the principle is the same.`,
+          },
+        };
+      }
+
+      case 'amplitude_growth': {
+        return {
+          teachingText: teachingMap.amplitude_growth,
+          workedExample: {
+            problem: `N = 4. Marked amplitude starts at 0.5. After oracle: −0.5. Mean = 0.25. After diffusion?`,
+            steps: [
+              `new = 2 × 0.25 − (−0.5) = 0.5 + 0.5 = 1`,
+              `Amplitude grew from 0.5 to 1.0 in one iteration.`,
+            ],
+            insight: `For N = 4, one iteration is optimal. More iterations would reduce the amplitude.`,
+          },
+          tryIt: {
+            question: `In a 2-qubit system (N=4), the marked item starts with amplitude 0.5. After one full Grover iteration, what is the marked item's amplitude?`,
+            answer: 1,
+            answerType: 'numeric',
+            answerDisplay: '1',
+            steps: [
+              `After oracle: marked amplitude = −0.5`,
+              `Mean = (0.5 + 0.5 + 0.5 + (−0.5))/4 = 0.25`,
+              `Diffusion: 2 × 0.25 − (−0.5) = 1`,
+            ],
+            whyItMatters:
+              `Amplitude amplification is a general quantum technique. Grover's algorithm is just ` +
+              `one application — the same principle speeds up many quantum algorithms.`,
+          },
+        };
+      }
+
+      default: return null;
+    }
+  },
+},
+
+grover_full: {
+  generate(difficulty, variation) {
+    const teachingMap = {
+      two_qubit:
+        `Let us trace the full Grover algorithm on the smallest interesting case: N = 4 (2 qubits).\n\n` +
+        `1. Start in equal superposition: (0.5, 0.5, 0.5, 0.5)\n` +
+        `2. Oracle marks one item (flips its sign)\n` +
+        `3. Diffusion reflects about the mean\n` +
+        `4. After 1 iteration: marked item has amplitude 1, probability 100%\n\n` +
+        `Optimal iterations = ⌊(π/4)√4⌋ = ⌊1.57⌋ = 1. Perfect.`,
+      optimal_iterations:
+        `The optimal number of Grover iterations is ⌊(π/4)√N⌋.\n\n` +
+        `• N = 4: ⌊1.57⌋ = 1 iteration\n` +
+        `• N = 16: ⌊3.14⌋ = 3 iterations\n` +
+        `• N = 64: ⌊6.28⌋ = 6 iterations\n` +
+        `• N = 256: ⌊12.57⌋ = 12 iterations\n\n` +
+        `Using exactly this many gives success probability close to 100%. Using more ` +
+        `causes the probability to decrease — the algorithm "overshoots."`,
+      probability_after_k:
+        `The probability of finding the marked item after k iterations follows a sine wave:\n\n` +
+        `P(k) = sin²((2k+1)θ) where sin(θ) = 1/√N\n\n` +
+        `For N = 4: θ = π/6 (since sin(π/6) = 0.5 = 1/√4)\n` +
+        `• k = 0: sin²(π/6) = 0.25 (25%)\n` +
+        `• k = 1: sin²(3π/6) = sin²(π/2) = 1 (100%)\n` +
+        `• k = 2: sin²(5π/6) = 0.25 (25%) — it oscillates back!`,
+      too_many_iterations:
+        `Grover's algorithm is not "the more iterations, the better." The success probability ` +
+        `oscillates like a sine wave. If you apply too many iterations, the probability of ` +
+        `finding the marked item decreases.\n\n` +
+        `For N = 4: 1 iteration gives 100%, but 2 iterations drops to 25%. ` +
+        `The algorithm overshoots and the amplitude of the marked item shrinks.\n\n` +
+        `This is why knowing the optimal iteration count is critical.`,
+    };
+
+    switch (variation) {
+
+      case 'two_qubit':
+      case 'basic': {
+        return {
+          teachingText: teachingMap.two_qubit,
+          workedExample: {
+            problem: `N = 4, oracle marks |11⟩. Trace the full iteration.`,
+            steps: [
+              `Start: (0.5, 0.5, 0.5, 0.5)`,
+              `Oracle: (0.5, 0.5, 0.5, −0.5)`,
+              `Mean = 0.25`,
+              `Diffusion: (0, 0, 0, 1)`,
+              `P(|11⟩) = |1|² = 1 = 100%`,
+            ],
+            insight: `N = 4 is the perfect demonstration — one iteration gives certainty.`,
+          },
+          tryIt: {
+            question: `Grover's algorithm on N = 4 items (2 qubits). After 1 iteration, what is the probability of measuring the marked item? (Give as a percentage, e.g. 100)`,
+            answer: 100,
+            answerType: 'numeric',
+            answerDisplay: '100',
+            steps: [
+              `Start: (0.5, 0.5, 0.5, 0.5)`,
+              `Oracle: (0.5, 0.5, 0.5, −0.5) [marking any item]`,
+              `Mean = 0.25`,
+              `Diffusion: unmarked → 0, marked → 1`,
+              `Probability = |1|² = 100%`,
+            ],
+            whyItMatters:
+              `N = 4 is the smallest case where Grover's algorithm shows its power. ` +
+              `Classically you would need 2 lookups on average; quantum gives certainty in 1 step.`,
+          },
+        };
+      }
+
+      case 'optimal_iterations': {
+        const wCase = { N: 16, sqrt: 4, iters: 3 };
+        const pCases = [
+          { N: 64, sqrt: 8, iters: 6 },
+          { N: 256, sqrt: 16, iters: 12 },
+        ];
+        const p = pCases[randInt(0, pCases.length - 1)];
+        return {
+          teachingText: teachingMap.optimal_iterations,
+          workedExample: {
+            problem: `N = ${wCase.N}. Optimal iterations = ⌊(π/4)√${wCase.N}⌋ = ?`,
+            steps: [
+              `√${wCase.N} = ${wCase.sqrt}`,
+              `(π/4) × ${wCase.sqrt} = ${(Math.PI/4*wCase.sqrt).toFixed(2)}`,
+              `⌊${(Math.PI/4*wCase.sqrt).toFixed(2)}⌋ = ${wCase.iters}`,
+            ],
+            insight: `The formula ⌊(π/4)√N⌋ is optimal — proven by Zalka (1999) to be tight.`,
+          },
+          tryIt: {
+            question: `For N = ${p.N} items, how many Grover iterations are optimal? Use ⌊(π/4)√N⌋. (Round down to nearest integer.)`,
+            answer: p.iters,
+            answerType: 'numeric',
+            answerDisplay: `${p.iters}`,
+            steps: [
+              `√${p.N} = ${p.sqrt}`,
+              `(π/4) × ${p.sqrt} = ${(Math.PI/4*p.sqrt).toFixed(2)}`,
+              `⌊${(Math.PI/4*p.sqrt).toFixed(2)}⌋ = ${p.iters}`,
+            ],
+            whyItMatters:
+              `Knowing the optimal iteration count is essential — unlike classical algorithms, ` +
+              `running Grover's algorithm longer does not always help. Precision matters.`,
+          },
+        };
+      }
+
+      case 'probability_after_k': {
+        return {
+          teachingText: teachingMap.probability_after_k,
+          workedExample: {
+            problem: `N = 4, θ = π/6. After k = 1 iteration: sin²((2×1+1)π/6) = sin²(π/2) = ?`,
+            steps: [
+              `(2k+1)θ = 3 × π/6 = π/2`,
+              `sin(π/2) = 1`,
+              `sin²(π/2) = 1 = 100%`,
+            ],
+            insight: `At k = 1, the angle hits π/2 exactly — maximum probability.`,
+          },
+          tryIt: {
+            question: `For N = 4 (θ = π/6), after k = 1 iteration, what is sin²((2k+1)θ) = sin²(π/2) as a percentage?`,
+            answer: 100,
+            answerType: 'numeric',
+            answerDisplay: '100',
+            steps: [
+              `θ = arcsin(1/√4) = arcsin(0.5) = π/6`,
+              `(2×1+1) × π/6 = 3π/6 = π/2`,
+              `sin²(π/2) = 1 = 100%`,
+            ],
+            whyItMatters:
+              `The sine formula P(k) = sin²((2k+1)θ) completely describes Grover's dynamics. ` +
+              `Understanding this oscillation is key to quantum algorithm design.`,
+          },
+        };
+      }
+
+      case 'too_many_iterations': {
+        return {
+          teachingText: teachingMap.too_many_iterations,
+          workedExample: {
+            problem: `N = 4, θ = π/6. After k = 2 iterations: sin²(5π/6) = ?`,
+            steps: [
+              `(2×2+1)θ = 5 × π/6 = 5π/6 = 150°`,
+              `sin(150°) = sin(30°) = 0.5`,
+              `sin²(150°) = 0.25 = 25%`,
+              `Probability dropped from 100% to 25%!`,
+            ],
+            insight: `Too many iterations cause the algorithm to overshoot — the probability oscillates.`,
+          },
+          tryIt: {
+            question: `For N = 4 (θ = π/6), after k = 2 iterations the probability is sin²(5π/6). What is this probability as a percentage?`,
+            answer: 25,
+            answerType: 'numeric',
+            answerDisplay: '25',
+            steps: [
+              `5π/6 = 150°`,
+              `sin(150°) = sin(30°) = 0.5`,
+              `sin²(150°) = 0.25 = 25%`,
+              `The probability decreased from 100% (at k=1) to 25%.`,
+            ],
+            whyItMatters:
+              `This oscillation is why Grover's algorithm requires knowing N (at least approximately). ` +
+              `Without knowing when to stop, you might overshoot and get the wrong answer.`,
+          },
+        };
+      }
+
+      default: return null;
+    }
+  },
+},
+
+grover_optimality: {
+  generate(difficulty, variation) {
+    const allItems = {
+      not_exponential: {
+        q: 'Is Grover\'s speedup over classical search exponential?',
+        choices: [
+          'Yes — it is exponentially faster',
+          'No — it is a quadratic speedup (square root)',
+          'No — it is only a constant factor improvement',
+          'Yes — it solves search in O(1)',
+        ],
+        answer: 'B', display: 'B) No — it is a quadratic speedup (square root)',
+        steps: [
+          'Classical search: O(N) lookups.',
+          'Grover\'s algorithm: O(√N) iterations.',
+          'This is a quadratic speedup, not exponential.',
+        ],
+      },
+      compare_dj: {
+        q: 'How does Grover\'s speedup compare to Deutsch-Jozsa\'s?',
+        choices: [
+          'Both give quadratic speedup',
+          'Deutsch-Jozsa gives exponential speedup; Grover gives quadratic',
+          'Grover gives exponential speedup; Deutsch-Jozsa gives quadratic',
+          'Both give exponential speedup',
+        ],
+        answer: 'B', display: 'B) Deutsch-Jozsa gives exponential speedup; Grover gives quadratic',
+        steps: [
+          'Deutsch-Jozsa: 1 query vs 2^(n-1)+1 classically → exponential.',
+          'Grover: O(√N) vs O(N) → quadratic.',
+          'Grover is more modest but far more broadly applicable.',
+        ],
+      },
+      practical_impact: {
+        q: 'A classical search of 10^12 items takes ~5 × 10^11 lookups. Grover needs ~785,398 iterations. By what factor is Grover faster?',
+        choices: [
+          'About 10× faster',
+          'About 1,000× faster',
+          'About 636,000× faster',
+          'About 10^12× faster',
+        ],
+        answer: 'C', display: 'C) About 636,000× faster',
+        steps: [
+          'Classical: 5 × 10^11 lookups.',
+          'Grover: ~785,398 iterations.',
+          'Speedup: 5×10^11 / 785,398 ≈ 636,000×.',
+        ],
+      },
+    };
+
+    const poolMap = {
+      not_exponential: ['not_exponential'],
+      compare_dj: ['compare_dj'],
+      practical_impact: ['practical_impact'],
+    };
+    const pool = poolMap[variation] || ['not_exponential', 'compare_dj', 'practical_impact'];
+
+    const wKey = pool[randInt(0, pool.length - 1)];
+    let pKey;
+    do { pKey = pool[randInt(0, pool.length - 1)]; } while (pKey === wKey && pool.length > 1);
+    const w = allItems[wKey], p = allItems[pKey];
+
+    const teachingMap = {
+      not_exponential:
+        `Grover's algorithm provides a quadratic speedup: O(√N) instead of O(N). ` +
+        `This is NOT exponential.\n\n` +
+        `An exponential speedup would be O(log N) or O(poly(log N)) — like Shor's algorithm ` +
+        `for factoring. Grover's speedup is more modest but applies to a much broader class ` +
+        `of problems: any unstructured search.\n\n` +
+        `Moreover, Grover's speedup is provably optimal — no quantum algorithm can search ` +
+        `faster than O(√N) (Bennett, Bernstein, Brassard, Vazirani, 1997).`,
+      compare_dj:
+        `Different quantum algorithms give different types of speedup:\n\n` +
+        `• Deutsch-Jozsa: determines constant vs balanced in 1 query (exponential speedup) ` +
+        `but solves a very specific problem.\n\n` +
+        `• Grover: searches any unsorted database in O(√N) (quadratic speedup) ` +
+        `and applies to any problem with a verifiable solution.\n\n` +
+        `Grover's speedup is smaller but far more general and practically important.`,
+      practical_impact:
+        `For a database of 10^12 items:\n` +
+        `• Classical: ~5 × 10^11 lookups on average\n` +
+        `• Grover: (π/4) × √(10^12) ≈ 785,398 iterations\n` +
+        `• Speedup factor: ~636,000×\n\n` +
+        `In cryptography, this means a 256-bit symmetric key provides only 128-bit security ` +
+        `against Grover's algorithm. This is why post-quantum cryptography recommends doubling key sizes.`,
+    };
+
+    return {
+      teachingText: teachingMap[variation] || teachingMap['not_exponential'],
+      workedExample: {
+        problem: w.q,
+        steps: [...w.steps, `Answer: ${w.display}`],
+        insight: `Grover's quadratic speedup is provably optimal — no quantum algorithm can do better for unstructured search.`,
+      },
+      tryIt: {
+        question: p.q,
+        choices: p.choices,
+        answer: p.answer,
+        answerType: 'choice',
+        answerDisplay: p.display,
+        steps: p.steps,
+        whyItMatters:
+          `Understanding the type of speedup is crucial for knowing where quantum computers ` +
+          `will and will not outperform classical ones. Grover's quadratic speedup is powerful ` +
+          `but not a silver bullet.`,
+      },
+    };
+  },
+},
+
+// ── Chapter 18: Quantum Error Correction ─────────────────────────────────────
+
+error_concept: {
+  generate(difficulty, variation) {
+    const items = {
+      bit_flip: {
+        q: 'What does a bit-flip (X) error do to the state α|0⟩ + β|1⟩?',
+        choices: [
+          'It gives α|0⟩ − β|1⟩',
+          'It gives β|0⟩ + α|1⟩ (swaps amplitudes)',
+          'It gives α|1⟩ + β|0⟩ (swaps basis states)',
+          'It destroys the state completely',
+        ],
+        answer: 'C', display: 'C) It gives α|1⟩ + β|0⟩ (swaps basis states)',
+        steps: [
+          'The X (Pauli-X) gate is the quantum bit-flip: X|0⟩ = |1⟩, X|1⟩ = |0⟩.',
+          'Applied to α|0⟩ + β|1⟩: X(α|0⟩ + β|1⟩) = α|1⟩ + β|0⟩.',
+        ],
+      },
+      phase_flip: {
+        q: 'What does a phase-flip (Z) error do to the state α|0⟩ + β|1⟩?',
+        choices: [
+          'It gives α|1⟩ + β|0⟩',
+          'It gives α|0⟩ − β|1⟩ (flips the sign of |1⟩)',
+          'It gives −α|0⟩ + β|1⟩',
+          'It gives −α|0⟩ − β|1⟩',
+        ],
+        answer: 'B', display: 'B) It gives α|0⟩ − β|1⟩ (flips the sign of |1⟩)',
+        steps: [
+          'Z|0⟩ = |0⟩, Z|1⟩ = −|1⟩.',
+          'Z(α|0⟩ + β|1⟩) = α|0⟩ − β|1⟩ — only the relative phase changes.',
+        ],
+      },
+      why_no_copy: {
+        q: 'Why can\'t we protect quantum information by simply copying it, as in classical repetition codes?',
+        choices: [
+          'Copying quantum states requires too much energy',
+          'The no-cloning theorem forbids copying unknown quantum states',
+          'Quantum states are always entangled and cannot be separated for copying',
+          'Quantum computers don\'t have enough memory',
+        ],
+        answer: 'B', display: 'B) The no-cloning theorem forbids copying unknown quantum states',
+        steps: [
+          'Classical error correction freely copies bits: 0 → 000.',
+          'The no-cloning theorem proves no quantum operation can duplicate an arbitrary unknown state.',
+        ],
+      },
+      classical_vs_quantum: {
+        q: 'How many independent types of single-qubit errors must quantum error correction handle?',
+        choices: [
+          '1 — just the bit-flip',
+          '2 — bit-flip and phase-flip',
+          '3 — bit-flip, phase-flip, and both combined (Y error)',
+          '4 — X, Y, Z, and the identity',
+        ],
+        answer: 'C', display: 'C) 3 — bit-flip, phase-flip, and both combined (Y error)',
+        steps: [
+          'Qubits have three error types: X (bit-flip), Z (phase-flip), Y = iXZ (both).',
+          'Any single-qubit error decomposes as aI + bX + cY + dZ.',
+        ],
+      },
+    };
+
+    const poolMap = {
+      bit_flip: ['bit_flip', 'phase_flip'],
+      phase_flip: ['phase_flip', 'bit_flip'],
+      why_no_copy: ['why_no_copy', 'classical_vs_quantum'],
+      classical_vs_quantum: ['classical_vs_quantum', 'why_no_copy'],
+    };
+    const pool = poolMap[variation] || Object.keys(items);
+
+    const wKey = pool[randInt(0, pool.length - 1)];
+    let pKey;
+    do { pKey = pool[randInt(0, pool.length - 1)]; } while (pKey === wKey && pool.length > 1);
+    const w = items[wKey], p = items[pKey];
+
+    const teachingMap = {
+      bit_flip:
+        `Quantum computers are incredibly sensitive to noise. Even tiny interactions with ` +
+        `the environment can corrupt a qubit's state. The simplest error is a bit-flip ` +
+        `(X error): it swaps |0⟩ and |1⟩.\n\n` +
+        `For a state α|0⟩ + β|1⟩, a bit-flip gives α|1⟩ + β|0⟩. The amplitudes are ` +
+        `unchanged, but they're attached to the wrong basis states. This is the quantum ` +
+        `analog of a classical bit-flip (0→1, 1→0).`,
+      phase_flip:
+        `Unlike classical bits, qubits can also suffer phase-flip (Z) errors. A phase-flip ` +
+        `leaves |0⟩ unchanged but maps |1⟩ → −|1⟩.\n\n` +
+        `For α|0⟩ + β|1⟩, a Z error gives α|0⟩ − β|1⟩. The measurement probabilities ` +
+        `(|α|² and |β|²) don't change, but the relative phase is corrupted. This error ` +
+        `has no classical analog — it's purely quantum.`,
+      why_no_copy:
+        `Classical error correction is simple: copy the bit (0→000, 1→111), and use ` +
+        `majority voting to fix errors. But quantum mechanics forbids this approach.\n\n` +
+        `The no-cloning theorem (Wootters & Zurek, 1982) proves that no quantum operation ` +
+        `can duplicate an arbitrary unknown quantum state. You cannot make a copy of ` +
+        `α|0⟩ + β|1⟩ without knowing α and β. Quantum error correction must use ` +
+        `entanglement rather than copying to protect information.`,
+      classical_vs_quantum:
+        `Classical bits have exactly one type of error: the bit-flip (0↔1). Qubits are ` +
+        `richer — they have three independent error types:\n\n` +
+        `• X (bit-flip): swaps |0⟩ and |1⟩\n` +
+        `• Z (phase-flip): flips the sign of |1⟩\n` +
+        `• Y = iXZ: both bit-flip and phase-flip simultaneously\n\n` +
+        `Any single-qubit error can be decomposed as a combination of I, X, Y, Z. ` +
+        `If a code can correct X and Z individually, it automatically corrects Y and ` +
+        `any arbitrary error.`,
+    };
+
+    return {
+      teachingText: teachingMap[variation] || teachingMap['bit_flip'],
+      workedExample: {
+        problem: w.q,
+        steps: [...w.steps, `Answer: ${w.display}`],
+        insight: `Quantum errors include both bit-flips (X) and phase-flips (Z) — a fundamentally richer error model than classical computing.`,
+      },
+      tryIt: {
+        question: p.q,
+        choices: p.choices,
+        answer: p.answer,
+        answerType: 'choice',
+        answerDisplay: p.display,
+        steps: p.steps,
+        whyItMatters:
+          `Understanding error types is the foundation of quantum error correction. ` +
+          `Every quantum algorithm of practical interest requires error correction to ` +
+          `run on real hardware, because physical qubits are inherently noisy.`,
+      },
+    };
+  },
+},
+
+bit_flip_code: {
+  generate(difficulty, variation) {
+    const items = {
+      encode: {
+        q: 'In the 3-qubit bit-flip code, how is the logical |0⟩ encoded?',
+        choices: [
+          '|0⟩ → |000⟩ and |1⟩ → |111⟩',
+          '|0⟩ → |+++⟩ and |1⟩ → |−−−⟩',
+          '|0⟩ → (|000⟩ + |111⟩)/√2',
+          '|0⟩ → |001⟩ and |1⟩ → |110⟩',
+        ],
+        answer: 'A', display: 'A) |0⟩ → |000⟩ and |1⟩ → |111⟩',
+        steps: [
+          'The 3-qubit bit-flip code: |0⟩_L = |000⟩, |1⟩_L = |111⟩.',
+          'A general state α|0⟩ + β|1⟩ → α|000⟩ + β|111⟩.',
+        ],
+      },
+      detect_error: {
+        q: 'Starting from |000⟩, a bit-flip error occurs on qubit 2. What is the resulting state?',
+        choices: [
+          '|100⟩',
+          '|010⟩',
+          '|001⟩',
+          '|110⟩',
+        ],
+        answer: 'B', display: 'B) |010⟩',
+        steps: [
+          'Qubit 2 is the middle qubit. Flipping it: |000⟩ → |010⟩.',
+          'The syndrome measurement will reveal qubit 2 disagrees with its neighbors.',
+        ],
+      },
+      correct_error: {
+        q: 'The syndrome shows qubit 3 disagrees with qubits 1 and 2. Which gate corrects the error?',
+        choices: [
+          'Apply X to qubit 1',
+          'Apply X to qubit 2',
+          'Apply X to qubit 3',
+          'Apply Z to qubit 3',
+        ],
+        answer: 'C', display: 'C) Apply X to qubit 3',
+        steps: [
+          'Qubit 3 disagrees → qubit 3 was flipped.',
+          'Apply X to qubit 3 to undo the flip.',
+        ],
+      },
+      no_error: {
+        q: 'What syndrome do you get in the 3-qubit bit-flip code when no error occurred?',
+        choices: [
+          'Both syndrome bits are 1',
+          'First bit is 1, second is 0',
+          'First bit is 0, second is 1',
+          'Both syndrome bits are 0 (all qubits agree)',
+        ],
+        answer: 'D', display: 'D) Both syndrome bits are 0 (all qubits agree)',
+        steps: [
+          'Syndrome compares pairs: bit1 ⊕ bit2, bit2 ⊕ bit3.',
+          'No error means all qubits agree: both comparisons give 0.',
+        ],
+      },
+    };
+
+    const poolMap = {
+      encode: ['encode', 'detect_error'],
+      detect_error: ['detect_error', 'correct_error'],
+      correct_error: ['correct_error', 'no_error'],
+      no_error: ['no_error', 'encode'],
+    };
+    const pool = poolMap[variation] || Object.keys(items);
+
+    const wKey = pool[randInt(0, pool.length - 1)];
+    let pKey;
+    do { pKey = pool[randInt(0, pool.length - 1)]; } while (pKey === wKey && pool.length > 1);
+    const w = items[wKey], p = items[pKey];
+
+    const teachingMap = {
+      encode:
+        `The 3-qubit bit-flip code is the simplest quantum error-correcting code. ` +
+        `It protects against a single X error on any one qubit.\n\n` +
+        `Encoding: |0⟩ → |000⟩, |1⟩ → |111⟩. A general state α|0⟩ + β|1⟩ becomes ` +
+        `α|000⟩ + β|111⟩. This is NOT copying — it creates an entangled state where ` +
+        `the three qubits are correlated but the encoded information is spread across all three.`,
+      detect_error:
+        `To detect which qubit was flipped, we perform syndrome measurements. These ` +
+        `compare pairs of qubits WITHOUT measuring the encoded information.\n\n` +
+        `Syndrome bit 1: Compare qubit 1 and qubit 2 (do they agree?)\n` +
+        `Syndrome bit 2: Compare qubit 2 and qubit 3 (do they agree?)\n\n` +
+        `If qubit 2 is flipped in |000⟩, we get |010⟩. The syndrome reveals qubit 2 ` +
+        `disagrees with both neighbors: syndrome = (1, 1).`,
+      correct_error:
+        `Once the syndrome identifies the flipped qubit, correction is simple: apply X ` +
+        `to that qubit to flip it back.\n\n` +
+        `Syndrome → Correction:\n` +
+        `(0, 0) → No error\n` +
+        `(1, 0) → Flip qubit 1\n` +
+        `(1, 1) → Flip qubit 2\n` +
+        `(0, 1) → Flip qubit 3\n\n` +
+        `The key insight: syndrome measurement extracts error information without ` +
+        `collapsing the encoded quantum state.`,
+      no_error:
+        `The syndrome measurement is designed to detect errors without disturbing the ` +
+        `encoded quantum information. It compares qubits pairwise.\n\n` +
+        `When no error occurred, all qubits agree with each other: qubit 1 ⊕ qubit 2 = 0, ` +
+        `qubit 2 ⊕ qubit 3 = 0. The syndrome (0, 0) means "no correction needed."\n\n` +
+        `This code can detect and correct any single bit-flip, but fails if two or more ` +
+        `qubits are flipped simultaneously.`,
+    };
+
+    return {
+      teachingText: teachingMap[variation] || teachingMap['encode'],
+      workedExample: {
+        problem: w.q,
+        steps: [...w.steps, `Answer: ${w.display}`],
+        insight: `The 3-qubit code spreads information across three qubits using entanglement, then uses syndrome measurements to find and fix errors without disturbing the data.`,
+      },
+      tryIt: {
+        question: p.q,
+        choices: p.choices,
+        answer: p.answer,
+        answerType: 'choice',
+        answerDisplay: p.display,
+        steps: p.steps,
+        whyItMatters:
+          `The bit-flip code illustrates the core principle of all quantum error correction: ` +
+          `encode information redundantly using entanglement, detect errors via syndrome ` +
+          `measurements, and correct without ever learning the encoded state.`,
+      },
+    };
+  },
+},
+
+phase_flip_code: {
+  generate(difficulty, variation) {
+    const items = {
+      encode: {
+        q: 'In the 3-qubit phase-flip code, how is the logical |0⟩ encoded?',
+        choices: [
+          '|0⟩ → |000⟩',
+          '|0⟩ → |+++⟩',
+          '|0⟩ → (|000⟩ + |111⟩)/√2',
+          '|0⟩ → |+0+⟩',
+        ],
+        answer: 'B', display: 'B) |0⟩ → |+++⟩',
+        steps: [
+          'Phase-flip code: |0⟩_L = |+++⟩, |1⟩_L = |−−−⟩.',
+          'This encodes in the Hadamard basis so that Z errors look like bit-flips.',
+        ],
+      },
+      detect_phase_error: {
+        q: 'Why does a Z error on |+⟩ look like a bit-flip?',
+        choices: [
+          'Because Z|+⟩ = |−⟩, which is a flip in the {|+⟩, |−⟩} basis',
+          'Because Z = X in all bases',
+          'Because phase errors don\'t actually change anything',
+          'Because Z|0⟩ = |1⟩',
+        ],
+        answer: 'A', display: 'A) Because Z|+⟩ = |−⟩, which is a flip in the {|+⟩, |−⟩} basis',
+        steps: [
+          'Z|+⟩ = Z(|0⟩+|1⟩)/√2 = (|0⟩−|1⟩)/√2 = |−⟩.',
+          'In the {|+⟩,|−⟩} basis, Z acts like a bit-flip: |+⟩ ↔ |−⟩.',
+        ],
+      },
+      relationship_to_bit_flip: {
+        q: 'What is the relationship between the phase-flip code and the bit-flip code?',
+        choices: [
+          'They are completely unrelated',
+          'The phase-flip code is the bit-flip code conjugated by H⊗H⊗H',
+          'The phase-flip code uses twice as many qubits',
+          'The phase-flip code also corrects bit-flip errors',
+        ],
+        answer: 'B', display: 'B) The phase-flip code is the bit-flip code conjugated by H⊗H⊗H',
+        steps: [
+          'Apply H to bit-flip codewords: H|000⟩ = |+++⟩, H|111⟩ = |−−−⟩.',
+          'The Hadamard transform exchanges X↔Z, turning bit-flip correction into phase-flip correction.',
+        ],
+      },
+    };
+
+    const poolMap = {
+      encode: ['encode', 'detect_phase_error'],
+      detect_phase_error: ['detect_phase_error', 'relationship_to_bit_flip'],
+      relationship_to_bit_flip: ['relationship_to_bit_flip', 'encode'],
+    };
+    const pool = poolMap[variation] || Object.keys(items);
+
+    const wKey = pool[randInt(0, pool.length - 1)];
+    let pKey;
+    do { pKey = pool[randInt(0, pool.length - 1)]; } while (pKey === wKey && pool.length > 1);
+    const w = items[wKey], p = items[pKey];
+
+    const teachingMap = {
+      encode:
+        `The phase-flip code protects against Z errors (phase-flips). The trick: work in ` +
+        `the Hadamard basis where Z errors look like bit-flips!\n\n` +
+        `Encoding: |0⟩ → |+++⟩, |1⟩ → |−−−⟩, where |+⟩ = (|0⟩+|1⟩)/√2 and ` +
+        `|−⟩ = (|0⟩−|1⟩)/√2. In this basis, a Z error flips |+⟩ ↔ |−⟩, which is ` +
+        `just a "bit-flip" in the {|+⟩, |−⟩} basis.`,
+      detect_phase_error:
+        `Phase-flip errors are invisible in the computational basis — they don't change ` +
+        `measurement probabilities for |0⟩ vs |1⟩. But in the Hadamard basis, they become ` +
+        `visible.\n\n` +
+        `Z|+⟩ = Z(|0⟩+|1⟩)/√2 = (|0⟩−|1⟩)/√2 = |−⟩. So a Z error on |+⟩ flips it ` +
+        `to |−⟩ — a "bit-flip" in the {|+⟩, |−⟩} basis. By measuring in this basis, ` +
+        `we can detect which qubit suffered the phase error.`,
+      relationship_to_bit_flip:
+        `The phase-flip code is beautifully connected to the bit-flip code: it is exactly ` +
+        `the bit-flip code with every qubit passed through a Hadamard gate.\n\n` +
+        `Bit-flip code: |0⟩→|000⟩, |1⟩→|111⟩ (corrects X errors)\n` +
+        `Apply H⊗H⊗H: |000⟩→|+++⟩, |111⟩→|−−−⟩ (corrects Z errors!)\n\n` +
+        `The Hadamard gate swaps X↔Z, so any X-correcting code becomes a Z-correcting ` +
+        `code after conjugation by H. This duality is a deep principle in quantum error correction.`,
+    };
+
+    return {
+      teachingText: teachingMap[variation] || teachingMap['encode'],
+      workedExample: {
+        problem: w.q,
+        steps: [...w.steps, `Answer: ${w.display}`],
+        insight: `The phase-flip code exploits the X↔Z duality under Hadamard: correcting phase errors is just correcting bit-flips in a rotated basis.`,
+      },
+      tryIt: {
+        question: p.q,
+        choices: p.choices,
+        answer: p.answer,
+        answerType: 'choice',
+        answerDisplay: p.display,
+        steps: p.steps,
+        whyItMatters:
+          `Phase errors are uniquely quantum — they have no classical analog. The fact that ` +
+          `they can be converted to bit-flip errors via a basis change is one of the most ` +
+          `elegant ideas in quantum information science.`,
+      },
+    };
+  },
+},
+
+shor_code: {
+  generate(difficulty, variation) {
+    const items = {
+      structure: {
+        q: 'How many physical qubits does the Shor code use per logical qubit?',
+        choices: [
+          '3 physical qubits',
+          '5 physical qubits',
+          '7 physical qubits',
+          '9 physical qubits',
+        ],
+        answer: 'D', display: 'D) 9 physical qubits',
+        steps: [
+          'Shor code = phase-flip code (3 blocks) × bit-flip code (3 per block).',
+          'Total: 3 × 3 = 9 physical qubits per logical qubit.',
+        ],
+      },
+      bit_flip_layer: {
+        q: 'Which layer of the Shor code protects against bit-flip (X) errors?',
+        choices: [
+          'The outer layer (3 blocks of 3)',
+          'The inner layer (repetition within each block)',
+          'Both layers equally',
+          'Neither — bit-flip protection comes from a separate code',
+        ],
+        answer: 'B', display: 'B) The inner layer (repetition within each block)',
+        steps: [
+          'Within each block: |0⟩→|000⟩, |1⟩→|111⟩ — the 3-qubit bit-flip code.',
+          'The outer layer handles phase-flip errors.',
+        ],
+      },
+      phase_flip_layer: {
+        q: 'Which layer of the Shor code protects against phase-flip (Z) errors?',
+        choices: [
+          'The inner layer (repetition within each block)',
+          'The outer layer (encoding across 3 blocks in the |+⟩/|−⟩ basis)',
+          'A separate Z-correction circuit after decoding',
+          'Phase-flip errors cannot be corrected',
+        ],
+        answer: 'B', display: 'B) The outer layer (encoding across 3 blocks in the |+⟩/|−⟩ basis)',
+        steps: [
+          'The outer code uses the phase-flip code structure across 3 blocks.',
+          'A Z error on any qubit causes its entire block to flip sign, which the outer code detects.',
+        ],
+      },
+      combined_protection: {
+        q: 'Why does correcting X and Z errors mean the Shor code corrects ANY single-qubit error?',
+        choices: [
+          'Because X and Z are the only possible errors',
+          'Because any single-qubit error is a linear combination of I, X, Z, and Y = iXZ',
+          'Because the Shor code also includes a Y-correction layer',
+          'It actually cannot correct Y errors',
+        ],
+        answer: 'B', display: 'B) Because any single-qubit error is a linear combination of I, X, Z, and Y = iXZ',
+        steps: [
+          'Any 2×2 error = aI + bX + cY + dZ. Since Y = iXZ, correcting X and Z covers Y.',
+          'Quantum error correction is linear: correcting basis errors corrects all superpositions.',
+        ],
+      },
+    };
+
+    const poolMap = {
+      structure: ['structure', 'bit_flip_layer'],
+      bit_flip_layer: ['bit_flip_layer', 'phase_flip_layer'],
+      phase_flip_layer: ['phase_flip_layer', 'combined_protection'],
+      combined_protection: ['combined_protection', 'structure'],
+    };
+    const pool = poolMap[variation] || Object.keys(items);
+
+    const wKey = pool[randInt(0, pool.length - 1)];
+    let pKey;
+    do { pKey = pool[randInt(0, pool.length - 1)]; } while (pKey === wKey && pool.length > 1);
+    const w = items[wKey], p = items[pKey];
+
+    const teachingMap = {
+      structure:
+        `Peter Shor's 9-qubit code (1995) was the first quantum code that could correct ` +
+        `any single-qubit error. It uses a nested structure:\n\n` +
+        `• Inner code: 3-qubit bit-flip code (3 physical qubits per block)\n` +
+        `• Outer code: 3-qubit phase-flip code (3 blocks)\n` +
+        `• Total: 3 × 3 = 9 physical qubits per logical qubit\n\n` +
+        `The inner code handles X errors within each block, the outer code handles Z ` +
+        `errors across blocks.`,
+      bit_flip_layer:
+        `The inner layer of the Shor code is a repetition code within each of the 3 blocks. ` +
+        `Each block encodes one qubit into three:\n\n` +
+        `|0⟩ → |000⟩, |1⟩ → |111⟩ (within each block)\n\n` +
+        `If an X error hits any single qubit within a block, the majority-vote syndrome ` +
+        `detects and corrects it. This layer provides bit-flip protection.`,
+      phase_flip_layer:
+        `The outer layer of the Shor code protects against phase-flip errors. It encodes ` +
+        `across 3 blocks using the phase-flip code:\n\n` +
+        `Logical |0⟩: (|000⟩+|111⟩)(|000⟩+|111⟩)(|000⟩+|111⟩) / (2√2)\n` +
+        `Logical |1⟩: (|000⟩−|111⟩)(|000⟩−|111⟩)(|000⟩−|111⟩) / (2√2)\n\n` +
+        `A Z error on any qubit flips the sign of that block's |111⟩ component, ` +
+        `which the outer code detects by comparing blocks.`,
+      combined_protection:
+        `The Shor code can correct ANY single-qubit error, not just X or Z. Why?\n\n` +
+        `Any 2×2 matrix (any single-qubit error operator) can be written as:\n` +
+        `E = aI + bX + cZ + dY, where Y = iXZ.\n\n` +
+        `If the code corrects X and Z individually, quantum linearity guarantees it ` +
+        `corrects any linear combination — including Y and arbitrary errors. This is ` +
+        `the "digitization of errors": we only need to correct a discrete set of errors ` +
+        `to handle all continuous errors.`,
+    };
+
+    return {
+      teachingText: teachingMap[variation] || teachingMap['structure'],
+      workedExample: {
+        problem: w.q,
+        steps: [...w.steps, `Answer: ${w.display}`],
+        insight: `The Shor code's nested structure — bit-flip protection inside, phase-flip protection outside — corrects any single-qubit error using 9 physical qubits.`,
+      },
+      tryIt: {
+        question: p.q,
+        choices: p.choices,
+        answer: p.answer,
+        answerType: 'choice',
+        answerDisplay: p.display,
+        steps: p.steps,
+        whyItMatters:
+          `The Shor code proved that quantum error correction is possible at all. Before 1995, ` +
+          `many physicists believed quantum computing was fundamentally impossible because ` +
+          `errors could never be corrected without measuring (and destroying) quantum states.`,
+      },
+    };
+  },
+},
+
+threshold_concept: {
+  generate(difficulty, variation) {
+    const items = {
+      overhead: {
+        q: 'Roughly how many physical qubits do surface codes need per logical qubit for useful computation?',
+        choices: [
+          'About 3 physical per logical',
+          'About 10 physical per logical',
+          'About 1,000 or more physical per logical',
+          'About 1 million physical per logical',
+        ],
+        answer: 'C', display: 'C) About 1,000 or more physical per logical',
+        steps: [
+          'Estimates: ~1,000 to ~10,000 physical qubits per logical qubit.',
+          'A million-qubit machine might yield only ~1,000 logical qubits.',
+        ],
+      },
+      threshold: {
+        q: 'What happens if the physical error rate is ABOVE the code\'s threshold?',
+        choices: [
+          'Error correction still works but more slowly',
+          'Adding more qubits makes things worse, not better',
+          'The code automatically switches to a different strategy',
+          'The logical error rate stays the same as the physical rate',
+        ],
+        answer: 'B', display: 'B) Adding more qubits makes things worse, not better',
+        steps: [
+          'Below threshold: more redundancy → lower logical error rate.',
+          'Above threshold: each added qubit introduces more errors than it corrects.',
+        ],
+      },
+      current_state: {
+        q: 'What is the approximate threshold for surface codes, and have physical qubits achieved it?',
+        choices: [
+          'Threshold ~10%; yes, easily achieved',
+          'Threshold ~1%; some systems are near or below it',
+          'Threshold ~0.001%; no system has achieved it',
+          'Threshold ~50%; all systems are below it',
+        ],
+        answer: 'B', display: 'B) Threshold ~1%; some systems are near or below it',
+        steps: [
+          'Surface codes have a threshold around 1% per gate.',
+          'Several platforms (superconducting, trapped ions) are near or below this threshold.',
+        ],
+      },
+    };
+
+    const poolMap = {
+      overhead: ['overhead', 'threshold'],
+      threshold: ['threshold', 'current_state'],
+      current_state: ['current_state', 'overhead'],
+    };
+    const pool = poolMap[variation] || Object.keys(items);
+
+    const wKey = pool[randInt(0, pool.length - 1)];
+    let pKey;
+    do { pKey = pool[randInt(0, pool.length - 1)]; } while (pKey === wKey && pool.length > 1);
+    const w = items[wKey], p = items[pKey];
+
+    const teachingMap = {
+      overhead:
+        `Quantum error correction requires significant overhead: many physical qubits ` +
+        `encode each logical qubit. Current estimates for surface codes (the leading ` +
+        `approach) suggest ~1,000 to ~10,000 physical qubits per logical qubit.\n\n` +
+        `This means a quantum computer with 1 million physical qubits might only have ` +
+        `~1,000 usable logical qubits. Reducing this overhead is one of the biggest ` +
+        `challenges in quantum computing.`,
+      threshold:
+        `The threshold theorem (1996) is one of the most important results in quantum ` +
+        `computing. It states: if the physical error rate p is below a critical value ` +
+        `p_threshold, then adding more redundancy (more physical qubits) always reduces ` +
+        `the logical error rate.\n\n` +
+        `But if p > p_threshold, adding qubits makes things WORSE — each new qubit ` +
+        `introduces more errors than it helps correct. The threshold for surface codes ` +
+        `is approximately 1% per gate.`,
+      current_state:
+        `The state of quantum error correction as of the mid-2020s:\n\n` +
+        `• Surface code threshold: ~1% per gate\n` +
+        `• Best superconducting qubits: gate errors ~0.1–0.5%\n` +
+        `• Best trapped ions: gate errors ~0.03–0.5%\n` +
+        `• Challenge: maintaining these rates across entire computations\n\n` +
+        `Several groups have demonstrated logical qubits that outperform physical qubits, ` +
+        `a key milestone. But fully fault-tolerant, useful computation is still in development.`,
+    };
+
+    return {
+      teachingText: teachingMap[variation] || teachingMap['overhead'],
+      workedExample: {
+        problem: w.q,
+        steps: [...w.steps, `Answer: ${w.display}`],
+        insight: `The threshold theorem guarantees that quantum computing can work at scale — as long as physical error rates are low enough.`,
+      },
+      tryIt: {
+        question: p.q,
+        choices: p.choices,
+        answer: p.answer,
+        answerType: 'choice',
+        answerDisplay: p.display,
+        steps: p.steps,
+        whyItMatters:
+          `The threshold theorem is what makes quantum computing a realistic technology. ` +
+          `Without it, errors would accumulate faster than we could fix them, and no ` +
+          `quantum algorithm could run long enough to be useful.`,
+      },
+    };
+  },
+},
+
+// ── Chapter 19: Shor's Algorithm ─────────────────────────────────────────────
+
+factoring_problem: {
+  generate(difficulty, variation) {
+    /** Helper: compute a^exp mod m */
+    function modPow(base, exp, mod) {
+      let result = 1; base = base % mod;
+      for (let i = 0; i < exp; i++) result = (result * base) % mod;
+      return result;
+    }
+    function gcd(a, b) { a = Math.abs(a); b = Math.abs(b); while (b) { [a, b] = [b, a % b]; } return a; }
+
+    const teachingMap = {
+      small_factor:
+        `Shor's algorithm solves the factoring problem: given a composite number N, find its ` +
+        `non-trivial factors (not 1 or N itself).\n\n` +
+        `Why does this matter? RSA encryption relies on the assumption that factoring large ` +
+        `numbers is practically impossible for classical computers. A 2048-bit RSA key is the ` +
+        `product of two large primes, and no classical algorithm can factor it in reasonable time.\n\n` +
+        `Let's start small: factoring numbers like 15, 21, or 35 by hand.`,
+      why_hard:
+        `Factoring seems simple for small numbers, but the difficulty grows dramatically.\n\n` +
+        `For an n-digit number, there are roughly 10^(n/2) possible prime factors to check. ` +
+        `A 300-digit number has about 10^150 candidate factors — more than atoms in the universe.\n\n` +
+        `The best classical algorithm (General Number Field Sieve) runs in ` +
+        `sub-exponential time: e^(O(n^(1/3) × (log n)^(2/3))). Fast, but still super-polynomial.`,
+      rsa_connection:
+        `RSA encryption works like this:\n` +
+        `1. Choose two large primes p and q\n` +
+        `2. Publish N = p × q (the public key)\n` +
+        `3. Keep p and q secret (needed for decryption)\n\n` +
+        `Anyone who can factor N can recover p and q and break the encryption. ` +
+        `Shor's algorithm factors N in polynomial time — O((log N)³) — which would ` +
+        `completely break RSA on a sufficiently large quantum computer.`,
+      classical_time:
+        `The gap between classical and quantum factoring is staggering:\n\n` +
+        `• 2048-bit RSA: classical computers need ~10^20 years\n` +
+        `• Shor's algorithm: polynomial time — hours to days on a large quantum computer\n\n` +
+        `The catch: we need thousands of error-corrected qubits. Current quantum computers ` +
+        `have only demonstrated factoring small numbers (e.g., 15 = 3 × 5 in 2001, 21 = 3 × 7 in 2012).`,
+    };
+
+    switch (variation) {
+
+      case 'small_factor': {
+        const composites = [
+          { N: 15, factors: [3, 5] },
+          { N: 21, factors: [3, 7] },
+          { N: 35, factors: [5, 7] },
+          { N: 33, factors: [3, 11] },
+          { N: 55, factors: [5, 11] },
+        ];
+        const wc = composites[randInt(0, composites.length - 1)];
+        let pc;
+        do { pc = composites[randInt(0, composites.length - 1)]; } while (pc.N === wc.N);
+        return {
+          teachingText: teachingMap.small_factor,
+          workedExample: {
+            problem: `Find a non-trivial factor of N = ${wc.N}.`,
+            steps: [
+              `Try small primes: is ${wc.N} divisible by 2? No (it's odd).`,
+              `Is ${wc.N} divisible by ${wc.factors[0]}? ${wc.N} ÷ ${wc.factors[0]} = ${wc.factors[1]}. Yes!`,
+              `${wc.N} = ${wc.factors[0]} × ${wc.factors[1]}`,
+            ],
+            insight: `For small numbers, trial division is easy. For 600-digit numbers, even the fastest supercomputers cannot do it.`,
+          },
+          tryIt: {
+            question: `Find a non-trivial factor of N = ${pc.N}.`,
+            answer: pc.factors[0],
+            answerType: 'numeric',
+            answerDisplay: `${pc.factors[0]} (since ${pc.N} = ${pc.factors[0]} × ${pc.factors[1]})`,
+            acceptAlternate: pc.factors[1],
+            steps: [
+              `Try dividing by small primes.`,
+              `${pc.N} ÷ ${pc.factors[0]} = ${pc.factors[1]}`,
+              `So ${pc.factors[0]} is a factor.`,
+            ],
+            whyItMatters:
+              `Shor's algorithm turns the factoring problem into a period-finding problem, ` +
+              `which quantum computers can solve exponentially faster than classical ones.`,
+          },
+        };
+      }
+
+      case 'why_hard': {
+        const wItem = {
+          q: 'Why is multiplying two primes easy but factoring their product hard?',
+          choices: [
+            'Multiplication is commutative',
+            'Multiplication takes O(n²) time; no known polynomial-time factoring algorithm exists classically',
+            'Both are equally hard',
+            'Factoring only works for even numbers',
+          ],
+          answer: 'B', display: 'B) Multiplication is O(n²); no known polynomial-time classical factoring algorithm',
+          steps: ['Multiplication: O(n²) digit operations.', 'Best classical factoring: sub-exponential.', 'This asymmetry is the basis of RSA.'],
+        };
+        const pItem = {
+          q: 'Why is factoring large numbers believed to be hard for classical computers?',
+          choices: [
+            'No one has ever factored a number',
+            'The number of possible factors grows exponentially with the number of digits',
+            'Multiplication is also hard',
+            'Computers cannot do division',
+          ],
+          answer: 'B', display: 'B) The number of possible factors grows exponentially with the number of digits',
+          steps: ['An n-digit number has ~10^(n/2) candidate factors.', 'No known classical algorithm runs in polynomial time.', 'This is a one-way function: easy to multiply, hard to factor.'],
+        };
+        return {
+          teachingText: teachingMap.why_hard,
+          workedExample: {
+            problem: wItem.q,
+            steps: [...wItem.steps, `Answer: ${wItem.display}`],
+            insight: `This computational asymmetry (easy to multiply, hard to factor) is the foundation of public-key cryptography.`,
+          },
+          tryIt: {
+            question: pItem.q,
+            choices: pItem.choices,
+            answer: pItem.answer,
+            answerType: 'choice',
+            answerDisplay: pItem.display,
+            steps: pItem.steps,
+            whyItMatters:
+              `If factoring were easy, RSA and much of internet security would collapse. ` +
+              `Shor's algorithm makes factoring easy — but only on a quantum computer.`,
+          },
+        };
+      }
+
+      case 'rsa_connection': {
+        const wItem = {
+          q: 'In RSA, the public key N = p × q is published. What must an attacker find to break it?',
+          choices: [
+            'The encryption algorithm',
+            'The prime factors p and q',
+            'The message hash',
+            'The sender\'s IP address',
+          ],
+          answer: 'B', display: 'B) The prime factors p and q',
+          steps: ['RSA decryption requires knowing p and q.', 'If you can factor N, you can compute the private key.'],
+        };
+        const pItem = {
+          q: 'Why does Shor\'s algorithm threaten RSA encryption?',
+          choices: [
+            'RSA keys are too short',
+            'RSA security relies on the difficulty of factoring large semiprimes',
+            'RSA uses quantum mechanics internally',
+            'Shor\'s algorithm can guess passwords',
+          ],
+          answer: 'B', display: 'B) RSA security relies on the difficulty of factoring large semiprimes',
+          steps: ['RSA publishes N = p × q.', 'Breaking RSA = factoring N.', 'Shor factors N in polynomial time.'],
+        };
+        return {
+          teachingText: teachingMap.rsa_connection,
+          workedExample: {
+            problem: wItem.q,
+            steps: [...wItem.steps, `Answer: ${wItem.display}`],
+            insight: `Every time you visit an HTTPS website, factoring hardness protects your data. Shor's algorithm threatens this.`,
+          },
+          tryIt: {
+            question: pItem.q,
+            choices: pItem.choices,
+            answer: pItem.answer,
+            answerType: 'choice',
+            answerDisplay: pItem.display,
+            steps: pItem.steps,
+            whyItMatters:
+              `This is why post-quantum cryptography is being developed — new algorithms ` +
+              `whose security doesn't rely on factoring.`,
+          },
+        };
+      }
+
+      case 'classical_time': {
+        const wItem = {
+          q: 'What is the best known classical time complexity for factoring?',
+          choices: [
+            'Polynomial — O(n²)',
+            'Sub-exponential — between polynomial and exponential',
+            'Exponential — O(2^n)',
+            'Constant — O(1)',
+          ],
+          answer: 'B', display: 'B) Sub-exponential — between polynomial and exponential',
+          steps: ['General Number Field Sieve: e^(O(n^(1/3) (log n)^(2/3))).', 'Faster than brute force but not polynomial.'],
+        };
+        const pItem = {
+          q: 'A 2048-bit RSA key would take classical computers millions of years to factor. Shor\'s algorithm (with a large enough quantum computer) could do it in:',
+          choices: [
+            'Millions of years (same as classical)',
+            'Thousands of years',
+            'Hours to days',
+            'It cannot factor RSA keys',
+          ],
+          answer: 'C', display: 'C) Hours to days',
+          steps: ['Shor runs in O((log N)³).', 'For 2048 bits: ~(2048)³ ≈ 8.6 billion operations.', 'On a large quantum computer: hours, not years.'],
+        };
+        return {
+          teachingText: teachingMap.classical_time,
+          workedExample: {
+            problem: wItem.q,
+            steps: [...wItem.steps, `Answer: ${wItem.display}`],
+            insight: `Shor's algorithm collapses this sub-exponential time to polynomial: O((log N)³).`,
+          },
+          tryIt: {
+            question: pItem.q,
+            choices: pItem.choices,
+            answer: pItem.answer,
+            answerType: 'choice',
+            answerDisplay: pItem.display,
+            steps: pItem.steps,
+            whyItMatters:
+              `The exponential-to-polynomial speedup for factoring is the most dramatic known ` +
+              `quantum advantage — far more powerful than Grover's quadratic speedup.`,
+          },
+        };
+      }
+
+      default:
+        return this.generate(difficulty, 'small_factor');
+    }
+  },
+},
+
+period_finding: {
+  generate(difficulty, variation) {
+    function modPow(base, exp, mod) {
+      let result = 1; base = base % mod;
+      for (let i = 0; i < exp; i++) result = (result * base) % mod;
+      return result;
+    }
+
+    const examples = [
+      { a: 7,  N: 15, powers: [7, 4, 13, 1], period: 4 },
+      { a: 11, N: 15, powers: [11, 1],        period: 2 },
+      { a: 2,  N: 15, powers: [2, 4, 8, 1],   period: 4 },
+      { a: 4,  N: 15, powers: [4, 1],          period: 2 },
+      { a: 13, N: 15, powers: [13, 4, 7, 1],   period: 4 },
+      { a: 2,  N: 21, powers: [2, 4, 8, 16, 11, 1], period: 6 },
+      { a: 4,  N: 21, powers: [4, 16, 1],      period: 3 },
+    ];
+
+    const teachingMap = {
+      compute_powers:
+        `Shor's algorithm converts factoring into period finding. The key function is:\n\n` +
+        `  f(x) = a^x mod N\n\n` +
+        `This function is periodic: it repeats after some number of steps r (the period). ` +
+        `For example, 7^x mod 15:\n` +
+        `  7^1 mod 15 = 7\n` +
+        `  7^2 mod 15 = 4  (49 mod 15)\n` +
+        `  7^3 mod 15 = 13 (343 mod 15)\n` +
+        `  7^4 mod 15 = 1  (2401 mod 15)\n` +
+        `  7^5 mod 15 = 7  ← repeats!\n\n` +
+        `The period is r = 4. Let's practice computing modular powers.`,
+      find_period:
+        `Once we have the sequence of a^x mod N, finding the period is straightforward: ` +
+        `it's the smallest positive r such that a^r mod N = 1.\n\n` +
+        `The quantum part of Shor's algorithm uses the QFT to find this period efficiently, ` +
+        `without computing every power individually. Classically, finding the period requires ` +
+        `computing up to O(N) powers — exponential in the number of digits.`,
+      small_example:
+        `Let's work through a complete period-finding example.\n\n` +
+        `For N = 15, we pick a random a coprime to 15 (meaning gcd(a, 15) = 1). ` +
+        `Valid choices: 2, 4, 7, 8, 11, 13, 14.\n\n` +
+        `Compute the sequence a^1, a^2, a^3, ... mod 15 until we hit 1. ` +
+        `The number of steps to reach 1 is the period r.`,
+    };
+
+    switch (variation) {
+
+      case 'compute_powers': {
+        const wEx = examples[0]; // 7^x mod 15
+        const wExp = 2;
+        const wAns = modPow(wEx.a, wExp, wEx.N); // 49 mod 15 = 4
+        // Pick a different problem for tryIt
+        const pPool = examples.filter(e => e.period >= 3);
+        const pEx = pPool[randInt(0, pPool.length - 1)];
+        const pExp = randInt(1, Math.min(3, pEx.period));
+        const pAns = modPow(pEx.a, pExp, pEx.N);
+        return {
+          teachingText: teachingMap.compute_powers,
+          workedExample: {
+            problem: `Compute 7^2 mod 15.`,
+            steps: [
+              `7^2 = 49`,
+              `49 ÷ 15 = 3 remainder 4`,
+              `So 7^2 mod 15 = 4`,
+            ],
+            insight: `Modular arithmetic "wraps around" — the results stay between 0 and N−1, creating a repeating pattern.`,
+          },
+          tryIt: {
+            question: `Compute ${pEx.a}^${pExp} mod ${pEx.N}.`,
+            answer: pAns,
+            answerType: 'numeric',
+            answerDisplay: `${pAns}`,
+            steps: (() => {
+              const stps = [];
+              let val = 1;
+              for (let i = 1; i <= pExp; i++) {
+                val = (val * pEx.a) % pEx.N;
+                const raw = Math.pow(pEx.a, i);
+                stps.push(`${pEx.a}^${i} = ${raw} mod ${pEx.N} = ${val}`);
+              }
+              return stps;
+            })(),
+            whyItMatters:
+              `Computing a^x mod N is the core operation in Shor's algorithm. On a quantum computer, ` +
+              `this is computed for all x simultaneously using superposition.`,
+          },
+        };
+      }
+
+      case 'find_period': {
+        const wEx = examples[0]; // 7^x mod 15, period 4
+        // Pick a different example for practice
+        const pPool = examples.filter(e => !(e.a === 7 && e.N === 15));
+        const pEx = pPool[randInt(0, pPool.length - 1)];
+        const pSeq = pEx.powers.map((v, i) => `${pEx.a}^${i + 1} mod ${pEx.N} = ${v}`).join(', ');
+        return {
+          teachingText: teachingMap.find_period,
+          workedExample: {
+            problem: `Find the period of 7^x mod 15. Sequence: 7, 4, 13, 1, 7, 4, ...`,
+            steps: [
+              `Look for the first time the sequence hits 1:`,
+              `7^1 mod 15 = 7, 7^2 mod 15 = 4, 7^3 mod 15 = 13, 7^4 mod 15 = 1`,
+              `The period r = 4 (it took 4 steps to return to 1).`,
+            ],
+            insight: `After finding 1, the sequence repeats exactly: 7^5 = 7, 7^6 = 4, etc. This periodicity is what the QFT detects.`,
+          },
+          tryIt: {
+            question: `Given the sequence: ${pSeq}. What is the period r of ${pEx.a}^x mod ${pEx.N}?`,
+            answer: pEx.period,
+            answerType: 'numeric',
+            answerDisplay: `${pEx.period}`,
+            steps: [
+              `The period r is the smallest positive integer where ${pEx.a}^r mod ${pEx.N} = 1.`,
+              `From the sequence, ${pEx.a}^${pEx.period} mod ${pEx.N} = 1.`,
+              `So r = ${pEx.period}.`,
+            ],
+            whyItMatters:
+              `Finding this period classically takes O(N) steps — exponential in the input size. ` +
+              `The quantum computer finds it in O((log N)²) steps using the QFT.`,
+          },
+        };
+      }
+
+      case 'small_example': {
+        const wEx = { a: 7, N: 15, powers: [7, 4, 13, 1], period: 4 };
+        const pPool = examples.filter(e => e.N === 15 && e.a !== 7);
+        const pEx = pPool[randInt(0, pPool.length - 1)];
+        const pSeq = pEx.powers.map((v, i) => `${pEx.a}^${i + 1}≡${v}`).join(', ');
+        return {
+          teachingText: teachingMap.small_example,
+          workedExample: {
+            problem: `Find the full period of 7^x mod 15.`,
+            steps: [
+              `7^1 mod 15 = 7`,
+              `7^2 mod 15 = 4  (49 mod 15)`,
+              `7^3 mod 15 = 13 (343 mod 15)`,
+              `7^4 mod 15 = 1  (2401 mod 15)`,
+              `Period r = 4`,
+            ],
+            insight: `Every valid a has a period that divides φ(N). For N = 15: φ(15) = 8, so possible periods are 1, 2, 4, 8.`,
+          },
+          tryIt: {
+            question: `Find the period of ${pEx.a}^x mod ${pEx.N}. (Hint: ${pSeq})`,
+            answer: pEx.period,
+            answerType: 'numeric',
+            answerDisplay: `${pEx.period}`,
+            steps: [
+              ...pEx.powers.map((v, i) => `${pEx.a}^${i + 1} mod ${pEx.N} = ${v}`),
+              `Period r = ${pEx.period}`,
+            ],
+            whyItMatters:
+              `This period r is exactly what Shor's algorithm extracts using quantum computation. ` +
+              `Once we have r, extracting factors is classical arithmetic.`,
+          },
+        };
+      }
+
+      default:
+        return this.generate(difficulty, 'compute_powers');
+    }
+  },
+},
+
+period_to_factors: {
+  generate(difficulty, variation) {
+    function modPow(base, exp, mod) {
+      let result = 1; base = base % mod;
+      for (let i = 0; i < exp; i++) result = (result * base) % mod;
+      return result;
+    }
+    function gcd(a, b) { a = Math.abs(a); b = Math.abs(b); while (b) { [a, b] = [b, a % b]; } return a; }
+
+    // Curated examples with even period and non-trivial factors
+    const good = [
+      { N: 15, a: 7,  r: 4 },
+      { N: 15, a: 2,  r: 4 },
+      { N: 15, a: 13, r: 4 },
+    ];
+
+    const teachingMap = {
+      basic:
+        `Once we have the period r, extracting factors is pure classical math:\n\n` +
+        `1. If r is even, compute a^(r/2) mod N.\n` +
+        `2. Compute gcd(a^(r/2) + 1, N) and gcd(a^(r/2) − 1, N).\n` +
+        `3. These give non-trivial factors of N (unless we're unlucky).\n\n` +
+        `Why does this work? Because a^r ≡ 1 (mod N) means:\n` +
+        `  a^r − 1 ≡ 0 (mod N)\n` +
+        `  (a^(r/2) − 1)(a^(r/2) + 1) ≡ 0 (mod N)\n` +
+        `N divides this product, so its factors are shared between the two terms.`,
+      gcd_step:
+        `The GCD (Greatest Common Divisor) is the final classical step.\n\n` +
+        `The Euclidean algorithm computes gcd efficiently:\n` +
+        `  gcd(50, 15): 50 = 3 × 15 + 5, then gcd(15, 5) = 5.\n\n` +
+        `In Shor's algorithm, we compute:\n` +
+        `  gcd(a^(r/2) + 1, N) → one factor\n` +
+        `  gcd(a^(r/2) − 1, N) → the other factor`,
+      different_a:
+        `Different choices of a give different periods, but they all lead to the same factors:\n\n` +
+        `For N = 15:\n` +
+        `• a = 7: r = 4, a^(r/2) = 49, gcd(50,15) = 5, gcd(48,15) = 3 ✓\n` +
+        `• a = 2: r = 4, a^(r/2) = 4,  gcd(5,15) = 5,  gcd(3,15) = 3 ✓\n` +
+        `• a = 11: r = 2, a^(r/2) = 11, gcd(12,15) = 3, gcd(10,15) = 5 ✓\n\n` +
+        `Some choices of a may fail (giving trivial factors), but trying again with a new a works.`,
+      why_even:
+        `For Shor's algorithm to extract factors, the period r must be even.\n\n` +
+        `If r is even: a^r − 1 = (a^(r/2) − 1)(a^(r/2) + 1), and we can compute GCDs.\n` +
+        `If r is odd: a^(r/2) is not an integer — we cannot proceed.\n\n` +
+        `Solution: simply pick a new random a and try again. For most composite N, ` +
+        `a random a gives a useful (even) period with probability at least 1/2.`,
+    };
+
+    switch (variation) {
+
+      case 'basic':
+      case 'different_a': {
+        const wEx = good[0]; // N=15, a=7, r=4
+        const wHalfR = wEx.r / 2;
+        const wAHalf = modPow(wEx.a, wHalfR, wEx.N);
+        const wF1 = gcd(wAHalf + 1, wEx.N);
+        const wF2 = gcd(wAHalf - 1, wEx.N);
+
+        const pIdx = variation === 'different_a' ? randInt(1, good.length - 1) : randInt(0, good.length - 1);
+        const pEx = good[pIdx === 0 && variation === 'basic' ? randInt(1, good.length - 1) : pIdx];
+        const pHalfR = pEx.r / 2;
+        const pAHalf = modPow(pEx.a, pHalfR, pEx.N);
+        const pF1 = gcd(pAHalf + 1, pEx.N);
+        const pF2 = gcd(pAHalf - 1, pEx.N);
+        const pFactors = [pF1, pF2].filter(f => f > 1 && f < pEx.N).sort((a, b) => a - b);
+        const pAns = pFactors[0];
+
+        return {
+          teachingText: teachingMap[variation] || teachingMap.basic,
+          workedExample: {
+            problem: `N = ${wEx.N}, a = ${wEx.a}, r = ${wEx.r}. Find a factor of ${wEx.N}.`,
+            steps: [
+              `r = ${wEx.r} is even. Compute a^(r/2) = ${wEx.a}^${wHalfR} = ${Math.pow(wEx.a, wHalfR)}.`,
+              `gcd(${Math.pow(wEx.a, wHalfR)} + 1, ${wEx.N}) = gcd(${Math.pow(wEx.a, wHalfR) + 1}, ${wEx.N}) = ${wF1}`,
+              `gcd(${Math.pow(wEx.a, wHalfR)} - 1, ${wEx.N}) = gcd(${Math.pow(wEx.a, wHalfR) - 1}, ${wEx.N}) = ${wF2}`,
+              `Factors: ${wF1} and ${wF2}. ✓ ${wEx.N} = ${Math.min(wF1,wF2)} × ${Math.max(wF1,wF2)}`,
+            ],
+            insight: `This works because a^r ≡ 1 (mod N) means N divides (a^(r/2)−1)(a^(r/2)+1).`,
+          },
+          tryIt: {
+            question: `N = ${pEx.N}, a = ${pEx.a}, period r = ${pEx.r}. Use these to find a non-trivial factor of ${pEx.N}.`,
+            answer: pAns,
+            answerType: 'numeric',
+            answerDisplay: `${pFactors.join(' and ')} (${pEx.N} = ${pFactors[0]} × ${pFactors[1]})`,
+            acceptAlternate: pFactors.length > 1 ? pFactors[1] : null,
+            steps: [
+              `a^(r/2) = ${pEx.a}^${pHalfR} = ${Math.pow(pEx.a, pHalfR)}`,
+              `gcd(${Math.pow(pEx.a, pHalfR) + 1}, ${pEx.N}) = ${pF1}`,
+              `gcd(${Math.pow(pEx.a, pHalfR) - 1}, ${pEx.N}) = ${pF2}`,
+              `Non-trivial factors: ${pFactors.join(' and ')}`,
+            ],
+            whyItMatters:
+              `This is the payoff: quantum period-finding feeds into classical GCD computation ` +
+              `to crack the factoring problem in polynomial time.`,
+          },
+        };
+      }
+
+      case 'gcd_step': {
+        const cases = [
+          { a: 7, N: 15, halfR: 2, raw: 49,  plus: 50, gcdVal: 5 },
+          { a: 2, N: 15, halfR: 2, raw: 4,   plus: 5,  gcdVal: 5 },
+          { a: 13, N: 15, halfR: 2, raw: 169, plus: 170, gcdVal: 5 },
+        ];
+        const wc = cases[0];
+        let pc;
+        do { pc = cases[randInt(0, cases.length - 1)]; } while (pc.a === wc.a);
+        return {
+          teachingText: teachingMap.gcd_step,
+          workedExample: {
+            problem: `Compute gcd(${wc.a}^${wc.halfR} + 1, ${wc.N}). (${wc.a}^${wc.halfR} = ${wc.raw})`,
+            steps: [
+              `${wc.raw} + 1 = ${wc.plus}`,
+              `gcd(${wc.plus}, ${wc.N}): ${wc.plus} = ${Math.floor(wc.plus / wc.N)} × ${wc.N} + ${wc.plus % wc.N}`,
+              `gcd(${wc.N}, ${wc.plus % wc.N}) = ${wc.gcdVal}`,
+            ],
+            insight: `The Euclidean algorithm for GCD is fast — O((log N)²) — so this step is trivially classical.`,
+          },
+          tryIt: {
+            question: `Compute gcd(${pc.a}^${pc.halfR} + 1, ${pc.N}). (Hint: ${pc.a}^${pc.halfR} = ${pc.raw})`,
+            answer: pc.gcdVal,
+            answerType: 'numeric',
+            answerDisplay: `${pc.gcdVal}`,
+            steps: [
+              `${pc.raw} + 1 = ${pc.plus}`,
+              `gcd(${pc.plus}, ${pc.N}) = ${pc.gcdVal}`,
+            ],
+            whyItMatters:
+              `The GCD step is the bridge between the quantum period and the classical factors. ` +
+              `It runs efficiently on any computer.`,
+          },
+        };
+      }
+
+      case 'why_even': {
+        const wItem = {
+          q: 'For N = 21 and a = 4, the period is r = 3 (odd). Why can\'t we extract factors?',
+          choices: [
+            'Because 21 is too large',
+            'Because a^(r/2) = 4^(3/2) is not an integer — we need an even period',
+            'Because gcd always returns 1 for odd periods',
+            'Because the QFT fails on odd numbers',
+          ],
+          answer: 'B', display: 'B) a^(r/2) is not an integer — we need an even period',
+          steps: ['r = 3 is odd.', 'a^(r/2) = 4^(1.5) = 8 — not an integer mod operation we can use.', 'Solution: pick a new a.'],
+        };
+        const pItem = {
+          q: 'What happens if the period r found by Shor\'s algorithm is odd?',
+          choices: [
+            'The algorithm still works — just use r directly',
+            'The algorithm fails for this a; try a different random a',
+            'An odd period means N is prime',
+            'You double r to make it even',
+          ],
+          answer: 'B', display: 'B) The algorithm fails for this a; try a different random a',
+          steps: ['An odd r means a^(r/2) is not an integer.', 'We cannot compute the GCD step.', 'Pick a new random a — even r has probability ≥ 1/2.'],
+        };
+        return {
+          teachingText: teachingMap.why_even,
+          workedExample: {
+            problem: wItem.q,
+            steps: [...wItem.steps, `Answer: ${wItem.display}`],
+            insight: `Shor's algorithm is probabilistic — it may need a few random choices of a, but succeeds quickly in expectation.`,
+          },
+          tryIt: {
+            question: pItem.q,
+            choices: pItem.choices,
+            answer: pItem.answer,
+            answerType: 'choice',
+            answerDisplay: pItem.display,
+            steps: pItem.steps,
+            whyItMatters:
+              `Understanding failure modes is important: Shor's algorithm is probabilistic, ` +
+              `but each attempt takes polynomial time, so retrying is cheap.`,
+          },
+        };
+      }
+
+      default:
+        return this.generate(difficulty, 'basic');
+    }
+  },
+},
+
+qft_concept: {
+  generate(difficulty, variation) {
+    const allItems = {
+      classical_vs_quantum: {
+        q: 'The classical FFT on N points takes O(N log N) time. How does the Quantum Fourier Transform compare?',
+        choices: [
+          'O(N log N) — same as classical',
+          'O(N²) — slower than classical',
+          'O((log N)²) — exponentially faster',
+          'O(1) — instant',
+        ],
+        answer: 'C', display: 'C) O((log N)²) — exponentially faster',
+        steps: ['Classical FFT: O(N log N).', 'QFT: O(n²) = O((log N)²) gates on n qubits.', 'Exponential speedup over classical FFT.'],
+      },
+      qft_analogy: {
+        q: 'The QFT is analogous to which everyday process?',
+        choices: [
+          'A magnifying glass focusing light',
+          'A prism splitting light into its frequency components',
+          'A mirror reflecting a signal',
+          'A battery storing energy',
+        ],
+        answer: 'B', display: 'B) A prism splitting light into its frequency components',
+        steps: ['Fourier transform: decompose a signal into frequencies.', 'QFT: transform quantum state to frequency basis.', 'Like a prism splitting white light into a spectrum.'],
+      },
+      where_speedup: {
+        q: 'In Shor\'s algorithm, which step provides the quantum speedup?',
+        choices: [
+          'Choosing random a',
+          'Computing a^x mod N',
+          'The Quantum Fourier Transform for period finding',
+          'Computing the GCD',
+        ],
+        answer: 'C', display: 'C) The Quantum Fourier Transform for period finding',
+        steps: ['Choosing a: classical O(1).', 'Modular exponentiation: prepared in superposition.', 'QFT: reveals the period — this is the quantum speedup.', 'GCD: classical O((log N)²).'],
+      },
+    };
+
+    const poolMap = {
+      classical_vs_quantum: ['classical_vs_quantum'],
+      qft_analogy: ['qft_analogy'],
+      where_speedup: ['where_speedup'],
+    };
+    const pool = poolMap[variation] || ['classical_vs_quantum', 'qft_analogy', 'where_speedup'];
+
+    const wKey = pool[randInt(0, pool.length - 1)];
+    let pKey;
+    do { pKey = pool[randInt(0, pool.length - 1)]; } while (pKey === wKey && pool.length > 1);
+    const w = allItems[wKey], p = allItems[pKey];
+
+    const teachingMap = {
+      classical_vs_quantum:
+        `The Quantum Fourier Transform (QFT) is the quantum version of the classical Discrete ` +
+        `Fourier Transform (DFT).\n\n` +
+        `Classical FFT: O(N log N) operations on N data points.\n` +
+        `QFT: O(n²) = O((log N)²) quantum gates on n = log₂(N) qubits.\n\n` +
+        `This exponential speedup comes from quantum parallelism: the QFT processes all 2^n ` +
+        `amplitudes simultaneously. However, we can't read all the amplitudes — measurement ` +
+        `gives only one outcome, but it's enough to extract the period.`,
+      qft_analogy:
+        `Think of the QFT like a prism:\n\n` +
+        `• White light → prism → spectrum of colors (frequencies)\n` +
+        `• Quantum state → QFT → frequency components of the state\n\n` +
+        `In Shor's algorithm, the modular exponentiation creates a state with a hidden ` +
+        `periodic structure. The QFT "splits" this state to reveal the period, just as ` +
+        `a prism reveals the hidden colors in white light.\n\n` +
+        `The mathematical basis: QFT maps |j⟩ to (1/√N) Σ_k e^(2πijk/N) |k⟩.`,
+      where_speedup:
+        `Shor's algorithm has four main steps:\n\n` +
+        `1. Pick random a < N (classical, trivial)\n` +
+        `2. Compute a^x mod N in superposition (quantum)\n` +
+        `3. Apply QFT to extract the period (quantum — this is the key!)\n` +
+        `4. Use GCD to find factors (classical, fast)\n\n` +
+        `The QFT in step 3 is where the exponential speedup happens. It finds the period ` +
+        `in O((log N)²) time, whereas the best classical period-finding takes O(N^(1/2)) or worse.`,
+    };
+
+    return {
+      teachingText: teachingMap[variation] || teachingMap['classical_vs_quantum'],
+      workedExample: {
+        problem: w.q,
+        steps: [...w.steps, `Answer: ${w.display}`],
+        insight: `The QFT is the computational engine of Shor's algorithm — without it, period finding would be exponentially slower.`,
+      },
+      tryIt: {
+        question: p.q,
+        choices: p.choices,
+        answer: p.answer,
+        answerType: 'choice',
+        answerDisplay: p.display,
+        steps: p.steps,
+        whyItMatters:
+          `The QFT is one of the most important quantum subroutines. It powers not just Shor's ` +
+          `algorithm but also quantum phase estimation, which underpins many quantum algorithms.`,
+      },
+    };
+  },
+},
+
+shor_full: {
+  generate(difficulty, variation) {
+    const allItems = {
+      steps_in_order: {
+        q: 'What is the correct order of steps in Shor\'s algorithm?',
+        choices: [
+          '1) QFT → 2) Pick random a → 3) Factor → 4) Compute GCD',
+          '1) Pick random a → 2) Compute a^x mod N in superposition → 3) QFT to find period → 4) Compute GCD to get factors',
+          '1) Compute GCD → 2) QFT → 3) Pick random a → 4) Factor',
+          '1) Factor N → 2) Verify with QFT → 3) Compute GCD → 4) Pick a',
+        ],
+        answer: 'B', display: 'B) Pick a → Compute a^x mod N → QFT → GCD',
+        steps: ['1. Pick random a, check gcd(a,N)=1.', '2. Quantum: compute a^x mod N in superposition.', '3. Quantum: QFT to find period r.', '4. Classical: gcd(a^(r/2)±1, N) → factors.'],
+      },
+      quantum_vs_classical_steps: {
+        q: 'Which part of Shor\'s algorithm is performed on a quantum computer?',
+        choices: [
+          'All steps are quantum',
+          'Only the GCD computation',
+          'Period finding via modular exponentiation + QFT',
+          'Only choosing random a',
+        ],
+        answer: 'C', display: 'C) Period finding via modular exponentiation + QFT',
+        steps: ['Picking a: classical.', 'Modular exponentiation + QFT: quantum.', 'GCD: classical.', 'Shor\'s is a hybrid classical-quantum algorithm.'],
+      },
+      complexity: {
+        q: 'What is the time complexity of Shor\'s algorithm for factoring an n-digit number?',
+        choices: [
+          'O(2^n) — exponential',
+          'O(n³) — polynomial',
+          'O(n!) — factorial',
+          'O(√(2^n)) — same as Grover on factoring',
+        ],
+        answer: 'B', display: 'B) O(n³) — polynomial',
+        steps: ['Shor\'s runs in O((log N)³).', 'n = log N digits, so O(n³).', 'Classical best: sub-exponential.', 'Exponential-to-polynomial speedup.'],
+      },
+      implications: {
+        q: 'Which cryptographic system would be broken by Shor\'s algorithm?',
+        choices: [
+          'AES-256 symmetric encryption',
+          'SHA-256 hashing',
+          'RSA and elliptic curve cryptography',
+          'One-time pads',
+        ],
+        answer: 'C', display: 'C) RSA and elliptic curve cryptography',
+        steps: ['RSA: broken (factoring).', 'ECC: broken (discrete log).', 'AES: only quadratically weakened (Grover).', 'One-time pads: information-theoretically secure.'],
+      },
+    };
+
+    const poolMap = {
+      steps_in_order: ['steps_in_order'],
+      quantum_vs_classical_steps: ['quantum_vs_classical_steps'],
+      complexity: ['complexity'],
+      implications: ['implications'],
+    };
+    const pool = poolMap[variation] || Object.keys(allItems);
+
+    const wKey = pool[randInt(0, pool.length - 1)];
+    let pKey;
+    do { pKey = pool[randInt(0, pool.length - 1)]; } while (pKey === wKey && pool.length > 1);
+    const w = allItems[wKey], p = allItems[pKey];
+
+    const teachingMap = {
+      steps_in_order:
+        `Let's put it all together. Shor's algorithm has four steps:\n\n` +
+        `1. **Choose random a** < N with gcd(a, N) = 1 (classical)\n` +
+        `2. **Modular exponentiation** — compute a^x mod N for all x in superposition (quantum)\n` +
+        `3. **QFT** — apply quantum Fourier transform to find period r (quantum)\n` +
+        `4. **Extract factors** — compute gcd(a^(r/2) ± 1, N) (classical)\n\n` +
+        `If r is odd or gives trivial factors, go back to step 1 with a new a. ` +
+        `Expected number of attempts: ~2.`,
+      quantum_vs_classical_steps:
+        `Shor's algorithm is a hybrid: some steps are classical, some are quantum.\n\n` +
+        `Classical steps:\n` +
+        `• Choosing random a (fast, trivial)\n` +
+        `• Computing GCD via Euclidean algorithm (fast, O((log N)²))\n\n` +
+        `Quantum steps:\n` +
+        `• Setting up superposition of a^x mod N for all x\n` +
+        `• Applying QFT to reveal the period\n\n` +
+        `The quantum computer is only needed for the hard part: period finding.`,
+      complexity:
+        `Shor's algorithm runs in O((log N)³) time — polynomial in the number of digits n = log N.\n\n` +
+        `Compare with classical algorithms:\n` +
+        `• Trial division: O(√N) = O(10^(n/2)) — exponential\n` +
+        `• General Number Field Sieve: e^(O(n^(1/3)(log n)^(2/3))) — sub-exponential\n` +
+        `• Shor: O(n³) — polynomial!\n\n` +
+        `This exponential speedup is the most dramatic advantage quantum computers are known to provide.`,
+      implications:
+        `Shor's algorithm has profound implications for cryptography:\n\n` +
+        `Broken by Shor's:\n` +
+        `• RSA — based on factoring\n` +
+        `• Elliptic Curve Cryptography — based on discrete logarithm\n` +
+        `• Diffie-Hellman key exchange — based on discrete logarithm\n\n` +
+        `NOT broken by Shor's:\n` +
+        `• AES — symmetric encryption (Grover gives only √ speedup; double the key)\n` +
+        `• Lattice-based cryptography — the leading post-quantum candidate\n` +
+        `• One-time pads — provably unbreakable`,
+    };
+
+    return {
+      teachingText: teachingMap[variation] || teachingMap['steps_in_order'],
+      workedExample: {
+        problem: w.q,
+        steps: [...w.steps, `Answer: ${w.display}`],
+        insight: `Shor's algorithm is the reason quantum computing went from a curiosity to a national security priority.`,
+      },
+      tryIt: {
+        question: p.q,
+        choices: p.choices,
+        answer: p.answer,
+        answerType: 'choice',
+        answerDisplay: p.display,
+        steps: p.steps,
+        whyItMatters:
+          `Shor's algorithm demonstrates the most important known quantum advantage: ` +
+          `an exponential speedup for a problem of enormous practical significance.`,
+      },
+    };
+  },
+},
+
+// ── Chapter 20: The Landscape — Where Quantum Computing Is Now ───────────────
+
+qubit_tech: {
+  generate(difficulty, variation) {
+    const items = {
+      match_ibm: {
+        q: 'What qubit technology does IBM primarily use in its quantum processors (e.g., Eagle, Heron)?',
+        choices: ['Trapped ions', 'Superconducting transmon qubits', 'Photonic qubits', 'Neutral atoms'],
+        answer: 'B', display: 'B) Superconducting transmon qubits',
+        steps: ['IBM uses superconducting transmon qubits cooled to ~15 mK.', 'Answer: B) Superconducting transmon qubits'],
+      },
+      match_ionq: {
+        q: 'What qubit technology does IonQ use?',
+        choices: ['Superconducting circuits', 'Topological qubits', 'Trapped ions (ytterbium)', 'Photonic qubits'],
+        answer: 'C', display: 'C) Trapped ions (ytterbium)',
+        steps: ['IonQ traps ytterbium ions using electromagnetic fields.', 'Answer: C) Trapped ions (ytterbium)'],
+      },
+      match_google: {
+        q: 'What qubit technology did Google use in Sycamore and Willow?',
+        choices: ['Neutral atoms in optical tweezers', 'Superconducting transmon qubits', 'NV centers in diamond', 'Trapped ions'],
+        answer: 'B', display: 'B) Superconducting transmon qubits',
+        steps: ['Google Quantum AI uses superconducting transmon qubits.', 'Answer: B) Superconducting transmon qubits'],
+      },
+      match_quantinuum: {
+        q: 'What qubit technology does Quantinuum use?',
+        choices: ['Superconducting qubits', 'Photonic qubits', 'Trapped ions', 'Spin qubits in silicon'],
+        answer: 'C', display: 'C) Trapped ions',
+        steps: ['Quantinuum inherited trapped-ion tech from Honeywell.', 'Answer: C) Trapped ions'],
+      },
+      tradeoff_ions: {
+        q: 'What is a key advantage of trapped-ion qubits over superconducting qubits?',
+        choices: ['Faster gate speeds', 'Higher gate fidelities and longer coherence times', 'Easier to manufacture', 'No vacuum needed'],
+        answer: 'B', display: 'B) Higher gate fidelities and longer coherence times',
+        steps: ['Trapped ions: coherence times of seconds, gate fidelities >99.8%.', 'Tradeoff: slower gates (~ms vs ~ns).', 'Answer: B)'],
+      },
+      tradeoff_sc: {
+        q: 'What is a key advantage of superconducting qubits over trapped ions?',
+        choices: ['Longer coherence times', 'Higher gate fidelity', 'Much faster gate speeds (~10-100 ns)', 'All-to-all connectivity'],
+        answer: 'C', display: 'C) Much faster gate speeds (~10-100 ns)',
+        steps: ['Superconducting gates: ~10-100 ns, ~1000x faster than trapped ions.', 'Answer: C)'],
+      },
+      current_scale: {
+        q: 'As of 2025, roughly how many physical qubits do the largest processors have?',
+        choices: ['About 10-50', 'About 100-200', 'About 1,000-1,200', 'About 100,000+'],
+        answer: 'C', display: 'C) About 1,000-1,200',
+        steps: ['IBM Condor: 1,121 qubits. Atom Computing: 1,225 qubits.', 'Answer: C) About 1,000-1,200'],
+      },
+      neutral_atoms: {
+        q: 'Which company is a leading developer of neutral-atom quantum computers?',
+        choices: ['IBM', 'IonQ', 'QuEra Computing', 'Quantinuum'],
+        answer: 'C', display: 'C) QuEra Computing',
+        steps: ['QuEra uses neutral atoms in optical tweezers.', 'Answer: C) QuEra Computing'],
+      },
+    };
+
+    const poolMap = {
+      match_company: ['match_ibm', 'match_ionq', 'match_google', 'match_quantinuum'],
+      tradeoffs: ['tradeoff_ions', 'tradeoff_sc'],
+      current_scale: ['current_scale', 'neutral_atoms'],
+    };
+    const pool = poolMap[variation] || ['match_ibm', 'match_ionq', 'match_google', 'tradeoff_ions', 'current_scale'];
+
+    const wKey = pool[randInt(0, pool.length - 1)];
+    let pKey;
+    do { pKey = pool[randInt(0, pool.length - 1)]; } while (pKey === wKey && pool.length > 1);
+    const w = items[wKey], p = items[pKey];
+
+    const teachingMap = {
+      match_company:
+        `Multiple companies are racing to build quantum computers, each using different ` +
+        `physical technologies:\n\n` +
+        `- IBM and Google use superconducting transmon qubits — tiny circuits cooled to ` +
+        `near absolute zero (~15 millikelvin) in dilution refrigerators.\n\n` +
+        `- IonQ and Quantinuum use trapped ions — individual atoms held by electromagnetic ` +
+        `fields, manipulated with laser pulses.\n\n` +
+        `Each approach has different strengths in gate speed, fidelity, and scalability.`,
+      tradeoffs:
+        `The two leading qubit technologies have complementary strengths:\n\n` +
+        `Superconducting qubits: very fast gates (~10-100 ns), but short coherence times ` +
+        `(~100 microseconds) and limited connectivity between qubits.\n\n` +
+        `Trapped ions: extremely high fidelity (>99.8%), long coherence (seconds), and ` +
+        `all-to-all connectivity, but much slower gates (~1 ms).\n\n` +
+        `The "best" technology depends on the algorithm and application.`,
+      current_scale:
+        `As of 2025, the largest quantum processors have reached ~1,000-1,200 physical qubits:\n\n` +
+        `- IBM Condor (2023): 1,121 superconducting qubits\n` +
+        `- Atom Computing (2023): 1,225 neutral-atom qubits\n\n` +
+        `However, raw qubit count is misleading — what matters is qubit quality (fidelity, ` +
+        `coherence) and connectivity. Most useful quantum computing today happens on ` +
+        `processors with 50-200 high-quality qubits.\n\n` +
+        `Neutral atoms (QuEra, Atom Computing) are an emerging third approach alongside ` +
+        `superconducting and trapped-ion systems.`,
+    };
+
+    return {
+      teachingText: teachingMap[variation] || teachingMap['match_company'],
+      workedExample: {
+        problem: w.q,
+        steps: [...w.steps],
+        insight: `The quantum computing hardware landscape is diverse — different physical approaches offer different tradeoffs in speed, fidelity, and scalability.`,
+      },
+      tryIt: {
+        question: p.q,
+        choices: p.choices,
+        answer: p.answer,
+        answerType: 'choice',
+        answerDisplay: p.display,
+        steps: p.steps,
+        whyItMatters:
+          `Understanding the hardware landscape helps you evaluate quantum computing ` +
+          `claims and choose the right platform for different applications.`,
+      },
+    };
+  },
+},
+
+nisq_concept: {
+  generate(difficulty, variation) {
+    const items = {
+      define_nisq: {
+        q: 'What does NISQ stand for?',
+        choices: ['New Intermediate-Scale Quantum', 'Noisy Intermediate-Scale Quantum', 'Non-Ideal Scalable Quantum', 'Narrow Input Superposition Quantum'],
+        answer: 'B', display: 'B) Noisy Intermediate-Scale Quantum',
+        steps: ['NISQ = Noisy Intermediate-Scale Quantum, coined by Preskill in 2018.', 'Answer: B)'],
+      },
+      nisq_era_meaning: {
+        q: 'What defines the NISQ era?',
+        choices: ['Perfect quantum computers', '50-1000+ qubits with limited error correction', 'Noise simulation computers', 'Room-temperature quantum computers'],
+        answer: 'B', display: 'B) 50-1000+ qubits with limited error correction',
+        steps: ['NISQ: enough qubits for non-trivial tasks, but errors limit circuit depth.', 'Answer: B)'],
+      },
+      why_not_shor: {
+        q: 'Why can\'t current quantum computers break RSA encryption?',
+        choices: ['Shor\'s hasn\'t been invented', 'RSA doesn\'t use numbers', '~4,000 logical (millions of physical) qubits needed', 'Shor\'s is classical only'],
+        answer: 'C', display: 'C) ~4,000 logical (millions of physical) qubits needed',
+        steps: ['Shor\'s algorithm exists but requires fault-tolerant qubits.', '~4,000 logical qubits needed, meaning millions of physical qubits.', 'Answer: C)'],
+      },
+      what_works_vqe: {
+        q: 'Which algorithm type is best suited for NISQ devices?',
+        choices: ['Shor\'s factoring', 'Variational algorithms (VQE, QAOA)', 'Grover on 10^18 items', 'Full error correction codes'],
+        answer: 'B', display: 'B) Variational algorithms (VQE, QAOA)',
+        steps: ['Variational algorithms use short circuits tolerant of noise.', 'VQE estimates molecular energies; QAOA tackles optimization.', 'Answer: B)'],
+      },
+      what_works_chemistry: {
+        q: 'What is a leading near-term application of NISQ quantum computers?',
+        choices: ['Replacing classical computers', 'Simulating small molecules', 'Cracking all encryption', 'Running AGI'],
+        answer: 'B', display: 'B) Simulating small molecules and chemical reactions',
+        steps: ['Quantum computers naturally simulate quantum systems.', 'Small molecules have been simulated on NISQ devices.', 'Answer: B)'],
+      },
+      noise_source: {
+        q: 'What is the primary source of errors in NISQ quantum computers?',
+        choices: ['Software bugs', 'Decoherence and imperfect gate operations', 'Classical measurement errors', 'Nearby quantum computers'],
+        answer: 'B', display: 'B) Decoherence and imperfect gate operations',
+        steps: ['Decoherence: environment interaction destroys quantum info.', 'Gate errors compound: 1000 gates at 99.9% = ~37% total success.', 'Answer: B)'],
+      },
+    };
+
+    const poolMap = {
+      define_nisq: ['define_nisq', 'nisq_era_meaning'],
+      why_not_shor: ['why_not_shor'],
+      what_works: ['what_works_vqe', 'what_works_chemistry', 'noise_source'],
+    };
+    const pool = poolMap[variation] || ['define_nisq', 'why_not_shor', 'what_works_vqe'];
+
+    const wKey = pool[randInt(0, pool.length - 1)];
+    let pKey;
+    do { pKey = pool[randInt(0, pool.length - 1)]; } while (pKey === wKey && pool.length > 1);
+    const w = items[wKey], p = items[pKey];
+
+    const teachingMap = {
+      define_nisq:
+        `We are in the NISQ era — "Noisy Intermediate-Scale Quantum." This term, ` +
+        `coined by physicist John Preskill in 2018, perfectly captures where we are:\n\n` +
+        `"Noisy" — every gate operation introduces small errors, and qubits lose their ` +
+        `quantum state (decohere) within microseconds to seconds.\n\n` +
+        `"Intermediate-Scale" — we have 50 to ~1,200 physical qubits. Enough for ` +
+        `interesting experiments, but far too few for full error correction.\n\n` +
+        `The NISQ era is a transitional period between "toy" quantum computers and ` +
+        `the fault-tolerant machines needed for Shor's algorithm.`,
+      why_not_shor:
+        `You learned Shor's algorithm can factor large numbers efficiently. So why ` +
+        `isn't RSA broken yet?\n\n` +
+        `The answer is scale. Breaking RSA-2048 requires ~4,000 error-corrected logical ` +
+        `qubits. Each logical qubit needs 1,000-10,000 physical qubits for error correction. ` +
+        `That means millions of physical qubits total.\n\n` +
+        `Current devices have ~1,000 noisy physical qubits — roughly 1,000-10,000x short ` +
+        `of what's needed. This is why post-quantum cryptography is being developed ` +
+        `proactively, before quantum computers catch up.`,
+      what_works:
+        `What CAN today's quantum computers do? The answer: variational algorithms ` +
+        `and small-scale quantum simulations.\n\n` +
+        `Variational Quantum Eigensolver (VQE) estimates molecular ground-state energies ` +
+        `using short circuits. QAOA tackles combinatorial optimization problems.\n\n` +
+        `These hybrid classical-quantum algorithms are designed for NISQ hardware — they ` +
+        `use shallow circuits that complete before decoherence destroys the computation.\n\n` +
+        `The most promising near-term application is quantum chemistry: simulating ` +
+        `molecules and materials for drug discovery and new materials.`,
+    };
+
+    return {
+      teachingText: teachingMap[variation] || teachingMap['define_nisq'],
+      workedExample: {
+        problem: w.q,
+        steps: [...w.steps],
+        insight: `The NISQ era is defined by having enough qubits to be interesting, but too much noise to be universally useful.`,
+      },
+      tryIt: {
+        question: p.q,
+        choices: p.choices,
+        answer: p.answer,
+        answerType: 'choice',
+        answerDisplay: p.display,
+        steps: p.steps,
+        whyItMatters:
+          `Understanding what NISQ devices can and cannot do helps you separate ` +
+          `quantum computing hype from reality.`,
+      },
+    };
+  },
+},
+
+quantum_advantage: {
+  generate(difficulty, variation) {
+    const items = {
+      google_claim: {
+        q: 'In 2019, Google claimed quantum supremacy with Sycamore. What did it do?',
+        choices: ['Broke RSA encryption', 'Simulated a protein', 'Sampling task: 200 sec vs ~10,000 years classically', 'Factored a 2048-bit number'],
+        answer: 'C', display: 'C) Sampling task in 200 sec vs ~10,000 years classically',
+        steps: ['Sycamore (53 qubits) did random circuit sampling.', 'Google estimated 10,000 years on classical Summit supercomputer.', 'Answer: C)'],
+      },
+      ibm_dispute: {
+        q: 'Why did IBM dispute Google\'s 2019 quantum supremacy claim?',
+        choices: ['Too many errors', 'Classical simulation possible in ~2.5 days with better algorithms', 'IBM\'s computer was faster', 'Violated physics'],
+        answer: 'B', display: 'B) Classical simulation possible in ~2.5 days with better algorithms',
+        steps: ['IBM proposed using 250 PB of storage to speed up classical simulation.', 'The "supremacy" boundary depends on classical optimization.', 'Answer: B)'],
+      },
+      practical_vs_theoretical: {
+        q: 'What is the difference between "quantum advantage" and "quantum utility"?',
+        choices: ['Same thing', 'Advantage = any task faster; utility = useful problem faster', 'Utility is marketing', 'Advantage = cryptography only'],
+        answer: 'B', display: 'B) Advantage = any task faster; utility = useful real-world problem faster',
+        steps: ['Advantage: outperform classical on ANY task.', 'Utility: outperform on a PRACTICAL, useful task.', 'Answer: B)'],
+      },
+      willow_2024: {
+        q: 'What breakthrough did Google\'s Willow chip (2024) demonstrate?',
+        choices: ['1 million qubits', 'Below-threshold error correction — more qubits reduced errors', 'Room-temp qubits', 'Factored RSA-2048'],
+        answer: 'B', display: 'B) Below-threshold error correction',
+        steps: ['Willow showed increasing code distance reduced logical error rates.', 'This proves error correction works as theory predicts.', 'Answer: B)'],
+      },
+      no_useful_yet: {
+        q: 'Have quantum computers solved any commercially important problem faster than classical?',
+        choices: ['Yes, drug discovery', 'Yes, broke RSA', 'Not yet — only specialized non-practical problems', 'Yes, Google search'],
+        answer: 'C', display: 'C) Not yet — advantage only on specialized problems',
+        steps: ['Advantage shown on sampling tasks, not practical applications.', 'Near-term candidates: molecular simulation, optimization.', 'Answer: C)'],
+      },
+    };
+
+    const poolMap = {
+      google_claim: ['google_claim'],
+      debate: ['ibm_dispute'],
+      practical_vs_theoretical: ['practical_vs_theoretical', 'willow_2024', 'no_useful_yet'],
+    };
+    const pool = poolMap[variation] || ['google_claim', 'ibm_dispute', 'practical_vs_theoretical'];
+
+    const wKey = pool[randInt(0, pool.length - 1)];
+    let pKey;
+    do { pKey = pool[randInt(0, pool.length - 1)]; } while (pKey === wKey && pool.length > 1);
+    const w = items[wKey], p = items[pKey];
+
+    const teachingMap = {
+      google_claim:
+        `In October 2019, Google published a landmark paper in Nature claiming ` +
+        `"quantum supremacy" — the first demonstration that a quantum computer ` +
+        `could perform a specific task faster than any classical computer.\n\n` +
+        `Their 53-qubit Sycamore processor completed a random circuit sampling ` +
+        `task in 200 seconds. Google estimated this would take the Summit ` +
+        `supercomputer approximately 10,000 years.\n\n` +
+        `This was a milestone, but it's important to note: the task was specifically ` +
+        `designed to be hard for classical computers, not to solve a practical problem.`,
+      debate:
+        `IBM immediately challenged Google's claim, arguing that with 250 petabytes ` +
+        `of disk storage, a classical computer could complete the task in about 2.5 days ` +
+        `— not 10,000 years.\n\n` +
+        `This debate reveals a crucial subtlety: "quantum supremacy" depends on the ` +
+        `BEST KNOWN classical algorithm. As classical algorithms improve, the bar for ` +
+        `quantum advantage keeps moving.\n\n` +
+        `Since 2019, classical tensor network methods have further narrowed the gap ` +
+        `for random circuit sampling, though quantum still appears faster.`,
+      practical_vs_theoretical:
+        `There's an important distinction between types of quantum advantage:\n\n` +
+        `Quantum advantage: a quantum computer outperforms the best classical ` +
+        `computer at ANY well-defined task (even an artificial one).\n\n` +
+        `Quantum utility: a quantum computer outperforms classical on a PRACTICAL, ` +
+        `commercially relevant problem.\n\n` +
+        `Google's 2019 result and their 2024 Willow chip showed advantage, but on ` +
+        `specially designed benchmarks. The holy grail is utility — solving real ` +
+        `problems in chemistry, optimization, or machine learning faster than classical.`,
+    };
+
+    return {
+      teachingText: teachingMap[variation] || teachingMap['google_claim'],
+      workedExample: {
+        problem: w.q,
+        steps: [...w.steps],
+        insight: `Quantum advantage has been demonstrated, but practical quantum utility for real-world problems remains the next milestone.`,
+      },
+      tryIt: {
+        question: p.q,
+        choices: p.choices,
+        answer: p.answer,
+        answerType: 'choice',
+        answerDisplay: p.display,
+        steps: p.steps,
+        whyItMatters:
+          `Understanding the nuance between "quantum advantage" and "quantum utility" ` +
+          `helps you evaluate claims critically and understand the true state of the field.`,
+      },
+    };
+  },
+},
+
+fault_tolerance_path: {
+  generate(difficulty, variation) {
+    const items = {
+      physical_per_logical: {
+        q: 'How many physical qubits per fault-tolerant logical qubit (surface codes)?',
+        choices: ['1-5', '10-50', '1,000-10,000', 'Exactly 2'],
+        answer: 'C', display: 'C) 1,000-10,000',
+        steps: ['Surface codes need large physical qubit arrays per logical qubit.', 'Estimate: 1,000-10,000 physical per logical.', 'Answer: C)'],
+      },
+      error_correction_idea: {
+        q: 'What is the basic idea behind quantum error correction?',
+        choices: ['Repeat and majority vote', 'Encode one logical qubit across many physical qubits', 'Classical double-checking', 'Cool to absolute zero'],
+        answer: 'B', display: 'B) Encode across many physical qubits',
+        steps: ['Spread quantum info across multiple physical qubits.', 'Syndrome measurements detect errors without collapsing state.', 'Answer: B)'],
+      },
+      shor_logical: {
+        q: 'How many logical qubits to run Shor\'s on RSA-2048?',
+        choices: ['About 50', 'About 4,000', 'About 10', 'About 1 million'],
+        answer: 'B', display: 'B) About 4,000',
+        steps: ['Shor\'s for RSA-2048 needs ~4,000 logical qubits (Gidney & Ekera, 2021).', 'Answer: B)'],
+      },
+      total_physical: {
+        q: 'Total physical qubits needed to factor RSA-2048?',
+        choices: ['About 10,000', 'About 100,000', 'Several million to tens of millions', 'About 1,000'],
+        answer: 'C', display: 'C) Several million to tens of millions',
+        steps: ['~4,000 logical x ~1,000-10,000 physical each = millions total.', 'Answer: C)'],
+      },
+      timeline: {
+        q: 'When might fault-tolerant quantum computers be available?',
+        choices: ['They exist today', 'By 2027', 'Likely 2030s or later', 'Mathematically impossible'],
+        answer: 'C', display: 'C) Likely 2030s or later',
+        steps: ['Google Willow (2024) showed below-threshold error correction.', 'Commercial fault tolerance expected in the 2030s.', 'Answer: C)'],
+      },
+      surface_code: {
+        q: 'What is the surface code?',
+        choices: ['A programming language', 'A QEC code with qubits on a 2D grid', 'A quantum encryption method', 'A classical error correction code'],
+        answer: 'B', display: 'B) A QEC code with qubits on a 2D grid',
+        steps: ['Surface code: 2D lattice of physical qubits, error threshold ~1%.', 'Answer: B)'],
+      },
+    };
+
+    const poolMap = {
+      physical_to_logical: ['physical_per_logical', 'error_correction_idea'],
+      shor_requirements: ['shor_logical'],
+      total_physical: ['total_physical', 'timeline', 'surface_code'],
+    };
+    const pool = poolMap[variation] || ['physical_per_logical', 'shor_logical', 'total_physical'];
+
+    const wKey = pool[randInt(0, pool.length - 1)];
+    let pKey;
+    do { pKey = pool[randInt(0, pool.length - 1)]; } while (pKey === wKey && pool.length > 1);
+    const w = items[wKey], p = items[pKey];
+
+    const teachingMap = {
+      physical_to_logical:
+        `The path from today's noisy qubits to useful fault-tolerant quantum computers ` +
+        `requires quantum error correction (QEC).\n\n` +
+        `The basic idea: encode one "logical" qubit across many "physical" qubits. ` +
+        `Errors on individual physical qubits can be detected and corrected without ` +
+        `destroying the quantum information (using syndrome measurements).\n\n` +
+        `The surface code — the leading QEC scheme — requires roughly 1,000-10,000 ` +
+        `physical qubits per logical qubit, depending on the physical error rate.`,
+      shor_requirements:
+        `To run Shor's algorithm on RSA-2048 (the gold standard benchmark), you need ` +
+        `approximately 4,000 error-corrected logical qubits.\n\n` +
+        `This estimate comes from Gidney and Ekera (2021), who optimized the circuit ` +
+        `implementation. The qubits are used for modular exponentiation, the quantum ` +
+        `Fourier transform, and ancilla operations.\n\n` +
+        `4,000 logical qubits may sound small, but remember: each one requires ` +
+        `thousands of physical qubits for error correction.`,
+      total_physical:
+        `Putting it all together:\n\n` +
+        `- Shor's on RSA-2048: ~4,000 logical qubits\n` +
+        `- Error correction: ~1,000-10,000 physical per logical\n` +
+        `- Total: ~4 million to 20+ million physical qubits\n\n` +
+        `Current state: ~1,000 physical qubits (2025)\n` +
+        `Gap: ~1,000-10,000x more qubits needed\n\n` +
+        `Google's Willow chip (2024) showed below-threshold error correction — proving ` +
+        `the concept works. But scaling to millions of qubits is a massive engineering ` +
+        `challenge. Most experts expect commercially useful fault tolerance in the 2030s.`,
+    };
+
+    return {
+      teachingText: teachingMap[variation] || teachingMap['physical_to_logical'],
+      workedExample: {
+        problem: w.q,
+        steps: [...w.steps],
+        insight: `The gap between current NISQ devices (~1,000 qubits) and fault-tolerant machines (~millions) defines the central engineering challenge of quantum computing.`,
+      },
+      tryIt: {
+        question: p.q,
+        choices: p.choices,
+        answer: p.answer,
+        answerType: 'choice',
+        answerDisplay: p.display,
+        steps: p.steps,
+        whyItMatters:
+          `Understanding the scale of the fault-tolerance challenge gives you a realistic ` +
+          `picture of the quantum computing timeline — not hype, not pessimism, just engineering reality.`,
+      },
+    };
+  },
+},
+
+graduation: {
+  generate(difficulty, variation) {
+    const items = {
+      next_step: {
+        q: 'You\'ve completed Quantum Primer! Which resource would you explore first?',
+        choices: [
+          'IBM Qiskit — Python SDK with real hardware access',
+          'Google Cirq — Python framework for NISQ algorithms',
+          'Xanadu PennyLane — quantum machine learning',
+          'Research papers on arXiv quant-ph',
+        ],
+        answer: 'A', display: 'A) IBM Qiskit (all are great choices!)',
+        steps: ['All four are excellent.', 'Qiskit has the largest community and free hardware.', 'Answer: A)'],
+      },
+    };
+
+    const w = items['next_step'], p = items['next_step'];
+
+    return {
+      teachingText:
+        `Congratulations — you've completed Quantum Primer!\n\n` +
+        `You now understand the mathematical foundations (vectors, complex numbers, ` +
+        `matrices), the core quantum concepts (superposition, entanglement, measurement), ` +
+        `quantum gates and circuits, and even real algorithms (Deutsch-Jozsa, Grover's, ` +
+        `Shor's).\n\n` +
+        `You also understand the current landscape: NISQ devices, the race for quantum ` +
+        `advantage, and the long road to fault tolerance.\n\n` +
+        `The next step is to write and run real quantum code. Here are your best options:\n\n` +
+        `- IBM Qiskit (qiskit.org) — the most popular open-source quantum SDK, with free ` +
+        `access to real quantum hardware via IBM Quantum\n` +
+        `- Google Cirq (quantumai.google/cirq) — great for NISQ algorithms research\n` +
+        `- Xanadu PennyLane (pennylane.ai) — the go-to for quantum machine learning\n` +
+        `- arXiv quant-ph — stay current with the latest research papers`,
+      workedExample: {
+        problem: 'Which resource has the largest beginner community and free hardware access?',
+        steps: ['IBM Qiskit has the largest community, most tutorials, and free quantum hardware.', 'Answer: IBM Qiskit'],
+        insight: `You don't need a quantum computer to start — all these frameworks include simulators you can run on your laptop today.`,
+      },
+      tryIt: {
+        question: p.q,
+        choices: p.choices,
+        answer: p.answer,
+        answerType: 'choice',
+        answerDisplay: p.display,
+        steps: p.steps,
+        whyItMatters:
+          `You've built a solid foundation. The quantum revolution is still in its early ` +
+          `days — the skills you've learned here put you ahead of the curve. Go build something!`,
+      },
+    };
+  },
+},
+
 };

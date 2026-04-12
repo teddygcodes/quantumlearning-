@@ -659,4 +659,614 @@ export const CHAPTERS = [
       },
     ],
   },
+
+  // ── Chapter 12: Rotation Gates ────────────────────────────────────────────
+
+  {
+    id: 12,
+    title: 'Rotation Gates',
+    color: 'var(--ch12)',
+    darkColor: 'var(--ch12-dk)',
+    problemTypes: ['bloch_identification', 'rz_apply', 'rx_apply', 'ry_apply', 'euler_decompose'],
+    quizCount: 8,
+    quizPass: 6,
+    description: 'Rotations around the Bloch sphere — Rx, Ry, Rz — give precise control over qubit states.',
+    lessonSteps: [
+      {
+        title: 'The Bloch Sphere',
+        problemType: 'bloch_identification',
+        progression: [
+          { difficulty: 1, variation: 'basic' },
+          { difficulty: 1, variation: 'basic' },
+          { difficulty: 2, variation: 'basic' },
+        ],
+      },
+      {
+        title: 'Rz — Rotation Around Z',
+        problemType: 'rz_apply',
+        progression: [
+          { difficulty: 1, variation: 'basic' },
+          { difficulty: 1, variation: 'basic' },
+          { difficulty: 2, variation: 'basic' },
+        ],
+      },
+      {
+        title: 'Rx — Rotation Around X',
+        problemType: 'rx_apply',
+        progression: [
+          { difficulty: 1, variation: 'basic' },
+          { difficulty: 1, variation: 'basic' },
+          { difficulty: 2, variation: 'basic' },
+        ],
+      },
+      {
+        title: 'Ry — Rotation Around Y',
+        problemType: 'ry_apply',
+        progression: [
+          { difficulty: 1, variation: 'basic' },
+          { difficulty: 1, variation: 'basic' },
+          { difficulty: 2, variation: 'basic' },
+        ],
+      },
+      {
+        title: 'Euler Decomposition',
+        problemType: 'euler_decompose',
+        progression: [
+          { difficulty: 1, variation: 'basic' },
+          { difficulty: 1, variation: 'basic' },
+          { difficulty: 2, variation: 'basic' },
+        ],
+      },
+    ],
+  },
+
+  // ── Chapter 13: Phase Gates ───────────────────────────────────────────────
+
+  {
+    id: 13,
+    title: 'Phase Gates',
+    color: 'var(--ch13)',
+    darkColor: 'var(--ch13-dk)',
+    problemTypes: ['s_gate_apply', 's_dagger_apply', 't_gate_apply', 't_dagger_apply', 'phase_family'],
+    quizCount: 8,
+    quizPass: 6,
+    description: 'S, T, and their daggers — the phase gates that enable fault-tolerant quantum computing.',
+    lessonSteps: [
+      {
+        title: 'The S Gate',
+        problemType: 's_gate_apply',
+        progression: [
+          { difficulty: 1, variation: 'basic' },
+          { difficulty: 1, variation: 'basic' },
+          { difficulty: 2, variation: 'basic' },
+        ],
+      },
+      {
+        title: 'S† (S-Dagger)',
+        problemType: 's_dagger_apply',
+        progression: [
+          { difficulty: 1, variation: 'basic' },
+          { difficulty: 1, variation: 'basic' },
+          { difficulty: 2, variation: 'basic' },
+        ],
+      },
+      {
+        title: 'The T Gate',
+        problemType: 't_gate_apply',
+        progression: [
+          { difficulty: 1, variation: 'basic' },
+          { difficulty: 1, variation: 'basic' },
+          { difficulty: 2, variation: 'basic' },
+        ],
+      },
+      {
+        title: 'T† (T-Dagger)',
+        problemType: 't_dagger_apply',
+        progression: [
+          { difficulty: 1, variation: 'basic' },
+          { difficulty: 1, variation: 'basic' },
+          { difficulty: 2, variation: 'basic' },
+        ],
+      },
+      {
+        title: 'The Phase Family',
+        problemType: 'phase_family',
+        progression: [
+          { difficulty: 1, variation: 'basic' },
+          { difficulty: 1, variation: 'sequence_to_gate' },
+          { difficulty: 2, variation: 'find_angle' },
+        ],
+      },
+    ],
+  },
+
+  // ── Chapter 14: Multi-Qubit Gates ─────────────────────────────────────────
+
+  {
+    id: 14,
+    title: 'Multi-Qubit Gates',
+    color: 'var(--ch14)',
+    darkColor: 'var(--ch14-dk)',
+    problemTypes: ['cz_apply', 'swap_apply', 'toffoli_apply', 'controlled_gate'],
+    quizCount: 10,
+    quizPass: 8,
+    description: 'CZ, SWAP, Toffoli, and controlled-U gates — the multi-qubit operations that enable real quantum algorithms.',
+    lessonSteps: [
+      {
+        title: 'The CZ Gate',
+        problemType: 'cz_apply',
+        progression: [
+          { difficulty: 1, variation: 'basic_00' },
+          { difficulty: 1, variation: 'basic_11' },
+          { difficulty: 2, variation: 'superposition' },
+          { difficulty: 2, variation: 'symmetry' },
+        ],
+      },
+      {
+        title: 'The SWAP Gate',
+        problemType: 'swap_apply',
+        progression: [
+          { difficulty: 1, variation: 'basic_basis' },
+          { difficulty: 1, variation: 'both_same' },
+          { difficulty: 2, variation: 'superposition' },
+          { difficulty: 2, variation: 'three_cnots' },
+        ],
+      },
+      {
+        title: 'The Toffoli Gate',
+        problemType: 'toffoli_apply',
+        progression: [
+          { difficulty: 1, variation: 'both_controls_1' },
+          { difficulty: 1, variation: 'one_control_0' },
+          { difficulty: 2, variation: 'both_controls_0' },
+          { difficulty: 2, variation: 'superposition_controls' },
+        ],
+      },
+      {
+        title: 'Controlled-U Gates',
+        problemType: 'controlled_gate',
+        progression: [
+          { difficulty: 1, variation: 'controlled_h' },
+          { difficulty: 1, variation: 'controlled_s' },
+          { difficulty: 2, variation: 'controlled_vs_uncontrolled' },
+          { difficulty: 2, variation: 'controlled_vs_uncontrolled' },
+        ],
+      },
+    ],
+  },
+
+  // ── Chapter 15: Quantum Teleportation ─────────────────────────────────────
+
+  {
+    id: 15,
+    title: 'Quantum Teleportation',
+    color: 'var(--ch15)',
+    darkColor: 'var(--ch15-dk)',
+    problemTypes: ['teleportation_concept', 'teleport_setup', 'teleport_alice_ops', 'teleport_measurement', 'teleport_correction'],
+    quizCount: 10,
+    quizPass: 8,
+    description: 'Teleport a quantum state using entanglement and classical communication — the crown jewel of quantum protocols.',
+    lessonSteps: [
+      {
+        title: 'Why Teleportation?',
+        problemType: 'teleportation_concept',
+        progression: [
+          { difficulty: 1, variation: 'why_not_copy' },
+          { difficulty: 1, variation: 'why_not_measure' },
+          { difficulty: 2, variation: 'what_is_shared' },
+        ],
+      },
+      {
+        title: 'Setting Up the Initial State',
+        problemType: 'teleport_setup',
+        progression: [
+          { difficulty: 1, variation: 'basic' },
+          { difficulty: 1, variation: 'basic' },
+          { difficulty: 2, variation: 'general' },
+          { difficulty: 2, variation: 'general' },
+        ],
+      },
+      {
+        title: 'Alice\'s CNOT',
+        problemType: 'teleport_alice_ops',
+        progression: [
+          { difficulty: 1, variation: 'cnot_step' },
+          { difficulty: 1, variation: 'cnot_step' },
+          { difficulty: 2, variation: 'hadamard_step' },
+          { difficulty: 2, variation: 'hadamard_step' },
+        ],
+      },
+      {
+        title: 'Alice\'s Full Circuit',
+        problemType: 'teleport_alice_ops',
+        progression: [
+          { difficulty: 1, variation: 'hadamard_step' },
+          { difficulty: 2, variation: 'full_alice' },
+          { difficulty: 2, variation: 'full_alice' },
+        ],
+      },
+      {
+        title: 'Bob\'s Correction Table',
+        problemType: 'teleport_measurement',
+        progression: [
+          { difficulty: 1, variation: 'outcome_00' },
+          { difficulty: 1, variation: 'outcome_01' },
+          { difficulty: 2, variation: 'outcome_10' },
+          { difficulty: 2, variation: 'outcome_11' },
+        ],
+      },
+      {
+        title: 'Applying X Correction',
+        problemType: 'teleport_correction',
+        progression: [
+          { difficulty: 1, variation: 'apply_x' },
+          { difficulty: 1, variation: 'apply_x' },
+          { difficulty: 2, variation: 'apply_z' },
+          { difficulty: 2, variation: 'apply_z' },
+        ],
+      },
+      {
+        title: 'Full Protocol',
+        problemType: 'teleport_correction',
+        progression: [
+          { difficulty: 1, variation: 'apply_z' },
+          { difficulty: 2, variation: 'apply_zx' },
+          { difficulty: 2, variation: 'full_protocol' },
+          { difficulty: 3, variation: 'full_protocol' },
+        ],
+      },
+    ],
+  },
+
+  // ── Chapter 16: Deutsch-Jozsa Algorithm ──────────────────────────────────
+
+  {
+    id: 16,
+    title: 'Deutsch-Jozsa Algorithm',
+    color: 'var(--ch16)',
+    darkColor: 'var(--ch16-dk)',
+    problemTypes: ['dj_problem_type', 'dj_oracle', 'dj_trace', 'phase_kickback', 'dj_generalize'],
+    quizCount: 8,
+    quizPass: 6,
+    description: 'The first quantum algorithm to show exponential speedup — determine constant vs balanced with one query.',
+    lessonSteps: [
+      {
+        title: 'Constant vs Balanced Functions',
+        problemType: 'dj_problem_type',
+        progression: [
+          { difficulty: 1, variation: 'identify_constant' },
+          { difficulty: 1, variation: 'identify_balanced' },
+          { difficulty: 2, variation: 'classical_queries' },
+          { difficulty: 2, variation: 'quantum_queries' },
+        ],
+      },
+      {
+        title: 'Oracle Circuits',
+        problemType: 'dj_oracle',
+        progression: [
+          { difficulty: 1, variation: 'constant_0' },
+          { difficulty: 1, variation: 'constant_1' },
+          { difficulty: 2, variation: 'balanced_identity' },
+          { difficulty: 2, variation: 'balanced_not' },
+        ],
+      },
+      {
+        title: 'Phase Kickback',
+        problemType: 'phase_kickback',
+        progression: [
+          { difficulty: 1, variation: 'basic' },
+          { difficulty: 1, variation: 'constant_phase' },
+          { difficulty: 2, variation: 'balanced_phase' },
+          { difficulty: 2, variation: 'interference' },
+        ],
+      },
+      {
+        title: 'Tracing the DJ Circuit: Setup',
+        problemType: 'dj_trace',
+        progression: [
+          { difficulty: 1, variation: 'after_hadamards' },
+          { difficulty: 1, variation: 'after_hadamards' },
+          { difficulty: 2, variation: 'after_oracle' },
+        ],
+      },
+      {
+        title: 'Tracing the DJ Circuit: Constant Oracle',
+        problemType: 'dj_trace',
+        progression: [
+          { difficulty: 1, variation: 'after_oracle' },
+          { difficulty: 2, variation: 'constant_trace' },
+          { difficulty: 2, variation: 'constant_trace' },
+        ],
+      },
+      {
+        title: 'Tracing the DJ Circuit: Balanced Oracle',
+        problemType: 'dj_trace',
+        progression: [
+          { difficulty: 1, variation: 'after_oracle' },
+          { difficulty: 2, variation: 'balanced_trace' },
+          { difficulty: 2, variation: 'balanced_trace' },
+        ],
+      },
+      {
+        title: 'Generalizing to n Bits',
+        problemType: 'dj_generalize',
+        progression: [
+          { difficulty: 1, variation: 'classical_cost' },
+          { difficulty: 1, variation: 'quantum_cost' },
+          { difficulty: 2, variation: 'speedup_factor' },
+        ],
+      },
+    ],
+  },
+
+  // ── Chapter 17: Grover's Search Algorithm ─────────────────────────────────
+
+  {
+    id: 17,
+    title: "Grover's Search",
+    color: 'var(--ch17)',
+    darkColor: 'var(--ch17-dk)',
+    problemTypes: ['grover_problem', 'grover_oracle', 'grover_diffusion', 'grover_full', 'grover_optimality'],
+    quizCount: 8,
+    quizPass: 6,
+    description: "Grover's algorithm searches an unsorted database in O(√N) — a quadratic speedup using amplitude amplification.",
+    lessonSteps: [
+      {
+        title: 'Classical vs Quantum Search',
+        problemType: 'grover_problem',
+        progression: [
+          { difficulty: 1, variation: 'classical_cost' },
+          { difficulty: 1, variation: 'quantum_cost' },
+          { difficulty: 2, variation: 'speedup' },
+        ],
+      },
+      {
+        title: 'The Oracle',
+        problemType: 'grover_oracle',
+        progression: [
+          { difficulty: 1, variation: 'basic_2qubit' },
+          { difficulty: 1, variation: 'mark_specific' },
+          { difficulty: 2, variation: 'phase_flip_only' },
+        ],
+      },
+      {
+        title: 'Computing the Mean',
+        problemType: 'grover_diffusion',
+        progression: [
+          { difficulty: 1, variation: 'compute_mean' },
+          { difficulty: 1, variation: 'reflect_about_mean' },
+          { difficulty: 2, variation: 'amplitude_growth' },
+        ],
+      },
+      {
+        title: 'The Diffusion Operator',
+        problemType: 'grover_diffusion',
+        progression: [
+          { difficulty: 1, variation: 'compute_mean' },
+          { difficulty: 2, variation: 'after_one_iteration' },
+          { difficulty: 2, variation: 'after_one_iteration' },
+        ],
+      },
+      {
+        title: 'Full Algorithm on 2 Qubits',
+        problemType: 'grover_full',
+        progression: [
+          { difficulty: 1, variation: 'two_qubit' },
+          { difficulty: 2, variation: 'optimal_iterations' },
+          { difficulty: 2, variation: 'probability_after_k' },
+          { difficulty: 3, variation: 'too_many_iterations' },
+        ],
+      },
+      {
+        title: 'Understanding the Speedup',
+        problemType: 'grover_optimality',
+        progression: [
+          { difficulty: 1, variation: 'not_exponential' },
+          { difficulty: 1, variation: 'compare_dj' },
+          { difficulty: 2, variation: 'practical_impact' },
+        ],
+      },
+    ],
+  },
+
+  // ── Chapter 18: Quantum Error Correction ──────────────────────────────────
+
+  {
+    id: 18,
+    title: 'Quantum Error Correction',
+    color: 'var(--ch18)',
+    darkColor: 'var(--ch18-dk)',
+    problemTypes: ['error_concept', 'bit_flip_code', 'phase_flip_code', 'shor_code', 'threshold_concept'],
+    quizCount: 8,
+    quizPass: 6,
+    description: 'Protecting quantum information from noise — the key to building practical quantum computers.',
+    lessonSteps: [
+      {
+        title: 'Types of Quantum Errors',
+        problemType: 'error_concept',
+        progression: [
+          { difficulty: 1, variation: 'bit_flip' },
+          { difficulty: 1, variation: 'phase_flip' },
+          { difficulty: 2, variation: 'why_no_copy' },
+          { difficulty: 2, variation: 'classical_vs_quantum' },
+        ],
+      },
+      {
+        title: 'The 3-Qubit Bit-Flip Code',
+        problemType: 'bit_flip_code',
+        progression: [
+          { difficulty: 1, variation: 'encode' },
+          { difficulty: 1, variation: 'detect_error' },
+          { difficulty: 2, variation: 'correct_error' },
+          { difficulty: 2, variation: 'no_error' },
+        ],
+      },
+      {
+        title: 'The Phase-Flip Code',
+        problemType: 'phase_flip_code',
+        progression: [
+          { difficulty: 1, variation: 'encode' },
+          { difficulty: 1, variation: 'detect_phase_error' },
+          { difficulty: 2, variation: 'relationship_to_bit_flip' },
+        ],
+      },
+      {
+        title: 'The 9-Qubit Shor Code',
+        problemType: 'shor_code',
+        progression: [
+          { difficulty: 1, variation: 'structure' },
+          { difficulty: 1, variation: 'bit_flip_layer' },
+          { difficulty: 2, variation: 'phase_flip_layer' },
+          { difficulty: 2, variation: 'combined_protection' },
+        ],
+      },
+      {
+        title: 'The Threshold Theorem',
+        problemType: 'threshold_concept',
+        progression: [
+          { difficulty: 1, variation: 'overhead' },
+          { difficulty: 1, variation: 'threshold' },
+          { difficulty: 2, variation: 'current_state' },
+        ],
+      },
+    ],
+  },
+
+  // ── Chapter 19: Shor's Algorithm ────────────────────────────────────────────
+
+  {
+    id: 19,
+    title: "Shor's Algorithm",
+    color: 'var(--ch19)',
+    darkColor: 'var(--ch19-dk)',
+    problemTypes: ['factoring_problem', 'period_finding', 'period_to_factors', 'qft_concept', 'shor_full'],
+    quizCount: 8,
+    quizPass: 6,
+    description: "Shor's algorithm factors integers in polynomial time — an exponential speedup that breaks RSA encryption.",
+    lessonSteps: [
+      {
+        title: 'The Factoring Problem',
+        problemType: 'factoring_problem',
+        progression: [
+          { difficulty: 1, variation: 'small_factor' },
+          { difficulty: 1, variation: 'why_hard' },
+          { difficulty: 2, variation: 'rsa_connection' },
+        ],
+      },
+      {
+        title: 'Classical vs Quantum Factoring',
+        problemType: 'factoring_problem',
+        progression: [
+          { difficulty: 1, variation: 'classical_time' },
+          { difficulty: 2, variation: 'rsa_connection' },
+          { difficulty: 2, variation: 'classical_time' },
+        ],
+      },
+      {
+        title: 'Modular Exponentiation',
+        problemType: 'period_finding',
+        progression: [
+          { difficulty: 1, variation: 'compute_powers' },
+          { difficulty: 1, variation: 'compute_powers' },
+          { difficulty: 2, variation: 'compute_powers' },
+        ],
+      },
+      {
+        title: 'Finding the Period',
+        problemType: 'period_finding',
+        progression: [
+          { difficulty: 1, variation: 'find_period' },
+          { difficulty: 2, variation: 'small_example' },
+          { difficulty: 2, variation: 'small_example' },
+        ],
+      },
+      {
+        title: 'From Period to Factors',
+        problemType: 'period_to_factors',
+        progression: [
+          { difficulty: 1, variation: 'basic' },
+          { difficulty: 1, variation: 'gcd_step' },
+          { difficulty: 2, variation: 'different_a' },
+          { difficulty: 2, variation: 'why_even' },
+        ],
+      },
+      {
+        title: 'The Quantum Fourier Transform',
+        problemType: 'qft_concept',
+        progression: [
+          { difficulty: 1, variation: 'qft_analogy' },
+          { difficulty: 1, variation: 'classical_vs_quantum' },
+          { difficulty: 2, variation: 'where_speedup' },
+        ],
+      },
+      {
+        title: 'The Full Algorithm',
+        problemType: 'shor_full',
+        progression: [
+          { difficulty: 1, variation: 'steps_in_order' },
+          { difficulty: 1, variation: 'quantum_vs_classical_steps' },
+          { difficulty: 2, variation: 'complexity' },
+          { difficulty: 2, variation: 'implications' },
+        ],
+      },
+    ],
+  },
+
+  // ── Chapter 20: The Landscape — Where Quantum Computing Is Now ──────────────
+
+  {
+    id: 20,
+    title: 'The Landscape',
+    color: 'var(--ch20)',
+    darkColor: 'var(--ch20-dk)',
+    problemTypes: ['qubit_tech', 'nisq_concept', 'quantum_advantage', 'fault_tolerance_path'],
+    quizCount: 8,
+    quizPass: 6,
+    description: 'Where quantum computing stands today — hardware, NISQ limits, advantage claims, and the road to fault tolerance.',
+    lessonSteps: [
+      {
+        title: 'Qubit Technologies',
+        problemType: 'qubit_tech',
+        progression: [
+          { difficulty: 1, variation: 'match_company' },
+          { difficulty: 1, variation: 'tradeoffs' },
+          { difficulty: 2, variation: 'current_scale' },
+        ],
+      },
+      {
+        title: 'The NISQ Era',
+        problemType: 'nisq_concept',
+        progression: [
+          { difficulty: 1, variation: 'define_nisq' },
+          { difficulty: 1, variation: 'why_not_shor' },
+          { difficulty: 2, variation: 'what_works' },
+        ],
+      },
+      {
+        title: 'Quantum Advantage',
+        problemType: 'quantum_advantage',
+        progression: [
+          { difficulty: 1, variation: 'google_claim' },
+          { difficulty: 1, variation: 'debate' },
+          { difficulty: 2, variation: 'practical_vs_theoretical' },
+        ],
+      },
+      {
+        title: 'The Road to Fault Tolerance',
+        problemType: 'fault_tolerance_path',
+        progression: [
+          { difficulty: 1, variation: 'physical_to_logical' },
+          { difficulty: 1, variation: 'shor_requirements' },
+          { difficulty: 2, variation: 'total_physical' },
+        ],
+      },
+      {
+        title: 'Graduation',
+        problemType: 'graduation',
+        progression: [
+          { difficulty: 1, variation: 'basic' },
+        ],
+      },
+    ],
+  },
 ];

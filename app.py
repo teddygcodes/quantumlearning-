@@ -110,11 +110,16 @@ async def read_answer(req: ReadAnswerRequest):
 
     answer_type = req.problem.get("answerType", "numeric")
     format_hints = {
-        "numeric": 'a number, e.g. "42" or "-3" or "1.41"',
-        "vector":  'two numbers separated by comma, e.g. "3, 4" or "-2, 5"',
-        "complex": 'a complex number, e.g. "3 + 4i" or "2 - i" or "5"',
-        "matrix":  'four numbers as two rows, e.g. "1 2; 3 4"',
-        "yesno":   '"yes" or "no"',
+        "numeric":   'a number, e.g. "42" or "-3" or "1.41"',
+        "vector":    'two numbers separated by comma, e.g. "3, 4" or "-2, 5"',
+        "vector4":   'four numbers separated by comma, e.g. "0.71, 0, 0, 0.71"',
+        "vector8":   'eight numbers separated by comma, e.g. "1, 0, 0, 0, 0, 0, 0, 0"',
+        "complex":   'a complex number, e.g. "3 + 4i" or "2 - i" or "5"',
+        "matrix":    'four numbers as two rows, e.g. "1 2; 3 4"',
+        "yesno":     '"yes" or "no"',
+        "angle":     'an angle in terms of pi, e.g. "pi/4" or "3pi/2" or "0"',
+        "gate_name": 'a gate name, e.g. "X" or "Z" or "CNOT" or "S"',
+        "choice":    'a letter A, B, C, or D',
     }
 
     prompt = (
