@@ -1271,6 +1271,91 @@ code { font-family: var(--mono); font-size: 14px; background: var(--border); pad
   h2 { font-size: 22px; }
 }
 
+/* ── Custom Keyboard ── */
+.custom-kb {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 900;
+  background: var(--surface);
+  border-top: 2px solid var(--border);
+  padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+  transform: translateY(100%);
+  transition: transform 0.25s ease;
+}
+.custom-kb.kb-visible {
+  transform: translateY(0);
+}
+.kb-inner {
+  max-width: 400px;
+  margin: 0 auto;
+}
+.kb-row {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 6px;
+}
+.kb-key {
+  flex: 1;
+  max-width: 80px;
+  padding: 14px 0;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  transition: background 0.1s;
+}
+.kb-key:active {
+  background: var(--border);
+}
+.kb-key.kb-wide {
+  flex: 2;
+  max-width: 166px;
+}
+.kb-backspace {
+  flex: 1;
+  background: var(--border);
+  font-size: 22px;
+}
+.kb-submit {
+  flex: 2;
+  max-width: 166px;
+  background: var(--green);
+  color: #fff;
+  font-family: var(--sans);
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.kb-submit:active {
+  background: color-mix(in srgb, var(--green) 80%, #000);
+}
+/* Push content up when keyboard is visible */
+body.kb-active .lesson-wrap,
+body.kb-active .problem-card {
+  padding-bottom: 260px;
+}
+/* Yes/No choice buttons */
+.yesno-grid {
+  display: flex;
+  gap: 12px;
+}
+.yesno-grid .choice-btn {
+  flex: 1;
+  justify-content: center;
+  font-size: 18px;
+  padding: 16px;
+}
+
 /* ── Prevent zoom on input focus (iOS) ── */
 @media screen and (-webkit-min-device-pixel-ratio: 0) {
   select, textarea, input {

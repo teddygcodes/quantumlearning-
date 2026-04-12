@@ -11,6 +11,7 @@ import { CHAPTERS } from './chapters.js?v=13';
 import { generateRandomProblem, generateProblem, checkAnswer } from './problems.js?v=13';
 import { TEMPLATES } from './templates.js?v=9';
 import { CanvasManager } from './canvas.js';
+import * as KB from './keyboard.js?v=1';
 
 // ── State ──────────────────────────────────────────────────────────────────
 
@@ -55,7 +56,7 @@ const root = document.getElementById('app');
 // Safe: only called with our own code-generated HTML strings, never user input.
 function setContent(html) { root.innerHTML = html; }
 
-function navigate(path) { window.location.hash = '#' + path; }
+function navigate(path) { KB.hide(); window.location.hash = '#' + path; }
 
 // ── Router ─────────────────────────────────────────────────────────────────
 
@@ -425,17 +426,29 @@ function renderLesson(chapterId) {
                 `).join('')}
               </div>
               <input type="hidden" id="lesson-ans" value="" />
+            ` : problem.answerType === 'yesno' ? `
+              <div id="lesson-choices" class="yesno-grid">
+                <button class="choice-btn" data-choice="yes" onclick="window.__selectChoice(this)">
+                  <span class="choice-letter">Y</span> Yes
+                </button>
+                <button class="choice-btn" data-choice="no" onclick="window.__selectChoice(this)">
+                  <span class="choice-letter">N</span> No
+                </button>
+              </div>
+              <input type="hidden" id="lesson-ans" value="" />
             ` : `
               <input class="answer-input" id="lesson-ans" type="text"
                      placeholder="Your answer…"
+                     inputmode="none" readonly
                      autocomplete="off" autocorrect="off" spellcheck="false"
-                     enterkeyhint="done"
+                     onfocus="window.__showKB(this)"
                      onkeydown="if(event.key==='Enter'){window.__lessonSubmit();this.blur();}" />
               <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">${hints[problem.answerType] || ''}</div>
             `}
           </div>
 
-          <button class="btn btn-green btn-full" id="lesson-check" onclick="window.__lessonSubmit();">
+          <button class="btn btn-green btn-full" id="lesson-check" onclick="window.__lessonSubmit();"
+            ${problem.answerType === 'choice' || problem.answerType === 'yesno' ? 'style="display:none"' : ''}>
             Check Answer
           </button>
 
@@ -516,6 +529,19 @@ function renderLesson(chapterId) {
       window.__lessonSubmit();
     };
 
+    // ── Custom keyboard ────────────────────────────────────────
+    window.__showKB = (input) => {
+      KB.show(input, problem.answerType, () => window.__lessonSubmit());
+    };
+
+    // Auto-show keyboard for text-input answer types
+    requestAnimationFrame(() => {
+      const inp = document.getElementById('lesson-ans');
+      if (inp && inp.type !== 'hidden') {
+        inp.addEventListener('click', () => window.__showKB(inp));
+      }
+    });
+
     // ── Answer handling ──────────────────────────────────────────
 
     window.__lessonSubmit = () => {
@@ -523,6 +549,7 @@ function renderLesson(chapterId) {
       const inp   = document.getElementById('lesson-ans');
       const value = inp?.value?.trim();
       if (!value) return;
+      KB.hide();
 
       const { correct, formattedAnswer } = checkAnswer(value, problem);
       answered = true;
@@ -553,6 +580,7 @@ function renderLesson(chapterId) {
     };
 
     window.__lessonNext = () => {
+      KB.hide();
       canvas?.clear();
       if (!isLastSub) {
         // More sub-problems in this concept
@@ -576,6 +604,7 @@ function renderLesson(chapterId) {
     };
 
     window.__lessonRetry = () => {
+      KB.hide();
       retryCount++;
       answered = false;
 
@@ -790,8 +819,10 @@ function renderProblemScreen(chapterId, isQuiz) {
           <div id="answer-text-wrap" style="display:none;">
             <input class="answer-input" id="answer-input" type="text"
                    placeholder="Type your answer…"
+                   inputmode="none" readonly
                    autocomplete="off" autocorrect="off" spellcheck="false"
-                   enterkeyhint="done"
+                   onfocus="window.__showPracticeKB(this)"
+                   onclick="window.__showPracticeKB(this)"
                    onkeydown="if(event.key==='Enter'){window.__submit();this.blur();}" />
             <div style="font-size:11px;color:var(--text-muted);margin-top:6px;" id="hint-text"></div>
           </div>
@@ -934,20 +965,34 @@ function renderProblemScreen(chapterId, isQuiz) {
       hintEl.textContent = hints[problem.answerType] || '';
     }
 
-    // Handle choice-type problems in practice/quiz
+    // Handle choice/yesno/text problems in practice/quiz
     // Note: innerHTML used only with our own generated content (choice text from problem generators), never user input
     const choiceWrap = document.getElementById('practice-choice-wrap');
     const submitBtn = document.getElementById('btn-submit');
-    if (problem.answerType === 'choice' && problem.choices) {
+    KB.hide();
+    const isChoiceUI = (problem.answerType === 'choice' && problem.choices) || problem.answerType === 'yesno';
+    if (isChoiceUI) {
       if (choiceWrap) {
         choiceWrap.style.display = '';
         const grid = document.getElementById('practice-choices');
         if (grid) {
-          grid.innerHTML = problem.choices.map((c, i) => `
-            <button class="choice-btn" data-choice="${String.fromCharCode(65+i)}" onclick="window.__selectPracticeChoice(this)">
-              <span class="choice-letter">${String.fromCharCode(65+i)}</span> ${c}
-            </button>
-          `).join('');
+          if (problem.answerType === 'yesno') {
+            grid.innerHTML = `
+              <div class="yesno-grid">
+                <button class="choice-btn" data-choice="yes" onclick="window.__selectPracticeChoice(this)">
+                  <span class="choice-letter">Y</span> Yes
+                </button>
+                <button class="choice-btn" data-choice="no" onclick="window.__selectPracticeChoice(this)">
+                  <span class="choice-letter">N</span> No
+                </button>
+              </div>`;
+          } else {
+            grid.innerHTML = problem.choices.map((c, i) => `
+              <button class="choice-btn" data-choice="${String.fromCharCode(65+i)}" onclick="window.__selectPracticeChoice(this)">
+                <span class="choice-letter">${String.fromCharCode(65+i)}</span> ${c}
+              </button>
+            `).join('');
+          }
         }
         const ci = document.getElementById('practice-choice-input');
         if (ci) ci.value = '';
@@ -1015,6 +1060,11 @@ function renderProblemScreen(chapterId, isQuiz) {
     if (submit) submit.style.display = '';
   }
 
+  // Custom keyboard for practice/quiz text input
+  window.__showPracticeKB = (input) => {
+    if (problem) KB.show(input, problem.answerType, () => window.__submit());
+  };
+
   // Choice selection for practice/quiz
   window.__selectPracticeChoice = (btn) => {
     if (answered) return;
@@ -1030,8 +1080,9 @@ function renderProblemScreen(chapterId, isQuiz) {
 
     let value = '';
 
-    // Check for choice-type answer first
-    if (problem.answerType === 'choice') {
+    KB.hide();
+    // Check for choice/yesno answer first
+    if (problem.answerType === 'choice' || problem.answerType === 'yesno') {
       const ci = document.getElementById('practice-choice-input');
       value = ci?.value?.trim() || '';
       if (!value) return;
@@ -1306,6 +1357,7 @@ function renderProblemScreen(chapterId, isQuiz) {
       const inp = document.getElementById('answer-input');
       if (inp) inp.focus();
     } else {
+      KB.hide();
       if (canvasWrap) canvasWrap.style.display = '';
       if (miniTools)  miniTools.style.display  = 'flex';
       if (textWrap)   textWrap.style.display   = 'none';
