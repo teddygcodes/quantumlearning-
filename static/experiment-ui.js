@@ -25,9 +25,10 @@ export class GridCanvas {
     this._dragCb = null;
     this._dragEndCb = null;
     this._pointerDown = false;
+    this._onResizeCb = null;
 
     this._resize();
-    this._ro = new ResizeObserver(() => this._resize());
+    this._ro = new ResizeObserver(() => { this._resize(); if (this._onResizeCb) this._onResizeCb(); });
     this._ro.observe(canvasEl);
 
     // Pointer events for drag
@@ -90,6 +91,10 @@ export class GridCanvas {
     const cy = this.h / 2;
     return [(sx - cx) / u, (cy - sy) / u];
   }
+
+  // ── Resize callback (fires when canvas gets real dimensions) ──
+
+  onResize(callback) { this._onResizeCb = callback; }
 
   // ── Drag interaction ──
 
@@ -249,6 +254,52 @@ export class GridCanvas {
     ctx.lineTo(x2, y2);
     ctx.stroke();
     ctx.setLineDash([]);
+  }
+
+  /** Draw an arc in world coords (angles in radians, math convention) */
+  drawArc(cx, cy, r, startAngle, endAngle, color = '#fff', lineWidth = 1.5) {
+    const ctx = this.ctx;
+    const [sx, sy] = this.worldToScreen(cx, cy);
+    const rPx = r * this.unitPx;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth;
+    ctx.beginPath();
+    // Negate angles for canvas Y-flip, swap order and use counterclockwise
+    ctx.arc(sx, sy, rPx, -startAngle, -endAngle, true);
+    ctx.stroke();
+  }
+
+  /** Draw a closed polygon from world-coord points */
+  drawPolygon(points, strokeColor = null, fillColor = null, lineWidth = 2) {
+    if (points.length < 2) return;
+    const ctx = this.ctx;
+    ctx.beginPath();
+    const [x0, y0] = this.worldToScreen(points[0][0], points[0][1]);
+    ctx.moveTo(x0, y0);
+    for (let i = 1; i < points.length; i++) {
+      const [x, y] = this.worldToScreen(points[i][0], points[i][1]);
+      ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    if (fillColor) { ctx.fillStyle = fillColor; ctx.fill(); }
+    if (strokeColor) { ctx.strokeStyle = strokeColor; ctx.lineWidth = lineWidth; ctx.stroke(); }
+  }
+
+  /** Draw axis labels (e.g. "Re"/"Im" for complex plane) */
+  drawAxisLabels(xLabel, yLabel, color = 'rgba(255,255,255,0.5)') {
+    const ctx = this.ctx;
+    ctx.fillStyle = color;
+    ctx.font = '13px "Fira Code", monospace';
+    // x-axis label near right end
+    const [rx, ry] = this.worldToScreen(this.range[1] - 0.3, 0);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(xLabel, rx, ry + 8);
+    // y-axis label near top
+    const [tx, ty] = this.worldToScreen(0, this.range[1] - 0.3);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(yLabel, tx + 8, ty);
   }
 }
 

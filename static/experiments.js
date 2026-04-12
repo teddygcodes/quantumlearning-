@@ -13,7 +13,7 @@
  * They teach through free-form interaction and live feedback.
  */
 
-import { GridCanvas, PhysicsBeam, showToast, animateValue } from './experiment-ui.js?v=1';
+import { GridCanvas, PhysicsBeam, showToast, animateValue } from './experiment-ui.js?v=2';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -468,6 +468,7 @@ const experiment2 = {
       updateReadout();
     });
 
+    grid.onResize(() => { renderScene(); updateReadout(); });
     renderScene();
     updateReadout();
 
@@ -577,6 +578,7 @@ const experiment3 = {
       updateInfo();
     });
 
+    grid.onResize(() => { renderScene(); updateInfo(); });
     renderScene();
     updateInfo();
 
@@ -591,11 +593,519 @@ function fmtN(n) {
   return Number.isInteger(n) ? String(n) : n.toFixed(1);
 }
 
+function fmtComplex(re, im) {
+  const r = +re.toFixed(2);
+  const i = +im.toFixed(2);
+  if (i === 0) return `${r}`;
+  if (r === 0) return i === 1 ? 'i' : i === -1 ? '\u2212i' : `${i}i`;
+  const sign = i > 0 ? ' + ' : ' \u2212 ';
+  const ai = Math.abs(i) === 1 ? '' : Math.abs(i);
+  return `${r}${sign}${ai}i`;
+}
+
+function fmtAngle(rad) {
+  return (rad * 180 / Math.PI).toFixed(1) + '\u00B0';
+}
+
 function addLine(parent, text) {
   const div = document.createElement('div');
   div.textContent = text;
   parent.appendChild(div);
 }
+
+
+// ── Chapter 4: Complex Multiplier ───────────────────────────────────────────
+
+/**
+ * Ch 4 — Complex Multiplier (sandbox)
+ *
+ * Drag to place complex numbers on the complex plane. Multiply by i to see
+ * 90° rotations, or multiply by an arbitrary complex number to see rotation
+ * + scaling. The key insight: multiplication IS rotation.
+ */
+const experiment4 = {
+  title: 'Complex Multiplier',
+  subtitle: 'See how multiplication rotates the complex plane',
+  icon: '\uD83D\uDD04',
+
+  mount(container, { chapterColor, onComplete }) {
+    let z = { re: 2, im: 1 };
+    let multiplier = { re: 0, im: 1 };
+    let mode = 'i';           // 'i' | 'other'
+    let dragging = 'z';       // 'z' | 'multiplier'
+    let history = [];
+    let animating = false;
+    let completed = false;
+    let mulCount = 0;
+    let cancelAnim = null;
+
+    container.style.flexDirection = 'column';
+
+    const canvasWrap = document.createElement('div');
+    canvasWrap.className = 'experiment-canvas-wrap';
+    const canvasEl = document.createElement('canvas');
+    canvasWrap.appendChild(canvasEl);
+
+    const controlsDiv = document.createElement('div');
+    controlsDiv.className = 'experiment-controls';
+
+    container.append(canvasWrap, controlsDiv);
+
+    const grid = new GridCanvas(canvasEl, { range: [-5, 5] });
+
+    // ─ Readout ─
+    const readout = document.createElement('div');
+    readout.style.cssText = "font-family:'Fira Code',monospace;font-size:14px;line-height:2;color:var(--text-muted);";
+
+    // ─ Mode buttons ─
+    const modeRow = document.createElement('div');
+    modeRow.style.cssText = 'display:flex;gap:8px;';
+    const modeIBtn = makeBtn('\u00D7 i', 'btn btn-green');
+    modeIBtn.style.cssText += 'flex:1;';
+    const modeOtherBtn = makeBtn('\u00D7 other', 'btn btn-ghost');
+    modeOtherBtn.style.cssText += 'flex:1;';
+
+    modeIBtn.addEventListener('click', () => {
+      if (animating) return;
+      mode = 'i'; dragging = 'z';
+      modeIBtn.className = 'btn btn-green'; modeOtherBtn.className = 'btn btn-ghost';
+      multiplierSection.style.display = 'none';
+      dragRow.style.display = 'none';
+      renderScene(); updateReadout();
+    });
+    modeOtherBtn.addEventListener('click', () => {
+      if (animating) return;
+      mode = 'other';
+      modeOtherBtn.className = 'btn btn-green'; modeIBtn.className = 'btn btn-ghost';
+      multiplierSection.style.display = '';
+      dragRow.style.display = 'flex';
+      renderScene(); updateReadout();
+    });
+    modeRow.append(modeIBtn, modeOtherBtn);
+
+    // ─ Multiply button ─
+    const multiplyBtn = makeBtn('Multiply', 'btn');
+    multiplyBtn.style.cssText += `width:100%;padding:14px;font-size:16px;background:${chapterColor};color:#fff;border:none;border-bottom:4px solid rgba(0,0,0,0.2);`;
+    multiplyBtn.addEventListener('click', () => {
+      if (animating) return;
+      doMultiply();
+    });
+
+    // ─ Multiplier section (hidden in 'i' mode) ─
+    const multiplierSection = document.createElement('div');
+    multiplierSection.style.cssText = 'display:none;';
+    const mulReadout = document.createElement('div');
+    mulReadout.style.cssText = "font-family:'Fira Code',monospace;font-size:13px;color:var(--text-muted);margin-bottom:6px;";
+    const randomBtn = makeBtn('Random Multiplier', 'btn btn-ghost btn-full');
+    randomBtn.addEventListener('click', () => {
+      if (animating) return;
+      multiplier = { re: (rnd(-4, 4) || 1) * 0.5, im: (rnd(-4, 4) || 1) * 0.5 };
+      renderScene(); updateReadout();
+    });
+    multiplierSection.append(mulReadout, randomBtn);
+
+    // ─ Drag mode selector (hidden in 'i' mode) ─
+    const dragRow = document.createElement('div');
+    dragRow.style.cssText = 'display:none;gap:8px;';
+    const dragZBtn = makeBtn('Drag: z', 'btn btn-green');
+    dragZBtn.style.cssText += 'flex:1;';
+    const dragMBtn = makeBtn('Drag: multiplier', 'btn btn-ghost');
+    dragMBtn.style.cssText += 'flex:1;';
+    dragZBtn.addEventListener('click', () => {
+      dragging = 'z'; dragZBtn.className = 'btn btn-green'; dragMBtn.className = 'btn btn-ghost';
+    });
+    dragMBtn.addEventListener('click', () => {
+      dragging = 'multiplier'; dragMBtn.className = 'btn btn-green'; dragZBtn.className = 'btn btn-ghost';
+    });
+    dragRow.append(dragZBtn, dragMBtn);
+
+    // ─ Reset ─
+    const resetBtn = makeBtn('Reset', 'btn btn-ghost btn-full');
+    resetBtn.addEventListener('click', () => {
+      if (animating) return;
+      z = { re: 2, im: 1 }; history = []; mulCount = 0;
+      renderScene(); updateReadout();
+    });
+
+    // ─ Discovery prompt ─
+    const discoveryDiv = document.createElement('div');
+    discoveryDiv.style.cssText = 'font-size:12px;color:var(--text-muted);text-align:center;opacity:0;transition:opacity 0.5s;padding:8px;';
+    discoveryDiv.textContent = 'Try: multiply 1+i by itself repeatedly \u2014 what path does it trace?';
+
+    controlsDiv.append(readout, modeRow, multiplyBtn, multiplierSection, dragRow, resetBtn, discoveryDiv);
+
+    // ─ Rendering ─
+
+    function renderScene() {
+      grid.clear();
+      grid.drawGrid();
+      grid.drawAxisLabels('Re', 'Im', chapterColor);
+      grid.drawCircle(0, 0, 1, 'rgba(255,255,255,0.12)', true);
+
+      // History trail
+      for (let i = 0; i < history.length; i++) {
+        const alpha = 0.15 + 0.35 * (i / Math.max(1, history.length));
+        const h = history[i];
+        grid.drawPoint(h.re, h.im, `rgba(255,150,0,${alpha.toFixed(2)})`, 4);
+        // Connect trail dots
+        if (i > 0) {
+          grid.drawDashedLine([history[i - 1].re, history[i - 1].im], [h.re, h.im], `rgba(255,150,0,${(alpha * 0.5).toFixed(2)})`);
+        }
+      }
+      // Connect last trail dot to current z
+      if (history.length > 0) {
+        const last = history[history.length - 1];
+        grid.drawDashedLine([last.re, last.im], [z.re, z.im], 'rgba(255,150,0,0.25)');
+      }
+
+      // Dashed projection lines
+      if (Math.abs(z.re) > 0.05 && Math.abs(z.im) > 0.05) {
+        grid.drawDashedLine([z.re, z.im], [z.re, 0], 'rgba(255,255,255,0.15)');
+        grid.drawDashedLine([z.re, z.im], [0, z.im], 'rgba(255,255,255,0.15)');
+      }
+
+      // Phase angle arc
+      const theta = Math.atan2(z.im, z.re);
+      if (Math.hypot(z.re, z.im) > 0.2) {
+        grid.drawArc(0, 0, 0.6, 0, theta, chapterColor, 2);
+      }
+
+      // z vector + point
+      grid.drawVector([0, 0], [z.re, z.im], chapterColor, '');
+      grid.drawPoint(z.re, z.im, chapterColor, 7);
+
+      // In "other" mode, draw multiplier
+      if (mode === 'other') {
+        grid.drawVector([0, 0], [multiplier.re, multiplier.im], '#1CB0F6', '');
+        grid.drawPoint(multiplier.re, multiplier.im, '#1CB0F6', 6);
+      }
+    }
+
+    function updateReadout() {
+      readout.textContent = '';
+      const r = Math.hypot(z.re, z.im);
+      const theta = Math.atan2(z.im, z.re);
+      addLine(readout, `z = ${fmtComplex(z.re, z.im)}`);
+      addLine(readout, `|z| = ${r.toFixed(2)}   \u2220 ${fmtAngle(theta)}`);
+
+      if (mode === 'other') {
+        mulReadout.textContent = '';
+        const mr = Math.hypot(multiplier.re, multiplier.im);
+        const mt = Math.atan2(multiplier.im, multiplier.re);
+        addLine(mulReadout, `w = ${fmtComplex(multiplier.re, multiplier.im)}`);
+        addLine(mulReadout, `|w| = ${mr.toFixed(2)}   \u2220 ${fmtAngle(mt)}`);
+      }
+
+      if (!completed) { completed = true; onComplete({ explored: true }); }
+    }
+
+    // ─ Multiply logic ─
+
+    function doMultiply() {
+      history.push({ re: z.re, im: z.im });
+      mulCount++;
+
+      const m = mode === 'i' ? { re: 0, im: 1 } : multiplier;
+      const newRe = z.re * m.re - z.im * m.im;
+      const newIm = z.re * m.im + z.im * m.re;
+
+      // Animate via polar interpolation
+      const r0 = Math.hypot(z.re, z.im);
+      const t0 = Math.atan2(z.im, z.re);
+      const r1 = Math.hypot(newRe, newIm);
+      const t1Raw = Math.atan2(newIm, newRe);
+      // Ensure we rotate the short way in the correct direction
+      let dt = t1Raw - t0;
+      // For multiply-by-i, always rotate +pi/2
+      if (mode === 'i') {
+        dt = Math.PI / 2;
+      } else {
+        // Normalize dt to [-pi, pi]
+        while (dt > Math.PI) dt -= 2 * Math.PI;
+        while (dt < -Math.PI) dt += 2 * Math.PI;
+      }
+
+      animating = true;
+      const duration = mode === 'i' ? 400 : 500;
+      const startTime = performance.now();
+      let frameId;
+
+      function step(now) {
+        const p = Math.min(1, (now - startTime) / duration);
+        const ease = 1 - Math.pow(1 - p, 3);
+        const r = r0 + (r1 - r0) * ease;
+        const t = t0 + dt * ease;
+        z.re = r * Math.cos(t);
+        z.im = r * Math.sin(t);
+        renderScene();
+        updateReadout();
+        if (p < 1) {
+          frameId = requestAnimationFrame(step);
+        } else {
+          // Snap to exact
+          z.re = +newRe.toFixed(6);
+          z.im = +newIm.toFixed(6);
+          animating = false;
+          cancelAnim = null;
+          renderScene();
+          updateReadout();
+          // Show discovery prompt after a few multiplications
+          if (mulCount >= 4) discoveryDiv.style.opacity = '1';
+        }
+      }
+      frameId = requestAnimationFrame(step);
+      cancelAnim = () => cancelAnimationFrame(frameId);
+    }
+
+    // ─ Drag ─
+
+    grid.onDrag((wx, wy) => {
+      if (animating) return;
+      const sx = snap(wx, 0.25);
+      const sy = snap(wy, 0.25);
+      if (dragging === 'z' || mode === 'i') {
+        z.re = sx; z.im = sy;
+      } else {
+        multiplier.re = sx; multiplier.im = sy;
+      }
+      renderScene();
+      updateReadout();
+    });
+
+    grid.onResize(() => { renderScene(); updateReadout(); });
+    renderScene();
+    updateReadout();
+
+    return () => { if (cancelAnim) cancelAnim(); grid.destroy(); };
+  },
+};
+
+
+// ── Chapter 5: Transformation Sandbox ───────────────────────────────────────
+
+/**
+ * Ch 5 — Transformation Sandbox (sandbox)
+ *
+ * Apply matrices to an asymmetric F-shape on the grid. See rotation,
+ * reflection, scaling, and shearing happen visually. Chain transforms,
+ * undo, or enter custom matrices. The insight: matrices ARE transformations.
+ */
+const experiment5 = {
+  title: 'Transformation Sandbox',
+  subtitle: 'Apply matrices — see space reshape',
+  icon: '\uD83D\uDD36',
+
+  mount(container, { chapterColor, onComplete }) {
+    // ── Matrix math helpers ──
+    function mat2mul(A, B) {
+      return [
+        [A[0][0] * B[0][0] + A[0][1] * B[1][0], A[0][0] * B[0][1] + A[0][1] * B[1][1]],
+        [A[1][0] * B[0][0] + A[1][1] * B[1][0], A[1][0] * B[0][1] + A[1][1] * B[1][1]],
+      ];
+    }
+    function mat2det(M) { return M[0][0] * M[1][1] - M[0][1] * M[1][0]; }
+    function mat2apply(M, p) {
+      return [M[0][0] * p[0] + M[0][1] * p[1], M[1][0] * p[0] + M[1][1] * p[1]];
+    }
+
+    const F_SHAPE = [
+      [0, 0], [0, 3], [2, 3], [2, 2.5],
+      [0.5, 2.5], [0.5, 1.75], [1.5, 1.75], [1.5, 1.25],
+      [0.5, 1.25], [0.5, 0],
+    ];
+
+    const TRANSFORMS = [
+      { name: 'Rotate 90\u00B0', m: [[0, -1], [1, 0]] },
+      { name: 'Reflect X',  m: [[1, 0], [0, -1]] },
+      { name: 'Reflect Y',  m: [[-1, 0], [0, 1]] },
+      { name: 'Scale 2\u00D7', m: [[2, 0], [0, 2]] },
+      { name: 'Shear',      m: [[1, 0.5], [0, 1]] },
+      { name: 'Scale \u00BD', m: [[0.5, 0], [0, 0.5]] },
+    ];
+
+    let currentMatrix = [[1, 0], [0, 1]];
+    let matrixStack = [];
+    let animating = false;
+    let completed = false;
+    let cancelAnim = null;
+
+    container.style.flexDirection = 'column';
+
+    const canvasWrap = document.createElement('div');
+    canvasWrap.className = 'experiment-canvas-wrap';
+    const canvasEl = document.createElement('canvas');
+    canvasWrap.appendChild(canvasEl);
+
+    const controlsDiv = document.createElement('div');
+    controlsDiv.className = 'experiment-controls';
+
+    container.append(canvasWrap, controlsDiv);
+
+    const grid = new GridCanvas(canvasEl, { range: [-5, 5] });
+
+    // ─ Matrix display ─
+    const matDisplay = document.createElement('div');
+    matDisplay.style.cssText = "font-family:'Fira Code',monospace;font-size:14px;line-height:1.8;color:var(--text-muted);text-align:center;";
+
+    // ─ Preset buttons (3 per row) ─
+    const presetGrid = document.createElement('div');
+    presetGrid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;';
+    TRANSFORMS.forEach(t => {
+      const btn = makeBtn(t.name, 'btn experiment-block-btn');
+      btn.style.cssText += 'font-size:12px;padding:10px 4px;';
+      btn.addEventListener('click', () => {
+        if (animating) return;
+        applyTransform(t.m);
+      });
+      presetGrid.appendChild(btn);
+    });
+
+    // ─ Custom matrix input ─
+    const customLabel = document.createElement('div');
+    customLabel.style.cssText = "font-size:11px;text-transform:uppercase;font-weight:800;letter-spacing:1px;color:var(--text-muted);margin-top:4px;";
+    customLabel.textContent = 'Custom Matrix';
+
+    const customGrid = document.createElement('div');
+    customGrid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:6px;';
+    const inputs = [1, 0, 0, 1].map((val, i) => {
+      const inp = document.createElement('input');
+      inp.type = 'number';
+      inp.step = '0.5';
+      inp.inputMode = 'decimal';
+      inp.value = val;
+      inp.style.cssText = "width:100%;min-height:48px;text-align:center;font-family:'Fira Code',monospace;font-size:16px;font-weight:700;background:var(--surface);color:var(--text);border:2px solid var(--border);border-radius:var(--radius);padding:8px;box-sizing:border-box;";
+      customGrid.appendChild(inp);
+      return inp;
+    });
+
+    const applyCustomBtn = makeBtn('Apply Custom', 'btn btn-ghost btn-full');
+    applyCustomBtn.addEventListener('click', () => {
+      if (animating) return;
+      const vals = inputs.map(inp => parseFloat(inp.value));
+      if (vals.some(v => isNaN(v))) { showToast(container, 'Enter valid numbers', 'error'); return; }
+      applyTransform([[vals[0], vals[1]], [vals[2], vals[3]]]);
+    });
+
+    // ─ Action buttons ─
+    const actionRow = document.createElement('div');
+    actionRow.style.cssText = 'display:flex;gap:8px;';
+    const undoBtn = makeBtn('Undo', 'btn btn-ghost');
+    undoBtn.style.cssText += 'flex:1;';
+    undoBtn.addEventListener('click', () => {
+      if (animating || matrixStack.length === 0) return;
+      const prev = matrixStack.pop();
+      animateMatrix(currentMatrix, prev, () => {
+        currentMatrix = prev;
+        showToast(container, 'Undid last transform', 'info');
+      });
+    });
+    const resetBtnT = makeBtn('Reset', 'btn btn-ghost');
+    resetBtnT.style.cssText += 'flex:1;';
+    resetBtnT.addEventListener('click', () => {
+      if (animating) return;
+      const identity = [[1, 0], [0, 1]];
+      if (currentMatrix[0][0] === 1 && currentMatrix[0][1] === 0 && currentMatrix[1][0] === 0 && currentMatrix[1][1] === 1) return;
+      matrixStack = [];
+      animateMatrix(currentMatrix, identity, () => {
+        currentMatrix = identity;
+        showToast(container, 'Reset to original', 'info');
+      });
+    });
+    actionRow.append(undoBtn, resetBtnT);
+
+    // ─ Transform counter ─
+    const counterDiv = document.createElement('div');
+    counterDiv.style.cssText = 'font-size:13px;color:var(--text-muted);text-align:center;';
+    counterDiv.textContent = 'Transforms applied: 0';
+
+    controlsDiv.append(matDisplay, presetGrid, customLabel, customGrid, applyCustomBtn, actionRow, counterDiv);
+
+    // ─ Rendering ─
+
+    function renderScene(matrix) {
+      const M = matrix || currentMatrix;
+      grid.clear();
+      grid.drawGrid();
+
+      // Ghost original shape
+      grid.drawPolygon(F_SHAPE, 'rgba(255,75,75,0.15)', 'rgba(255,75,75,0.05)');
+
+      // Transformed shape
+      const transformed = F_SHAPE.map(p => mat2apply(M, p));
+      grid.drawPolygon(transformed, chapterColor, 'rgba(255,75,75,0.2)', 2.5);
+
+      // Transformed basis vectors (show how matrix reshapes axes)
+      const e1 = mat2apply(M, [1, 0]);
+      const e2 = mat2apply(M, [0, 1]);
+      grid.drawVector([0, 0], e1, '#FF9600', '', 2);
+      grid.drawVector([0, 0], e2, '#1CB0F6', '', 2);
+    }
+
+    function updateMatDisplay(matrix) {
+      const M = matrix || currentMatrix;
+      const d = mat2det(M);
+      matDisplay.textContent = '';
+      addLine(matDisplay, `[ ${fmtN(M[0][0])}  ${fmtN(M[0][1])} ]`);
+      addLine(matDisplay, `[ ${fmtN(M[1][0])}  ${fmtN(M[1][1])} ]`);
+      const detLine = document.createElement('div');
+      detLine.style.cssText = 'margin-top:4px;font-size:12px;';
+      if (Math.abs(d) < 0.01) {
+        detLine.style.color = '#FF4B4B';
+        detLine.textContent = `det \u2248 0 (singular!)`;
+      } else {
+        detLine.textContent = `det = ${d.toFixed(2)}`;
+      }
+      matDisplay.appendChild(detLine);
+    }
+
+    // ─ Transform logic ─
+
+    function applyTransform(T) {
+      matrixStack.push(currentMatrix.map(r => [...r]));
+      const newM = mat2mul(T, currentMatrix);
+      animateMatrix(currentMatrix, newM, () => {
+        currentMatrix = newM;
+        counterDiv.textContent = `Transforms applied: ${matrixStack.length}`;
+      });
+    }
+
+    function animateMatrix(from, to, onDone) {
+      animating = true;
+      const duration = 400;
+      const startTime = performance.now();
+      let frameId;
+
+      function step(now) {
+        const p = Math.min(1, (now - startTime) / duration);
+        const ease = 1 - Math.pow(1 - p, 3);
+        const interp = [
+          [from[0][0] + (to[0][0] - from[0][0]) * ease, from[0][1] + (to[0][1] - from[0][1]) * ease],
+          [from[1][0] + (to[1][0] - from[1][0]) * ease, from[1][1] + (to[1][1] - from[1][1]) * ease],
+        ];
+        renderScene(interp);
+        updateMatDisplay(interp);
+        if (p < 1) {
+          frameId = requestAnimationFrame(step);
+        } else {
+          animating = false;
+          cancelAnim = null;
+          if (onDone) onDone();
+          renderScene();
+          updateMatDisplay();
+          if (!completed) { completed = true; onComplete({ explored: true }); }
+        }
+      }
+      frameId = requestAnimationFrame(step);
+      cancelAnim = () => cancelAnimationFrame(frameId);
+    }
+
+    grid.onResize(() => { renderScene(); updateMatDisplay(); });
+    renderScene();
+    updateMatDisplay();
+
+    return () => { if (cancelAnim) cancelAnim(); grid.destroy(); };
+  },
+};
 
 
 // ── Export ─────────────────────────────────────────────────────────────────────
@@ -604,4 +1114,6 @@ export const EXPERIMENTS = {
   1: experiment1,
   2: experiment2,
   3: experiment3,
+  4: experiment4,
+  5: experiment5,
 };

@@ -12,7 +12,7 @@ import { generateRandomProblem, generateProblem, checkAnswer } from './problems.
 import { TEMPLATES } from './templates.js?v=9';
 import { CanvasManager } from './canvas.js';
 import * as KB from './keyboard.js?v=2';
-import { EXPERIMENTS } from './experiments.js?v=2';
+import { EXPERIMENTS } from './experiments.js?v=3';
 
 // ── State ──────────────────────────────────────────────────────────────────
 
@@ -367,9 +367,16 @@ function renderExperiment(chapterId) {
     const container = document.getElementById('experiment-container');
     if (!container) return;
 
+    // Resolve CSS variables to actual colors for canvas rendering
+    const cs2 = getComputedStyle(container.closest('.experiment-screen'));
+    const chColor = cs2.getPropertyValue(`--ch-color`).trim() ||
+                    getComputedStyle(document.documentElement).getPropertyValue(`--ch${chapterId}`).trim();
+    const chColorDk = cs2.getPropertyValue(`--ch-dk`).trim() ||
+                      getComputedStyle(document.documentElement).getPropertyValue(`--ch${chapterId}-dk`).trim();
+
     experimentCleanup = exp.mount(container, {
-      chapterColor: `var(--ch${chapterId})`,
-      chapterColorDk: `var(--ch${chapterId}-dk)`,
+      chapterColor: chColor,
+      chapterColorDk: chColorDk,
       onComplete(stats) {
         if (!state.chapters[chapterId].experimentCompleted) {
           state.chapters[chapterId].experimentCompleted = true;
