@@ -403,6 +403,7 @@ Build multi-qubit gates from simpler ones and verify equivalence by testing all 
 
 ### Chapter 15: Quantum Teleportation
 **Experiment: "Teleportation Simulator"**
+**Built in Session 6** ✅
 
 **ONE JOB**: Teleportation is a procedure you can run — CNOT, H, measure, send bits, correct.
 
@@ -430,6 +431,7 @@ Step-by-step interactive simulation of the teleportation protocol with Alice and
 
 ### Chapter 16: Deutsch-Jozsa Algorithm
 **Experiment: "Oracle Detective"**
+**Built in Session 6** ✅
 
 **ONE JOB**: A quantum circuit answers the question in one query where classical needs many.
 
@@ -453,6 +455,7 @@ Explore how quantum queries solve oracle problems faster than classical ones. Co
 
 ### Chapter 17: Grover's Search
 **Experiment: "Quantum Search Race"**
+**Built in Session 6** ✅
 
 **ONE JOB**: Amplitude amplification — watching the marked item's bar grow while others shrink IS Grover's algorithm.
 
@@ -584,5 +587,5 @@ Run circuits with and without error correction. A noise slider lets you feel how
 | 3 ✅ | Ch 6-8 (State Explorer, Gate Laboratory, Quantum Coin Toss Lab) | BlochSphere renderer, HistogramRenderer |
 | 4 ✅ | Ch 9-11 (Qubit Combiner, Entanglement Lab, Circuit Puzzler) | CircuitSimulator |
 | 5 ✅ | Ch 12-14 (Bloch Sphere Painter, Phase Clock, Gate Wiring Lab) | BlochSphere trails, clock face |
-| 6 | Ch 15-17 (Teleportation Simulator, Oracle Detective, Quantum Search Race) | Animation sequencer |
+| 6 ✅ | Ch 15-17 (Teleportation Simulator, Oracle Detective, Quantum Search Race) | StepSequencer, 3-qubit CircuitSimulator usage |
 | 7 | Ch 18-20 (Noisy Quantum Lab, Period Finder, Hardware Explorer) | Noise sim, RadarChart |

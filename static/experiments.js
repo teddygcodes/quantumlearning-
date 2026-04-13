@@ -13,7 +13,7 @@
  * They teach through free-form interaction and live feedback.
  */
 
-import { GridCanvas, PhysicsBeam, BlochSphere, HistogramRenderer, CircuitSimulator, ClockFace, showToast, animateValue } from './experiment-ui.js?v=5';
+import { GridCanvas, PhysicsBeam, BlochSphere, HistogramRenderer, CircuitSimulator, ClockFace, StepSequencer, showToast, animateValue } from './experiment-ui.js?v=6';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -3405,6 +3405,1033 @@ const experiment14 = {
 };
 
 
+// ── Chapter 15: Teleportation Simulator ──────────────────────────────────────
+
+/**
+ * Ch 15 — Teleportation Simulator (sandbox)
+ *
+ * Step through the quantum teleportation protocol: Alice picks a state,
+ * shares a Bell pair with Bob, applies CNOT + H, measures, sends classical
+ * bits, and Bob applies the right correction gate. Full 3-qubit state
+ * vector shown at every step.
+ */
+
+function fmtKet3Q(state) {
+  const labels = ['|000⟩','|001⟩','|010⟩','|011⟩','|100⟩','|101⟩','|110⟩','|111⟩'];
+  const terms = [];
+  for (let i = 0; i < 8; i++) {
+    const amp = state[i];
+    if (cabs(amp) < 0.005) continue;
+    const c = fmtKetCoeff(amp.re, amp.im);
+    terms.push({ c, label: labels[i] });
+  }
+  if (terms.length === 0) return '0';
+  let s = '';
+  terms.forEach((t, idx) => {
+    if (idx > 0) {
+      if (t.c.startsWith('\u2212') || t.c.startsWith('-')) {
+        s += ' \u2212 ' + (t.c.startsWith('\u2212') ? t.c.slice(1) : t.c.slice(1));
+      } else {
+        s += ' + ' + t.c;
+      }
+    } else {
+      s += t.c;
+    }
+    s += t.label;
+  });
+  return s;
+}
+
+const experiment15 = {
+  title: 'Teleportation Simulator',
+  subtitle: 'Beam a qubit from Alice to Bob',
+  icon: '📡',
+
+  mount(container, { chapterColor, chapterColorDk, onComplete }) {
+    let completed = false;
+    let teleportations = 0;
+
+    container.style.flexDirection = 'column';
+
+    // ─ Alice's state (theta slider) ─
+    let aliceTheta = Math.PI / 3; // default interesting state
+    let originalState = blochToState(aliceTheta, 0);
+
+    // ─ Header ─
+    const titleDiv = document.createElement('div');
+    titleDiv.style.cssText = "text-align:center;font-family:'Fira Code',monospace;font-weight:700;font-size:15px;color:var(--text);margin-bottom:4px;";
+    titleDiv.textContent = 'Quantum Teleportation Protocol';
+
+    // ─ Alice / Bob panels ─
+    const panelsRow = document.createElement('div');
+    panelsRow.style.cssText = 'display:flex;gap:8px;width:100%;';
+
+    function makePanel(label) {
+      const panel = document.createElement('div');
+      panel.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;';
+      const lbl = document.createElement('div');
+      lbl.style.cssText = "font-family:'Fira Code',monospace;font-weight:700;font-size:13px;color:var(--text);";
+      lbl.textContent = label;
+      panel.appendChild(lbl);
+      const wrap = document.createElement('div');
+      wrap.className = 'experiment-canvas-wrap';
+      wrap.style.cssText += 'min-height:130px;max-height:160px;width:100%;';
+      const canvas = document.createElement('canvas');
+      wrap.appendChild(canvas);
+      panel.appendChild(wrap);
+      return { panel, canvas, wrap };
+    }
+
+    const alice = makePanel('ALICE');
+    const bob = makePanel('BOB');
+
+    // Classical channel between them
+    const channelDiv = document.createElement('div');
+    channelDiv.style.cssText = `
+      display:flex;align-items:center;justify-content:center;flex-direction:column;
+      width:40px;align-self:center;position:relative;
+    `;
+    const channelLine = document.createElement('div');
+    channelLine.style.cssText = `
+      width:2px;height:80px;background:var(--border);position:relative;
+    `;
+    const channelBits = document.createElement('div');
+    channelBits.style.cssText = `
+      font-family:'Fira Code',monospace;font-size:16px;font-weight:700;
+      color:${chapterColor};opacity:0;transition:opacity 0.3s;
+      text-align:center;margin-top:4px;
+    `;
+    channelDiv.append(channelLine, channelBits);
+
+    panelsRow.append(alice.panel, channelDiv, bob.panel);
+
+    const aliceBloch = new BlochSphere(alice.canvas, { color: chapterColor, showLabels: true });
+    const bobBloch = new BlochSphere(bob.canvas, { color: chapterColor, showLabels: true });
+    aliceBloch.setState(aliceTheta, 0);
+    bobBloch.setState(0, 0);
+
+    // ─ State slider ─
+    const sliderRow = document.createElement('div');
+    sliderRow.style.cssText = 'display:flex;align-items:center;gap:8px;width:100%;';
+    const sliderLabel = document.createElement('div');
+    sliderLabel.style.cssText = "font-family:'Fira Code',monospace;font-size:12px;color:var(--text-muted);min-width:50px;";
+    sliderLabel.textContent = 'Alice |ψ⟩:';
+    const slider = document.createElement('input');
+    slider.type = 'range'; slider.min = '0'; slider.max = '314';
+    slider.value = String(Math.round(aliceTheta * 100));
+    slider.style.cssText = 'flex:1;accent-color:' + chapterColor;
+    const randomBtn = makeBtn('Random', 'btn experiment-block-btn');
+    randomBtn.style.cssText += 'padding:6px 10px;font-size:12px;';
+    sliderRow.append(sliderLabel, slider, randomBtn);
+
+    // ─ State vector display ─
+    const stateDiv = document.createElement('div');
+    stateDiv.style.cssText = `
+      font-family:'Fira Code',monospace;font-size:11px;color:var(--text-muted);
+      text-align:center;min-height:18px;word-break:break-all;line-height:1.5;
+      max-height:40px;overflow-y:auto;
+    `;
+
+    // ─ Protocol log ─
+    const logDiv = document.createElement('div');
+    logDiv.style.cssText = `
+      font-family:'Fira Code',monospace;font-size:12px;color:var(--text-muted);
+      min-height:60px;max-height:100px;overflow-y:auto;line-height:1.6;
+      background:var(--surface);border-radius:var(--radius);padding:8px;width:100%;
+    `;
+
+    // ─ Bob's correction buttons (hidden until step 5) ─
+    const correctionDiv = document.createElement('div');
+    correctionDiv.style.cssText = 'display:none;flex-direction:column;align-items:center;gap:6px;width:100%;';
+    const corrLabel = document.createElement('div');
+    corrLabel.style.cssText = "font-family:'Fira Code',monospace;font-size:13px;color:var(--text);font-weight:700;";
+    const corrBtnsRow = document.createElement('div');
+    corrBtnsRow.style.cssText = 'display:flex;gap:6px;justify-content:center;flex-wrap:wrap;';
+    correctionDiv.append(corrLabel, corrBtnsRow);
+
+    // ─ Action row ─
+    const actionRow = document.createElement('div');
+    actionRow.style.cssText = 'display:flex;gap:8px;width:100%;';
+    const nextBtn = makeBtn('▶ Next Step', 'btn');
+    nextBtn.style.cssText += `flex:2;background:${chapterColor};color:#fff;border:none;`;
+    const newStateBtn = makeBtn('New State', 'btn experiment-block-btn');
+    newStateBtn.style.cssText += 'flex:1;';
+    actionRow.append(nextBtn, newStateBtn);
+
+    // ─ Counter ─
+    const counterDiv = document.createElement('div');
+    counterDiv.style.cssText = "font-size:13px;color:var(--text-muted);text-align:center;font-family:'Fira Code',monospace;";
+    counterDiv.textContent = 'Teleportations: 0';
+
+    // ─ Discovery prompt ─
+    const discoveryDiv = document.createElement('div');
+    discoveryDiv.style.cssText = "font-family:'Fira Code',monospace;font-size:12px;color:var(--text-muted);text-align:center;opacity:0;transition:opacity 0.5s;line-height:1.5;";
+    discoveryDiv.textContent = "💡 Notice: Alice's qubit is destroyed after measurement — the state moved to Bob without copying!";
+
+    container.append(titleDiv, panelsRow, sliderRow, stateDiv, logDiv, correctionDiv, actionRow, discoveryDiv, counterDiv);
+
+    // ─ Protocol state ─
+    let sim = null;
+    let protocolStep = 0; // 0=ready, 1=bell, 2=cnot, 3=H, 4=measure, 5=correct
+    let measureResult = -1;
+    let sliderEnabled = true;
+
+    function updateAliceState() {
+      aliceTheta = parseInt(slider.value) / 100;
+      originalState = blochToState(aliceTheta, 0);
+      aliceBloch.setState(aliceTheta, 0);
+      stateDiv.textContent = `|ψ⟩ = ${(+Math.cos(aliceTheta / 2).toFixed(3))}|0⟩ + ${(+Math.sin(aliceTheta / 2).toFixed(3))}|1⟩`;
+    }
+
+    function addLog(text, isCurrent) {
+      const line = document.createElement('div');
+      line.style.cssText = isCurrent ? `color:${chapterColor};font-weight:700;` : '';
+      line.textContent = (isCurrent ? '→ ' : '✓ ') + text;
+      logDiv.appendChild(line);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    function resetProtocol() {
+      protocolStep = 0;
+      measureResult = -1;
+      sim = null;
+      sliderEnabled = true;
+      slider.disabled = false;
+      logDiv.textContent = '';
+      correctionDiv.style.display = 'none';
+      channelBits.style.opacity = '0';
+      channelBits.textContent = '';
+      nextBtn.textContent = '▶ Start Protocol';
+      nextBtn.disabled = false;
+      alice.wrap.style.opacity = '1';
+      updateAliceState();
+      bobBloch.setState(0, 0);
+      stateDiv.textContent = `|ψ⟩ = ${(+Math.cos(aliceTheta / 2).toFixed(3))}|0⟩ + ${(+Math.sin(aliceTheta / 2).toFixed(3))}|1⟩`;
+    }
+
+    function showStateVector() {
+      if (sim) stateDiv.textContent = fmtKet3Q(sim.getState());
+    }
+
+    slider.addEventListener('input', () => { if (sliderEnabled) updateAliceState(); });
+    randomBtn.addEventListener('click', () => {
+      if (!sliderEnabled) return;
+      slider.value = String(rnd(10, 304));
+      updateAliceState();
+    });
+
+    async function doStep() {
+      if (protocolStep === 0) {
+        // Step 1: Share Bell pair
+        sliderEnabled = false;
+        slider.disabled = true;
+        sim = new CircuitSimulator(3);
+        // qubit 0 = Alice's ψ, qubit 1 = Alice's Bell half, qubit 2 = Bob's Bell half
+        // Set initial state: |ψ⟩ ⊗ |00⟩
+        const initState = Array.from({ length: 8 }, () => ({ re: 0, im: 0 }));
+        const cosH = Math.cos(aliceTheta / 2);
+        const sinH = Math.sin(aliceTheta / 2);
+        // |ψ⟩|00⟩ = cosH|000⟩ + sinH|100⟩
+        initState[0] = { re: cosH, im: 0 }; // |000⟩
+        initState[4] = { re: sinH, im: 0 }; // |100⟩
+        sim.setState(initState);
+        // Create Bell pair between qubits 1 and 2
+        sim.applyGate('H', 1);
+        sim.applyGate('X', 2, 1); // CNOT: control=1, target=2
+        addLog('Bell pair |Φ+⟩ shared between Alice & Bob', false);
+        showStateVector();
+        channelLine.style.background = chapterColor;
+        channelLine.style.boxShadow = `0 0 8px ${chapterColor}`;
+        protocolStep = 1;
+        nextBtn.textContent = '▶ Alice: CNOT';
+      } else if (protocolStep === 1) {
+        // Step 2: Alice's CNOT (control=ψ qubit 0, target=Bell qubit 1)
+        sim.applyGate('X', 1, 0);
+        addLog("Alice applied CNOT (ψ→Bell)", false);
+        showStateVector();
+        protocolStep = 2;
+        nextBtn.textContent = '▶ Alice: Hadamard';
+      } else if (protocolStep === 2) {
+        // Step 3: Alice's Hadamard on qubit 0
+        sim.applyGate('H', 0);
+        addLog("Alice applied Hadamard on ψ-qubit", false);
+        showStateVector();
+        protocolStep = 3;
+        nextBtn.textContent = '▶ Alice: Measure';
+      } else if (protocolStep === 3) {
+        // Step 4: Alice measures qubits 0 and 1
+        const bit0 = sim.measureQubit(0);
+        const bit1 = sim.measureQubit(1);
+        measureResult = bit0 * 2 + bit1;
+        const bits = `${bit0}${bit1}`;
+        addLog(`Alice measured: ${bits}`, false);
+        showStateVector();
+
+        // Gray out Alice's sphere (qubit destroyed)
+        alice.wrap.style.opacity = '0.3';
+
+        // Animate classical bits across channel
+        channelBits.textContent = bits;
+        channelBits.style.opacity = '1';
+
+        // Show Bob's current (uncorrected) state on Bloch sphere
+        const st = sim.getState();
+        // Bob's qubit is qubit 2. Extract his reduced state.
+        // After measuring qubits 0,1, only two amplitudes are nonzero
+        let bobAlpha = { re: 0, im: 0 };
+        let bobBeta = { re: 0, im: 0 };
+        for (let i = 0; i < 8; i++) {
+          if (cabs(st[i]) < 1e-10) continue;
+          const q2bit = i & 1;
+          if (q2bit === 0) bobAlpha = st[i];
+          else bobBeta = st[i];
+        }
+        const [nAlpha, nBeta] = normalizeGlobalPhase(bobAlpha, bobBeta);
+        const bCoords = stateToBloch(nAlpha, nBeta);
+        await bobBloch.animateState(bCoords.theta, bCoords.phi, 400);
+
+        protocolStep = 4;
+        nextBtn.style.display = 'none';
+
+        // Show correction buttons
+        const corrections = ['I (none)', 'X', 'Z', 'ZX'];
+        const correctIdx = measureResult; // 00→I, 01→X, 10→Z, 11→ZX
+        corrLabel.textContent = `Bob received bits "${bits}" — pick correction gate:`;
+        corrBtnsRow.textContent = '';
+        corrections.forEach((label, idx) => {
+          const btn = makeBtn(label, 'btn experiment-block-btn');
+          btn.style.cssText += `min-width:60px;padding:8px 12px;font-size:13px;`;
+          btn.addEventListener('click', async () => {
+            if (idx === correctIdx) {
+              // Apply correct correction
+              if (idx === 1 || idx === 3) sim.applyGate('X', 2);
+              if (idx === 2 || idx === 3) sim.applyGate('Z', 2);
+
+              // Verify Bob's state matches original
+              const finalSt = sim.getState();
+              let fAlpha = { re: 0, im: 0 }, fBeta = { re: 0, im: 0 };
+              for (let i = 0; i < 8; i++) {
+                if (cabs(finalSt[i]) < 1e-10) continue;
+                if ((i & 1) === 0) fAlpha = finalSt[i]; else fBeta = finalSt[i];
+              }
+              const [fnA, fnB] = normalizeGlobalPhase(fAlpha, fBeta);
+              const fCoords = stateToBloch(fnA, fnB);
+              await bobBloch.animateState(fCoords.theta, fCoords.phi, 500);
+
+              addLog(`Bob applied ${label} — state teleported!`, true);
+              showToast(container, 'Teleportation successful!', 'success');
+              teleportations++;
+              counterDiv.textContent = `Teleportations: ${teleportations}`;
+              if (teleportations >= 2) discoveryDiv.style.opacity = '1';
+
+              correctionDiv.style.display = 'none';
+              nextBtn.style.display = '';
+              nextBtn.textContent = '🔄 New State';
+              nextBtn.disabled = false;
+              protocolStep = 5;
+
+              if (!completed) { completed = true; onComplete({ teleportations }); }
+            } else {
+              showToast(container, 'Wrong gate — try another!', 'warning');
+            }
+          });
+          corrBtnsRow.appendChild(btn);
+        });
+        correctionDiv.style.display = 'flex';
+      } else if (protocolStep === 5) {
+        resetProtocol();
+      }
+    }
+
+    nextBtn.addEventListener('click', doStep);
+    newStateBtn.addEventListener('click', resetProtocol);
+
+    resetProtocol();
+
+    return () => { aliceBloch.destroy(); bobBloch.destroy(); };
+  },
+};
+
+
+// ── Chapter 16: Oracle Detective ─────────────────────────────────────────────
+
+/**
+ * Ch 16 — Oracle Detective (sandbox)
+ *
+ * A mystery function is either constant or balanced. Classically, you query
+ * inputs one by one. Quantum (Deutsch-Jozsa) solves it in one shot.
+ * Scale from 1-bit to 3-bit and watch the classical query count grow
+ * while quantum stays at 1.
+ */
+
+const experiment16 = {
+  title: 'Oracle Detective',
+  subtitle: 'Constant or balanced? One query to know.',
+  icon: '🔍',
+
+  mount(container, { chapterColor, onComplete }) {
+    let completed = false;
+    let oraclesExplored = 0;
+    let totalClassical = 0;
+    let totalQuantum = 0;
+
+    container.style.flexDirection = 'column';
+
+    // ─ State ─
+    let nBits = 1;
+    let oracle = null; // { type: 'constant'|'balanced', outputs: Map<string, 0|1> }
+    let queriedInputs = new Set();
+    let classicalQueriesThisRound = 0;
+    let oracleSolved = false;
+
+    function generateOracle(n) {
+      const numInputs = 1 << n;
+      const inputs = [];
+      for (let i = 0; i < numInputs; i++) inputs.push(i.toString(2).padStart(n, '0'));
+
+      const isConstant = Math.random() < 0.5;
+      const outputs = new Map();
+
+      if (isConstant) {
+        const val = Math.random() < 0.5 ? 0 : 1;
+        inputs.forEach(inp => outputs.set(inp, val));
+      } else {
+        // balanced: exactly half 0, half 1
+        const half = numInputs / 2;
+        const shuffled = shuffle(inputs);
+        shuffled.forEach((inp, idx) => outputs.set(inp, idx < half ? 0 : 1));
+      }
+
+      return { type: isConstant ? 'constant' : 'balanced', outputs, inputs };
+    }
+
+    // ─ Title ─
+    const titleDiv = document.createElement('div');
+    titleDiv.style.cssText = "text-align:center;font-family:'Fira Code',monospace;font-weight:700;font-size:15px;color:var(--text);margin-bottom:2px;";
+    titleDiv.textContent = 'Mystery function f(x) → ?';
+
+    const subtitleDiv = document.createElement('div');
+    subtitleDiv.style.cssText = "text-align:center;font-family:'Fira Code',monospace;font-size:12px;color:var(--text-muted);margin-bottom:6px;";
+    subtitleDiv.textContent = 'Is it CONSTANT or BALANCED?';
+
+    // ─ Scale selector ─
+    const scaleRow = document.createElement('div');
+    scaleRow.style.cssText = 'display:flex;gap:6px;justify-content:center;margin-bottom:6px;';
+    const scaleBtns = {};
+    [1, 2, 3].forEach(n => {
+      const btn = makeBtn(`${n}-bit`, 'btn experiment-block-btn');
+      btn.style.cssText += 'padding:6px 12px;font-size:12px;';
+      btn.addEventListener('click', () => {
+        nBits = n;
+        newOracle();
+      });
+      scaleRow.appendChild(btn);
+      scaleBtns[n] = btn;
+    });
+
+    // ─ Side-by-side panels ─
+    const panelsRow = document.createElement('div');
+    panelsRow.style.cssText = 'display:flex;gap:8px;width:100%;';
+
+    // Classical panel
+    const classicalPanel = document.createElement('div');
+    classicalPanel.style.cssText = `
+      flex:1;display:flex;flex-direction:column;gap:4px;
+      background:var(--surface);border-radius:var(--radius);padding:8px;
+    `;
+    const classicalTitle = document.createElement('div');
+    classicalTitle.style.cssText = "font-family:'Fira Code',monospace;font-weight:700;font-size:13px;color:var(--text);text-align:center;";
+    classicalTitle.textContent = 'CLASSICAL';
+
+    const queryTable = document.createElement('div');
+    queryTable.style.cssText = "font-family:'Fira Code',monospace;font-size:12px;color:var(--text-muted);min-height:50px;max-height:100px;overflow-y:auto;";
+
+    const queryBtnsDiv = document.createElement('div');
+    queryBtnsDiv.style.cssText = 'display:flex;gap:4px;flex-wrap:wrap;justify-content:center;';
+
+    const classicalCountDiv = document.createElement('div');
+    classicalCountDiv.style.cssText = "font-family:'Fira Code',monospace;font-size:11px;color:var(--text-muted);text-align:center;";
+
+    const guessRow = document.createElement('div');
+    guessRow.style.cssText = 'display:flex;gap:4px;justify-content:center;margin-top:4px;';
+    const guessConstBtn = makeBtn('Constant', 'btn experiment-block-btn');
+    guessConstBtn.style.cssText += 'padding:6px 10px;font-size:11px;';
+    const guessBalBtn = makeBtn('Balanced', 'btn experiment-block-btn');
+    guessBalBtn.style.cssText += 'padding:6px 10px;font-size:11px;';
+    guessRow.append(guessConstBtn, guessBalBtn);
+
+    const classicalResultDiv = document.createElement('div');
+    classicalResultDiv.style.cssText = "font-family:'Fira Code',monospace;font-size:12px;text-align:center;min-height:18px;font-weight:700;";
+
+    classicalPanel.append(classicalTitle, queryTable, queryBtnsDiv, classicalCountDiv, guessRow, classicalResultDiv);
+
+    // Quantum panel
+    const quantumPanel = document.createElement('div');
+    quantumPanel.style.cssText = `
+      flex:1;display:flex;flex-direction:column;gap:4px;align-items:center;
+      background:var(--surface);border-radius:var(--radius);padding:8px;
+    `;
+    const quantumTitle = document.createElement('div');
+    quantumTitle.style.cssText = "font-family:'Fira Code',monospace;font-weight:700;font-size:13px;color:var(--text);text-align:center;";
+    quantumTitle.textContent = 'QUANTUM';
+
+    const circuitDiv = document.createElement('div');
+    circuitDiv.style.cssText = `
+      font-family:'Fira Code',monospace;font-size:11px;color:var(--text-muted);
+      text-align:center;line-height:1.6;min-height:40px;
+    `;
+
+    const djBtn = makeBtn('Run Deutsch-Jozsa', 'btn');
+    djBtn.style.cssText += `background:${chapterColor};color:#fff;border:none;padding:10px 16px;`;
+
+    const quantumResultDiv = document.createElement('div');
+    quantumResultDiv.style.cssText = "font-family:'Fira Code',monospace;font-size:12px;text-align:center;min-height:18px;font-weight:700;";
+
+    const quantumCountDiv = document.createElement('div');
+    quantumCountDiv.style.cssText = "font-family:'Fira Code',monospace;font-size:11px;color:var(--text-muted);text-align:center;";
+
+    quantumPanel.append(quantumTitle, circuitDiv, djBtn, quantumResultDiv, quantumCountDiv);
+
+    panelsRow.append(classicalPanel, quantumPanel);
+
+    // ─ Scoreboard ─
+    const scoreDiv = document.createElement('div');
+    scoreDiv.style.cssText = `
+      font-family:'Fira Code',monospace;font-size:12px;color:var(--text-muted);
+      text-align:center;background:var(--surface);border-radius:var(--radius);
+      padding:8px;width:100%;line-height:1.8;
+    `;
+
+    // ─ Action row ─
+    const newOracleBtn = makeBtn('New Oracle', 'btn experiment-block-btn');
+    newOracleBtn.style.cssText += 'width:100%;';
+
+    // ─ Counter ─
+    const counterDiv = document.createElement('div');
+    counterDiv.style.cssText = "font-size:13px;color:var(--text-muted);text-align:center;font-family:'Fira Code',monospace;";
+
+    container.append(titleDiv, subtitleDiv, scaleRow, panelsRow, scoreDiv, newOracleBtn, counterDiv);
+
+    function updateScore() {
+      scoreDiv.textContent = `Classical total queries: ${totalClassical}  |  Quantum total queries: ${totalQuantum}`;
+    }
+
+    function renderCircuit() {
+      const hStr = nBits === 1 ? 'H' : `H⊗${nBits}`;
+      circuitDiv.textContent = `|0⟩⊗${nBits}|1⟩ → ${hStr}⊗H → Uf → ${hStr}⊗I → Measure`;
+    }
+
+    function newOracle() {
+      oracle = generateOracle(nBits);
+      queriedInputs = new Set();
+      classicalQueriesThisRound = 0;
+      oracleSolved = false;
+
+      // Highlight active scale button
+      Object.entries(scaleBtns).forEach(([n, btn]) => {
+        btn.style.boxShadow = parseInt(n) === nBits ? `0 0 0 3px ${chapterColor}` : '';
+      });
+
+      // Reset classical panel
+      queryTable.textContent = '';
+      classicalCountDiv.textContent = 'Queries: 0';
+      classicalResultDiv.textContent = '';
+      classicalResultDiv.style.color = '';
+      guessConstBtn.disabled = false;
+      guessBalBtn.disabled = false;
+
+      // Build query buttons
+      queryBtnsDiv.textContent = '';
+      oracle.inputs.forEach(inp => {
+        const btn = makeBtn(inp, 'btn experiment-block-btn');
+        btn.style.cssText += 'padding:4px 8px;font-size:11px;min-width:36px;';
+        btn.addEventListener('click', () => {
+          if (oracleSolved || queriedInputs.has(inp)) return;
+          queriedInputs.add(inp);
+          classicalQueriesThisRound++;
+          totalClassical++;
+          btn.disabled = true;
+          btn.style.opacity = '0.5';
+
+          const row = document.createElement('div');
+          row.textContent = `f(${inp}) = ${oracle.outputs.get(inp)}`;
+          queryTable.appendChild(row);
+          queryTable.scrollTop = queryTable.scrollHeight;
+
+          classicalCountDiv.textContent = `Queries: ${classicalQueriesThisRound}`;
+
+          // Check if certainty is now possible
+          const needed = (1 << (nBits - 1)) + 1;
+          if (classicalQueriesThisRound >= needed) {
+            classicalCountDiv.textContent = `Queries: ${classicalQueriesThisRound} (certainty possible!)`;
+            classicalCountDiv.style.color = chapterColor;
+          }
+
+          updateScore();
+        });
+        queryBtnsDiv.appendChild(btn);
+      });
+
+      // Reset quantum panel
+      quantumResultDiv.textContent = '';
+      quantumCountDiv.textContent = '';
+      djBtn.disabled = false;
+      renderCircuit();
+
+      updateScore();
+      counterDiv.textContent = `Oracles explored: ${oraclesExplored}`;
+    }
+
+    function handleGuess(guess) {
+      if (oracleSolved) return;
+      if (guess === oracle.type) {
+        classicalResultDiv.textContent = `✓ Correct! (${classicalQueriesThisRound} queries)`;
+        classicalResultDiv.style.color = '#58CC02';
+        oracleSolved = true;
+        guessConstBtn.disabled = true;
+        guessBalBtn.disabled = true;
+        oraclesExplored++;
+        counterDiv.textContent = `Oracles explored: ${oraclesExplored}`;
+        if (!completed) { completed = true; onComplete({ oraclesExplored }); }
+      } else {
+        classicalResultDiv.textContent = '✗ Wrong — keep querying!';
+        classicalResultDiv.style.color = '#FF4B4B';
+        setTimeout(() => { classicalResultDiv.textContent = ''; }, 1500);
+      }
+    }
+
+    guessConstBtn.addEventListener('click', () => handleGuess('constant'));
+    guessBalBtn.addEventListener('click', () => handleGuess('balanced'));
+
+    djBtn.addEventListener('click', () => {
+      if (djBtn.disabled) return;
+      djBtn.disabled = true;
+      totalQuantum++;
+
+      // DJ always gets it right in 1 query
+      const result = oracle.type;
+      const allZeros = '0'.repeat(nBits);
+      const measured = result === 'constant' ? allZeros : '1'.padEnd(nBits, '0');
+      quantumResultDiv.textContent = `Measured |${measured}⟩ → ${result.toUpperCase()}`;
+      quantumResultDiv.style.color = '#58CC02';
+      quantumCountDiv.textContent = '1 query used';
+
+      if (!oracleSolved) {
+        oracleSolved = true;
+        oraclesExplored++;
+        counterDiv.textContent = `Oracles explored: ${oraclesExplored}`;
+        if (!completed) { completed = true; onComplete({ oraclesExplored }); }
+      }
+
+      updateScore();
+    });
+
+    newOracleBtn.addEventListener('click', newOracle);
+
+    newOracle();
+
+    return () => {};
+  },
+};
+
+
+// ── Chapter 17: Quantum Search Race ──────────────────────────────────────────
+
+/**
+ * Ch 17 — Quantum Search Race (sandbox)
+ *
+ * Visual side-by-side race: classical sequential search vs Grover's algorithm.
+ * Step through oracle + diffusion manually, or race them head-to-head.
+ * Watch amplitude amplification happen in real time.
+ */
+
+const experiment17 = {
+  title: 'Quantum Search Race',
+  subtitle: 'Watch amplitude amplification crush classical search',
+  icon: '⚡',
+
+  mount(container, { chapterColor, onComplete }) {
+    let completed = false;
+    let searches = 0;
+
+    container.style.flexDirection = 'column';
+
+    // ─ State ─
+    let N = 4;
+    let numQubits = 2;
+    let markedIdx = 0;
+    let amplitudes = [];
+    let groverIteration = 0;
+    let optimalIter = 1;
+    let classicalChecked = 0;
+    let classicalFound = false;
+    let groverDone = false;
+    let stepPhase = 'oracle'; // 'oracle', 'diffusion', 'measure'
+    let raceTimer = null;
+
+    function initSearch() {
+      N = 1 << numQubits;
+      markedIdx = Math.floor(Math.random() * N);
+      amplitudes = Array(N).fill(1 / Math.sqrt(N));
+      groverIteration = 0;
+      optimalIter = Math.max(1, Math.floor(Math.PI / 4 * Math.sqrt(N)));
+      classicalChecked = 0;
+      classicalFound = false;
+      groverDone = false;
+      stepPhase = 'oracle';
+      if (raceTimer) { clearInterval(raceTimer); raceTimer = null; }
+    }
+
+    // ─ Size selector ─
+    const sizeRow = document.createElement('div');
+    sizeRow.style.cssText = 'display:flex;gap:6px;justify-content:center;margin-bottom:4px;';
+    const sizeBtns = {};
+    [{ n: 2, label: '4' }, { n: 3, label: '8' }, { n: 4, label: '16' }].forEach(({ n, label }) => {
+      const btn = makeBtn(`N=${label}`, 'btn experiment-block-btn');
+      btn.style.cssText += 'padding:6px 12px;font-size:12px;';
+      btn.addEventListener('click', () => {
+        numQubits = n;
+        newSearch();
+      });
+      sizeRow.appendChild(btn);
+      sizeBtns[n] = btn;
+    });
+
+    // ─ Info row ─
+    const infoDiv = document.createElement('div');
+    infoDiv.style.cssText = "font-family:'Fira Code',monospace;font-size:11px;color:var(--text-muted);text-align:center;margin-bottom:4px;line-height:1.6;";
+
+    // ─ Side-by-side panels ─
+    const panelsRow = document.createElement('div');
+    panelsRow.style.cssText = 'display:flex;gap:8px;width:100%;';
+
+    // Classical panel
+    const classicalPanel = document.createElement('div');
+    classicalPanel.style.cssText = `
+      flex:1;display:flex;flex-direction:column;gap:4px;
+      background:var(--surface);border-radius:var(--radius);padding:8px;
+    `;
+    const classicalTitle = document.createElement('div');
+    classicalTitle.style.cssText = "font-family:'Fira Code',monospace;font-weight:700;font-size:12px;color:var(--text);text-align:center;";
+    classicalTitle.textContent = 'CLASSICAL';
+    const classicalGrid = document.createElement('div');
+    classicalGrid.style.cssText = 'display:flex;flex-wrap:wrap;gap:3px;justify-content:center;';
+    const classicalStatus = document.createElement('div');
+    classicalStatus.style.cssText = "font-family:'Fira Code',monospace;font-size:11px;color:var(--text-muted);text-align:center;min-height:18px;";
+    classicalPanel.append(classicalTitle, classicalGrid, classicalStatus);
+
+    // Grover panel
+    const groverPanel = document.createElement('div');
+    groverPanel.style.cssText = `
+      flex:1.2;display:flex;flex-direction:column;gap:4px;
+      background:var(--surface);border-radius:var(--radius);padding:8px;
+    `;
+    const groverTitle = document.createElement('div');
+    groverTitle.style.cssText = "font-family:'Fira Code',monospace;font-weight:700;font-size:12px;color:var(--text);text-align:center;";
+    groverTitle.textContent = "GROVER'S";
+    const barsContainer = document.createElement('div');
+    barsContainer.style.cssText = 'position:relative;min-height:120px;display:flex;align-items:flex-end;gap:1px;justify-content:center;';
+    const groverStatus = document.createElement('div');
+    groverStatus.style.cssText = "font-family:'Fira Code',monospace;font-size:11px;color:var(--text-muted);text-align:center;min-height:18px;";
+    const meanDiv = document.createElement('div');
+    meanDiv.style.cssText = "font-family:'Fira Code',monospace;font-size:10px;color:var(--text-muted);text-align:center;min-height:14px;";
+
+    groverPanel.append(groverTitle, barsContainer, meanDiv, groverStatus);
+
+    panelsRow.append(classicalPanel, groverPanel);
+
+    // ─ Step-by-step controls ─
+    const stepRow = document.createElement('div');
+    stepRow.style.cssText = 'display:flex;gap:6px;justify-content:center;flex-wrap:wrap;';
+
+    const oracleBtn = makeBtn('Oracle', 'btn experiment-block-btn');
+    oracleBtn.style.cssText += 'padding:8px 12px;font-size:12px;';
+    const diffusionBtn = makeBtn('Diffusion', 'btn experiment-block-btn');
+    diffusionBtn.style.cssText += 'padding:8px 12px;font-size:12px;';
+    const measureBtn = makeBtn('Measure', 'btn experiment-block-btn');
+    measureBtn.style.cssText += 'padding:8px 12px;font-size:12px;';
+
+    stepRow.append(oracleBtn, diffusionBtn, measureBtn);
+
+    // ─ Action row ─
+    const actionRow = document.createElement('div');
+    actionRow.style.cssText = 'display:flex;gap:8px;width:100%;';
+    const raceBtn = makeBtn('▶ Race!', 'btn');
+    raceBtn.style.cssText += `flex:2;background:${chapterColor};color:#fff;border:none;`;
+    const newSearchBtn = makeBtn('New Search', 'btn experiment-block-btn');
+    newSearchBtn.style.cssText += 'flex:1;';
+    actionRow.append(raceBtn, newSearchBtn);
+
+    // ─ Formula ─
+    const formulaDiv = document.createElement('div');
+    formulaDiv.style.cssText = "font-family:'Fira Code',monospace;font-size:11px;color:var(--text-muted);text-align:center;line-height:1.6;min-height:28px;";
+
+    // ─ Counter ─
+    const counterDiv = document.createElement('div');
+    counterDiv.style.cssText = "font-size:13px;color:var(--text-muted);text-align:center;font-family:'Fira Code',monospace;";
+
+    // ─ Discovery ─
+    const discoveryDiv = document.createElement('div');
+    discoveryDiv.style.cssText = "font-family:'Fira Code',monospace;font-size:12px;color:var(--text-muted);text-align:center;opacity:0;transition:opacity 0.5s;line-height:1.5;";
+    discoveryDiv.textContent = "💡 Try N=16: classical checks ~8 items on average, Grover needs only ~3 iterations!";
+
+    container.append(sizeRow, infoDiv, panelsRow, stepRow, actionRow, formulaDiv, discoveryDiv, counterDiv);
+
+    function ketLabel(i) {
+      return '|' + i.toString(2).padStart(numQubits, '0') + '⟩';
+    }
+
+    function renderClassicalGrid() {
+      classicalGrid.textContent = '';
+      const cellSize = N <= 8 ? 32 : 24;
+      for (let i = 0; i < N; i++) {
+        const cell = document.createElement('div');
+        cell.style.cssText = `
+          width:${cellSize}px;height:${cellSize}px;border-radius:4px;
+          display:flex;align-items:center;justify-content:center;
+          font-family:'Fira Code',monospace;font-size:${N <= 8 ? 10 : 8}px;
+          font-weight:700;border:2px solid var(--border);color:var(--text-muted);
+          transition:all 0.2s;
+        `;
+        cell.textContent = ketLabel(i);
+        cell.dataset.idx = i;
+        classicalGrid.appendChild(cell);
+      }
+    }
+
+    function updateClassicalCell(idx, state) {
+      const cells = classicalGrid.children;
+      if (idx >= cells.length) return;
+      const cell = cells[idx];
+      if (state === 'checking') {
+        cell.style.borderColor = '#FFB020';
+        cell.style.background = 'rgba(255,176,32,0.15)';
+        cell.style.color = '#FFB020';
+      } else if (state === 'found') {
+        cell.style.borderColor = '#58CC02';
+        cell.style.background = 'rgba(88,204,2,0.2)';
+        cell.style.color = '#58CC02';
+      } else if (state === 'checked') {
+        cell.style.borderColor = 'var(--border)';
+        cell.style.background = 'rgba(255,255,255,0.03)';
+        cell.style.color = 'var(--text-muted)';
+        cell.style.opacity = '0.4';
+      }
+    }
+
+    function renderBars() {
+      barsContainer.textContent = '';
+      const maxBarH = 100;
+      const barW = Math.max(12, Math.floor((barsContainer.offsetWidth || 200) / N) - 2);
+
+      // Zero line
+      const zeroLine = document.createElement('div');
+      zeroLine.style.cssText = `
+        position:absolute;left:0;right:0;top:50%;height:1px;
+        background:var(--border);z-index:0;
+      `;
+      barsContainer.appendChild(zeroLine);
+
+      // Mean line
+      const mean = amplitudes.reduce((s, a) => s + a, 0) / N;
+      const meanPx = mean * maxBarH;
+      const meanLine = document.createElement('div');
+      meanLine.style.cssText = `
+        position:absolute;left:0;right:0;bottom:${50 + meanPx}%;height:1px;
+        border-top:1px dashed ${chapterColor};opacity:0.5;z-index:1;
+      `;
+      barsContainer.appendChild(meanLine);
+
+      meanDiv.textContent = `Mean: ${mean.toFixed(3)} | Formula: new = 2×mean − old`;
+
+      for (let i = 0; i < N; i++) {
+        const col = document.createElement('div');
+        col.style.cssText = `
+          display:flex;flex-direction:column;align-items:center;z-index:2;
+          width:${barW}px;position:relative;
+        `;
+
+        const amp = amplitudes[i];
+        const barH = Math.abs(amp) * maxBarH;
+        const isNeg = amp < 0;
+        const isMarked = i === markedIdx;
+
+        const barWrap = document.createElement('div');
+        barWrap.style.cssText = `
+          width:100%;height:${maxBarH}px;position:relative;
+          display:flex;flex-direction:column;justify-content:center;
+        `;
+
+        const bar = document.createElement('div');
+        const color = isMarked ? chapterColor : 'var(--text-muted)';
+        if (isNeg) {
+          bar.style.cssText = `
+            width:100%;height:${barH}px;background:${color};
+            border-radius:0 0 2px 2px;opacity:${isMarked ? 1 : 0.5};
+            position:absolute;top:50%;transition:height 0.3s;
+          `;
+        } else {
+          bar.style.cssText = `
+            width:100%;height:${barH}px;background:${color};
+            border-radius:2px 2px 0 0;opacity:${isMarked ? 1 : 0.5};
+            position:absolute;bottom:50%;transition:height 0.3s;
+          `;
+        }
+        barWrap.appendChild(bar);
+
+        const label = document.createElement('div');
+        label.style.cssText = `
+          font-family:'Fira Code',monospace;font-size:${N <= 8 ? 9 : 7}px;
+          color:${isMarked ? chapterColor : 'var(--text-muted)'};text-align:center;
+          font-weight:${isMarked ? 700 : 400};margin-top:2px;
+        `;
+        label.textContent = N <= 8 ? ketLabel(i) : i.toString();
+
+        const ampLabel = document.createElement('div');
+        ampLabel.style.cssText = `font-family:'Fira Code',monospace;font-size:8px;color:var(--text-muted);text-align:center;`;
+        ampLabel.textContent = amp.toFixed(2);
+
+        col.append(barWrap, label, ampLabel);
+        barsContainer.appendChild(col);
+      }
+    }
+
+    function applyOracle() {
+      if (groverDone) return;
+      amplitudes[markedIdx] *= -1;
+      stepPhase = 'diffusion';
+      renderBars();
+      formulaDiv.textContent = `Oracle: flipped ${ketLabel(markedIdx)} amplitude → ${amplitudes[markedIdx].toFixed(3)}`;
+      groverStatus.textContent = `Iteration ${groverIteration + 1} — oracle applied`;
+      updateStepBtnStates();
+    }
+
+    function applyDiffusion() {
+      if (groverDone || stepPhase !== 'diffusion') return;
+      const mean = amplitudes.reduce((s, a) => s + a, 0) / N;
+      amplitudes = amplitudes.map(a => 2 * mean - a);
+      groverIteration++;
+      stepPhase = 'oracle';
+      renderBars();
+      formulaDiv.textContent = `Diffusion: reflected about mean (${mean.toFixed(3)}). Marked item: ${amplitudes[markedIdx].toFixed(3)}`;
+      groverStatus.textContent = `Iteration ${groverIteration}/${optimalIter}`;
+      updateStepBtnStates();
+    }
+
+    function applyMeasure() {
+      if (groverDone) return;
+      // Sample based on probabilities
+      const probs = amplitudes.map(a => a * a);
+      const r = Math.random();
+      let cum = 0, result = N - 1;
+      for (let i = 0; i < N; i++) {
+        cum += probs[i];
+        if (r < cum) { result = i; break; }
+      }
+      groverDone = true;
+      const found = result === markedIdx;
+      groverStatus.textContent = `Measured ${ketLabel(result)} — ${found ? 'FOUND!' : 'miss'}`;
+      groverStatus.style.color = found ? '#58CC02' : '#FF4B4B';
+      formulaDiv.textContent = `P(${ketLabel(markedIdx)}) = ${(amplitudes[markedIdx] ** 2 * 100).toFixed(1)}% | Used ${groverIteration} iteration${groverIteration !== 1 ? 's' : ''}`;
+
+      searches++;
+      counterDiv.textContent = `Searches: ${searches}`;
+      if (searches >= 3) discoveryDiv.style.opacity = '1';
+      if (!completed) { completed = true; onComplete({ searches }); }
+      updateStepBtnStates();
+    }
+
+    function updateStepBtnStates() {
+      oracleBtn.disabled = groverDone || stepPhase !== 'oracle';
+      diffusionBtn.disabled = groverDone || stepPhase !== 'diffusion';
+      measureBtn.disabled = groverDone;
+      oracleBtn.style.opacity = oracleBtn.disabled ? '0.4' : '1';
+      diffusionBtn.style.opacity = diffusionBtn.disabled ? '0.4' : '1';
+      measureBtn.style.opacity = measureBtn.disabled ? '0.4' : '1';
+    }
+
+    function newSearch() {
+      initSearch();
+      Object.entries(sizeBtns).forEach(([n, btn]) => {
+        btn.style.boxShadow = parseInt(n) === numQubits ? `0 0 0 3px ${chapterColor}` : '';
+      });
+      infoDiv.textContent = `N = ${N} items | Optimal Grover iterations: ⌊(π/4)√${N}⌋ = ${optimalIter} | Classical expected: ~${Math.ceil(N / 2)}`;
+      groverStatus.textContent = 'Equal superposition — ready';
+      groverStatus.style.color = '';
+      classicalStatus.textContent = `Checked: 0 / ${N}`;
+      formulaDiv.textContent = '';
+      renderClassicalGrid();
+      renderBars();
+      updateStepBtnStates();
+      counterDiv.textContent = `Searches: ${searches}`;
+    }
+
+    oracleBtn.addEventListener('click', applyOracle);
+    diffusionBtn.addEventListener('click', applyDiffusion);
+    measureBtn.addEventListener('click', applyMeasure);
+
+    raceBtn.addEventListener('click', () => {
+      if (raceTimer || groverDone) {
+        newSearch();
+        return;
+      }
+      // Run Grover optimally
+      for (let iter = 0; iter < optimalIter; iter++) {
+        amplitudes[markedIdx] *= -1;
+        const mean = amplitudes.reduce((s, a) => s + a, 0) / N;
+        amplitudes = amplitudes.map(a => 2 * mean - a);
+        groverIteration++;
+      }
+      renderBars();
+      groverStatus.textContent = `${groverIteration} iterations done — measuring...`;
+
+      // Race: animate classical search
+      let classIdx = 0;
+      // Random permutation for classical search order
+      const searchOrder = shuffle(Array.from({ length: N }, (_, i) => i));
+
+      raceTimer = setInterval(() => {
+        if (classIdx > 0) {
+          updateClassicalCell(searchOrder[classIdx - 1], searchOrder[classIdx - 1] === markedIdx ? 'found' : 'checked');
+        }
+        if (classicalFound || classIdx >= N) {
+          clearInterval(raceTimer);
+          raceTimer = null;
+          if (!classicalFound) {
+            classicalStatus.textContent = `Checked all ${N} — not great!`;
+          }
+          // Now measure Grover
+          applyMeasure();
+          return;
+        }
+        const checkingIdx = searchOrder[classIdx];
+        updateClassicalCell(checkingIdx, 'checking');
+        classicalChecked++;
+        classicalStatus.textContent = `Checked: ${classicalChecked} / ${N}`;
+
+        if (checkingIdx === markedIdx) {
+          classicalFound = true;
+          updateClassicalCell(checkingIdx, 'found');
+          classicalStatus.textContent = `Found ${ketLabel(markedIdx)} after ${classicalChecked} checks`;
+          classicalStatus.style.color = '#58CC02';
+          clearInterval(raceTimer);
+          raceTimer = null;
+          applyMeasure();
+          return;
+        }
+        classIdx++;
+      }, N <= 4 ? 500 : N <= 8 ? 300 : 180);
+    });
+
+    newSearchBtn.addEventListener('click', newSearch);
+
+    newSearch();
+
+    return () => { if (raceTimer) clearInterval(raceTimer); };
+  },
+};
+
+
 // ── Export ─────────────────────────────────────────────────────────────────────
 
 export const EXPERIMENTS = {
@@ -3422,4 +4449,7 @@ export const EXPERIMENTS = {
   12: experiment12,
   13: experiment13,
   14: experiment14,
+  15: experiment15,
+  16: experiment16,
+  17: experiment17,
 };

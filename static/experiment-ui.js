@@ -1123,6 +1123,35 @@ export class CircuitSimulator {
 }
 
 
+// ── StepSequencer ────────────────────────────────────────────────────────────
+// Lightweight step-by-step animation controller. Used by Ch 15+ experiments.
+
+export class StepSequencer {
+  constructor(steps) {
+    this._steps = steps; // [{ label, action: async () => {} }]
+    this._index = 0;
+    this._running = false;
+  }
+
+  getCurrentStep() { return this._index; }
+  getStepCount() { return this._steps.length; }
+  isComplete() { return this._index >= this._steps.length; }
+
+  async next() {
+    if (this._running || this.isComplete()) return null;
+    this._running = true;
+    const step = this._steps[this._index];
+    await step.action();
+    this._index++;
+    this._running = false;
+    return step.label;
+  }
+
+  reset() { this._index = 0; this._running = false; }
+  destroy() { this._steps = []; this._index = 0; }
+}
+
+
 // ── Utility: showToast ────────────────────────────────────────────────────────
 
 export function showToast(container, message, type = 'info') {
