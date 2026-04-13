@@ -58,7 +58,7 @@ An interactive, Duolingo-style quantum computing course built for iPad with Appl
 - **Optional AI work review** — vision-based feedback on handwritten work via Claude API
 - **Progress tracking** — localStorage persistence, sequential chapter unlocking, lesson progress resume
 - **Quiz gates** — pass the quiz to unlock the next chapter
-- **Chapter Experiments** — sandbox-style interactive labs that unlock after completing each chapter. No scoring, no rounds — pure exploration with live feedback. 11 experiments built so far:
+- **Chapter Experiments** — sandbox-style interactive labs that unlock after completing each chapter. No scoring, no rounds — pure exploration with live feedback. 14 experiments built so far:
   - Ch 1: Equation Balancer — solve and balance algebraic equations
   - Ch 2: Vector Playground — drag vectors, see addition and magnitude in real time
   - Ch 3: Normalization Machine — stretch and normalize vectors with physics beam
@@ -70,6 +70,9 @@ An interactive, Duolingo-style quantum computing course built for iPad with Appl
   - Ch 9: Qubit Combiner — combine two independent qubits via tensor product, dual Bloch spheres, 4-element probability histogram
   - Ch 10: Entanglement Lab — prepare Bell states, measure one qubit and watch the other instantly collapse, correlation tracking
   - Ch 11: Circuit Puzzler — tap-to-place circuit builder with X/H/Z/CNOT gates, run circuits, target matching challenges
+  - Ch 12: Bloch Sphere Painter — paint colored trails on the Bloch sphere with Rx/Ry/Rz rotation sliders, discover global phase
+  - Ch 13: Phase Clock — clock face showing phase angle, T/S/Z gate buttons add fixed increments, discover T²=S, S²=Z
+  - Ch 14: Gate Wiring Lab — build equivalent circuits from simpler gates (CZ, SWAP decomposition), test all inputs with truth table
 
 ## Getting Started
 
@@ -100,7 +103,7 @@ static/
   problems.js           86 problem generators + answer checker (10 answer types)
   chapters.js           20 chapters with progression arrays and lesson structure
   experiments.js        Interactive experiment definitions per chapter (mount/cleanup pattern)
-  experiment-ui.js      Shared experiment components (GridCanvas, BlochSphere, HistogramRenderer, CircuitSimulator)
+  experiment-ui.js      Shared experiment components (GridCanvas, BlochSphere, HistogramRenderer, CircuitSimulator, ClockFace)
   keyboard.js           Custom answer keyboard (context-aware per answer type)
   canvas.js             Apple Pencil drawing engine with palm rejection
   style.css             Duolingo-inspired dark theme design system

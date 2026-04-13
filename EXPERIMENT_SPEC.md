@@ -325,6 +325,7 @@ A sandbox circuit builder where the student drags gates onto wires and tests cir
 
 ### Chapter 12: Rotation Gates
 **Experiment: "Bloch Sphere Painter"**
+**Built in Session 5** ✅
 
 **ONE JOB**: Each rotation axis (Rx, Ry, Rz) traces a different circle on the sphere — see which parts of state space each one can reach.
 
@@ -351,6 +352,7 @@ Use rotation gate sliders as brushes to paint trails on the Bloch sphere, discov
 
 ### Chapter 13: Phase Gates
 **Experiment: "Phase Clock"**
+**Built in Session 5** ✅
 
 **ONE JOB**: Phase gates add fixed angles — T, S, and Z are just different-sized steps around the same circle.
 
@@ -375,6 +377,7 @@ A clock face showing the phase of |1⟩'s amplitude. Phase gates rotate the cloc
 
 ### Chapter 14: Multi-Qubit Gates
 **Experiment: "Gate Wiring Lab"**
+**Built in Session 5** ✅
 
 **ONE JOB**: Complex gates decompose into simple ones — you become the compiler.
 
@@ -580,6 +583,6 @@ Run circuits with and without error correction. A noise slider lets you feel how
 | 2 ✅ | Ch 4-5 (Complex Multiplier, Transformation Sandbox) | Extended GridCanvas: drawArc, drawPolygon, drawAxisLabels |
 | 3 ✅ | Ch 6-8 (State Explorer, Gate Laboratory, Quantum Coin Toss Lab) | BlochSphere renderer, HistogramRenderer |
 | 4 ✅ | Ch 9-11 (Qubit Combiner, Entanglement Lab, Circuit Puzzler) | CircuitSimulator |
-| 5 | Ch 12-14 (Bloch Sphere Painter, Phase Clock, Gate Wiring Lab) | BlochSphere trails, clock face |
+| 5 ✅ | Ch 12-14 (Bloch Sphere Painter, Phase Clock, Gate Wiring Lab) | BlochSphere trails, clock face |
 | 6 | Ch 15-17 (Teleportation Simulator, Oracle Detective, Quantum Search Race) | Animation sequencer |
 | 7 | Ch 18-20 (Noisy Quantum Lab, Period Finder, Hardware Explorer) | Noise sim, RadarChart |

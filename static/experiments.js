@@ -13,7 +13,7 @@
  * They teach through free-form interaction and live feedback.
  */
 
-import { GridCanvas, PhysicsBeam, BlochSphere, HistogramRenderer, CircuitSimulator, showToast, animateValue } from './experiment-ui.js?v=4';
+import { GridCanvas, PhysicsBeam, BlochSphere, HistogramRenderer, CircuitSimulator, ClockFace, showToast, animateValue } from './experiment-ui.js?v=5';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -2576,6 +2576,835 @@ const experiment11 = {
 };
 
 
+// ── Rotation gate helpers (Ch 12) ────────────────────────────────────────────
+
+function applyRx(state, theta) {
+  const c = Math.cos(theta / 2);
+  const s = Math.sin(theta / 2);
+  // Rx(θ) = [[cos(θ/2), -i·sin(θ/2)], [-i·sin(θ/2), cos(θ/2)]]
+  const [a, b] = state;
+  return [
+    { re: c * a.re + s * b.im, im: c * a.im - s * b.re },
+    { re: s * a.im + c * b.re, im: -s * a.re + c * b.im },
+  ];
+}
+
+function applyRy(state, theta) {
+  const c = Math.cos(theta / 2);
+  const s = Math.sin(theta / 2);
+  // Ry(θ) = [[cos(θ/2), -sin(θ/2)], [sin(θ/2), cos(θ/2)]]
+  const [a, b] = state;
+  return [
+    { re: c * a.re - s * b.re, im: c * a.im - s * b.im },
+    { re: s * a.re + c * b.re, im: s * a.im + c * b.im },
+  ];
+}
+
+function applyRz(state, theta) {
+  // Rz(θ) = [[e^(-iθ/2), 0], [0, e^(iθ/2)]]
+  const c = Math.cos(theta / 2);
+  const s = Math.sin(theta / 2);
+  const [a, b] = state;
+  return [
+    { re: c * a.re + s * a.im, im: c * a.im - s * a.re },  // e^(-iθ/2) * a
+    { re: c * b.re - s * b.im, im: c * b.im + s * b.re },  // e^(+iθ/2) * b
+  ];
+}
+
+// stateToBloch and fmtKet already defined above (line ~640)
+
+function fmtKetFull(alpha, beta) {
+  // Like fmtKet but shows complex alpha (needed when Rz introduces phase on |0⟩)
+  function fc(c) {
+    const re = Math.round(c.re * 100) / 100;
+    const im = Math.round(c.im * 100) / 100;
+    if (Math.abs(im) < 0.005) return `${re}`;
+    if (Math.abs(re) < 0.005) return `${im}i`;
+    return `(${re}${im >= 0 ? '+' : ''}${im}i)`;
+  }
+  const aStr = fc(alpha);
+  const bStr = fc(beta);
+  if (aStr === '0' && bStr === '0') return '|ψ⟩ = 0';
+  if (aStr === '0') return `|ψ⟩ = ${bStr}|1⟩`;
+  if (bStr === '0') return `|ψ⟩ = ${aStr}|0⟩`;
+  return `|ψ⟩ = ${aStr}|0⟩ + ${bStr}|1⟩`;
+}
+
+
+// ── Chapter 12: Bloch Sphere Painter ─────────────────────────────────────────
+
+/**
+ * Ch 12 — Bloch Sphere Painter (sandbox)
+ *
+ * Rotation gate sliders paint colored trails on the Bloch sphere.
+ * Rx = red, Ry = green, Rz = blue. Each axis traces a different circle.
+ * Students discover: Rz from |0⟩ doesn't visibly move (global phase).
+ */
+const experiment12 = {
+  title: 'Bloch Sphere Painter',
+  subtitle: 'Paint rotation trails on the Bloch sphere',
+  icon: '🎨',
+
+  mount(container, { chapterColor, onComplete }) {
+    let completed = false;
+    let rotationsExplored = 0;
+
+    // Quantum state as complex amplitudes [α, β]
+    let state = [{ re: 1, im: 0 }, { re: 0, im: 0 }]; // |0⟩
+
+    container.style.flexDirection = 'column';
+
+    // ─ Bloch sphere (large) ─
+    const sphereWrap = document.createElement('div');
+    sphereWrap.className = 'experiment-canvas-wrap';
+    sphereWrap.style.cssText += 'min-height:220px;max-height:280px;width:100%;';
+    const sphereCanvas = document.createElement('canvas');
+    sphereWrap.appendChild(sphereCanvas);
+    const bloch = new BlochSphere(sphereCanvas, { color: chapterColor, showTrails: true });
+
+    // ─ State display ─
+    const stateDiv = document.createElement('div');
+    stateDiv.style.cssText = `
+      background:var(--surface);border:2px solid var(--border);border-radius:var(--radius-lg);
+      padding:12px;text-align:center;font-family:'Fira Code',monospace;font-size:14px;
+      font-weight:700;color:var(--text);line-height:1.4;
+    `;
+
+    // ─ Probability readout ─
+    const probDiv = document.createElement('div');
+    probDiv.style.cssText = "text-align:center;font-family:'Fira Code',monospace;font-size:12px;color:var(--text-muted);";
+
+    // ─ Rotation sliders ─
+    const AXES = [
+      { name: 'Rx', color: '#FF4B4B', apply: applyRx },
+      { name: 'Ry', color: '#58CC02', apply: applyRy },
+      { name: 'Rz', color: '#1CB0F6', apply: applyRz },
+    ];
+
+    const sliderSection = document.createElement('div');
+    sliderSection.style.cssText = 'display:flex;flex-direction:column;gap:8px;';
+
+    const sliderRefs = AXES.map(axis => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;';
+
+      const label = document.createElement('div');
+      label.style.cssText = `font-family:'Fira Code',monospace;font-size:13px;font-weight:700;color:${axis.color};min-width:28px;`;
+      label.textContent = axis.name;
+
+      const slider = document.createElement('input');
+      slider.type = 'range';
+      slider.min = String(-Math.PI);
+      slider.max = String(Math.PI);
+      slider.step = '0.03';
+      slider.value = '0';
+      slider.style.cssText = `flex:1;accent-color:${axis.color};`;
+
+      const valEl = document.createElement('div');
+      valEl.style.cssText = `font-family:'Fira Code',monospace;font-size:11px;color:${axis.color};min-width:44px;text-align:right;`;
+      valEl.textContent = '0';
+
+      row.append(label, slider, valEl);
+      sliderSection.appendChild(row);
+
+      let lastVal = 0;
+
+      slider.addEventListener('input', () => {
+        const val = parseFloat(slider.value);
+        const delta = val - lastVal;
+        lastVal = val;
+
+        if (Math.abs(delta) < 0.001) return;
+
+        state = axis.apply(state, delta);
+
+        const blochAngles = stateToBloch(state[0], state[1]);
+        bloch.addTrailPoint(blochAngles.theta, blochAngles.phi, axis.color);
+
+        rotationsExplored++;
+        update();
+
+        if (!completed) {
+          completed = true;
+          onComplete({ rotationsExplored });
+        }
+      });
+
+      const resetSlider = () => {
+        slider.value = '0';
+        lastVal = 0;
+        valEl.textContent = '0';
+        bloch._currentTrail = null;
+      };
+      slider.addEventListener('pointerup', resetSlider);
+      slider.addEventListener('touchend', resetSlider);
+
+      return { slider, valEl, resetSlider };
+    });
+
+    // ─ Action buttons ─
+    const actionRow = document.createElement('div');
+    actionRow.style.cssText = 'display:flex;gap:8px;';
+
+    const clearBtn = makeBtn('Clear Trails', 'btn experiment-block-btn');
+    clearBtn.addEventListener('click', () => {
+      bloch.clearTrails();
+      bloch.render();
+      showToast(container, 'Trails cleared', 'info');
+    });
+
+    const resetBtn = makeBtn('Reset to |0⟩', 'btn experiment-block-btn');
+    resetBtn.addEventListener('click', () => {
+      state = [{ re: 1, im: 0 }, { re: 0, im: 0 }];
+      bloch.clearTrails();
+      sliderRefs.forEach(s => s.resetSlider());
+      update();
+      showToast(container, 'Reset to |0⟩', 'info');
+    });
+
+    actionRow.append(clearBtn, resetBtn);
+
+    // ─ Discovery prompt ─
+    const discoveryDiv = document.createElement('div');
+    discoveryDiv.style.cssText = "font-family:'Fira Code',monospace;font-size:12px;color:var(--text-muted);text-align:center;opacity:0;transition:opacity 0.5s;line-height:1.5;";
+    discoveryDiv.textContent = "💡 Start at |0⟩. Try using ONLY Rz — can you move the arrow? Now try Ry, then combine both.";
+
+    // ─ Counter ─
+    const counterDiv = document.createElement('div');
+    counterDiv.style.cssText = 'font-size:13px;color:var(--text-muted);text-align:center;';
+    counterDiv.textContent = 'Rotations explored: 0';
+
+    container.append(sphereWrap, stateDiv, probDiv, sliderSection, actionRow, discoveryDiv, counterDiv);
+
+    function update() {
+      const blochAngles = stateToBloch(state[0], state[1]);
+      bloch.setState(blochAngles.theta, blochAngles.phi);
+      stateDiv.textContent = fmtKetFull(state[0], state[1]);
+
+      const p0 = state[0].re * state[0].re + state[0].im * state[0].im;
+      probDiv.textContent = `P(|0⟩) = ${(p0).toFixed(3)}   P(|1⟩) = ${(1 - p0).toFixed(3)}`;
+
+      sliderRefs.forEach(s => {
+        s.valEl.textContent = parseFloat(s.slider.value).toFixed(2);
+      });
+
+      counterDiv.textContent = `Rotations explored: ${rotationsExplored}`;
+      if (rotationsExplored >= 10) discoveryDiv.style.opacity = '1';
+    }
+
+    update();
+
+    return () => { bloch.destroy(); };
+  },
+};
+
+
+// ── Chapter 13: Phase Clock ──────────────────────────────────────────────────
+
+/**
+ * Ch 13 — Phase Clock (sandbox)
+ *
+ * Clock face showing the phase of |1⟩'s amplitude. Phase gates (T, S, Z)
+ * rotate the clock hand in fixed increments. Students discover the hierarchy:
+ * T² = S, S² = Z, T⁴ = Z. Running decomposition formula shows equivalences.
+ */
+const experiment13 = {
+  title: 'Phase Clock',
+  subtitle: 'Step through phase gates — see the hierarchy',
+  icon: '🕐',
+
+  mount(container, { chapterColor, onComplete }) {
+    let completed = false;
+    let gatesApplied = 0;
+    let phase = 0;
+    let gateHistory = [];
+
+    container.style.flexDirection = 'column';
+
+    // ─ Clock face ─
+    const clockWrap = document.createElement('div');
+    clockWrap.className = 'experiment-canvas-wrap';
+    clockWrap.style.cssText += 'min-height:200px;max-height:240px;width:100%;';
+    const clockCanvas = document.createElement('canvas');
+    clockWrap.appendChild(clockCanvas);
+    const clock = new ClockFace(clockCanvas, { color: chapterColor });
+
+    // ─ State display ─
+    const stateDiv = document.createElement('div');
+    stateDiv.style.cssText = `
+      background:var(--surface);border:2px solid var(--border);border-radius:var(--radius-lg);
+      padding:12px;text-align:center;font-family:'Fira Code',monospace;font-size:14px;
+      font-weight:700;color:var(--text);line-height:1.4;
+    `;
+
+    // ─ Phase formula ─
+    const formulaDiv = document.createElement('div');
+    formulaDiv.style.cssText = `
+      background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+      padding:10px;text-align:center;font-family:'Fira Code',monospace;font-size:13px;
+      color:var(--text-muted);line-height:1.5;min-height:40px;
+    `;
+
+    // ─ Probability bars (always 50/50) ─
+    const probDiv = document.createElement('div');
+    probDiv.style.cssText = "text-align:center;font-family:'Fira Code',monospace;font-size:12px;color:var(--text-muted);";
+    probDiv.textContent = 'P(|0⟩) = 0.500   P(|1⟩) = 0.500 — phase never changes probabilities';
+
+    // ─ Gate buttons ─
+    const PHASE_GATES = [
+      { label: 'T', sublabel: '+π/4', angle: Math.PI / 4, primary: true },
+      { label: 'S', sublabel: '+π/2', angle: Math.PI / 2, primary: true },
+      { label: 'Z', sublabel: '+π', angle: Math.PI, primary: true },
+      { label: 'T†', sublabel: '−π/4', angle: -Math.PI / 4, primary: false },
+      { label: 'S†', sublabel: '−π/2', angle: -Math.PI / 2, primary: false },
+    ];
+
+    const gateRow = document.createElement('div');
+    gateRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;justify-content:center;';
+
+    PHASE_GATES.forEach(gate => {
+      const btn = document.createElement('button');
+      btn.className = gate.primary ? 'btn' : 'btn experiment-block-btn';
+      btn.style.cssText = `
+        padding:10px 14px;font-family:'Fira Code',monospace;font-weight:700;
+        font-size:15px;display:flex;flex-direction:column;align-items:center;gap:2px;
+        min-width:60px;
+        ${gate.primary ? `background:${chapterColor};color:#fff;border:none;` : ''}
+      `;
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = gate.label;
+      const subSpan = document.createElement('span');
+      subSpan.style.cssText = 'font-size:10px;opacity:0.7;';
+      subSpan.textContent = gate.sublabel;
+      btn.append(nameSpan, subSpan);
+
+      btn.addEventListener('click', async () => {
+        const oldPhase = phase;
+        phase += gate.angle;
+        gateHistory.push(gate.label);
+        gatesApplied++;
+
+        await clock.animatePhase(oldPhase, phase, 300);
+        updateDisplay();
+
+        if (!completed) {
+          completed = true;
+          onComplete({ gatesApplied });
+        }
+      });
+
+      gateRow.appendChild(btn);
+    });
+
+    // ─ Reset button ─
+    const actionRow = document.createElement('div');
+    actionRow.style.cssText = 'display:flex;gap:8px;justify-content:center;';
+
+    const resetBtn = makeBtn('Reset Phase', 'btn experiment-block-btn');
+    resetBtn.addEventListener('click', () => {
+      phase = 0;
+      gateHistory = [];
+      clock.setPhase(0);
+      updateDisplay();
+      showToast(container, 'Phase reset to 0', 'info');
+    });
+    actionRow.appendChild(resetBtn);
+
+    // ─ Discovery prompt ─
+    const discoveryDiv = document.createElement('div');
+    discoveryDiv.style.cssText = "font-family:'Fira Code',monospace;font-size:12px;color:var(--text-muted);text-align:center;opacity:0;transition:opacity 0.5s;line-height:1.5;";
+    discoveryDiv.textContent = '💡 How many T gates equal one Z gate? Try it!';
+
+    // ─ Counter ─
+    const counterDiv = document.createElement('div');
+    counterDiv.style.cssText = 'font-size:13px;color:var(--text-muted);text-align:center;';
+
+    container.append(clockWrap, stateDiv, formulaDiv, probDiv, gateRow, actionRow, discoveryDiv, counterDiv);
+
+    function formatPhaseAngle(rad) {
+      let r = rad % (2 * Math.PI);
+      if (r < -1e-9) r += 2 * Math.PI;
+      if (Math.abs(r) < 1e-9 || Math.abs(r - 2 * Math.PI) < 1e-9) return '0';
+      const frac = r / Math.PI;
+      const fracs = [
+        [1/4, 'π/4'], [1/2, 'π/2'], [3/4, '3π/4'], [1, 'π'],
+        [5/4, '5π/4'], [3/2, '3π/2'], [7/4, '7π/4'],
+      ];
+      for (const [f, label] of fracs) {
+        if (Math.abs(frac - f) < 0.01) return label;
+      }
+      return `${(r).toFixed(2)}`;
+    }
+
+    function getEquivalence() {
+      const phaseNorm = ((phase % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+      if (Math.abs(phaseNorm) < 0.01 || Math.abs(phaseNorm - 2 * Math.PI) < 0.01) return '= I (full circle!)';
+      if (Math.abs(phaseNorm - Math.PI) < 0.01) return '= Z';
+      if (Math.abs(phaseNorm - Math.PI / 2) < 0.01) return '= S';
+      if (Math.abs(phaseNorm - Math.PI / 4) < 0.01) return '= T';
+      if (Math.abs(phaseNorm - 3 * Math.PI / 2) < 0.01) return '= S†';
+      if (Math.abs(phaseNorm - 7 * Math.PI / 4) < 0.01) return '= T†';
+      return '';
+    }
+
+    function updateDisplay() {
+      const pNorm = ((phase % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+      const cosP = Math.cos(pNorm);
+      const sinP = Math.sin(pNorm);
+      const phaseStr = formatPhaseAngle(phase);
+
+      if (Math.abs(pNorm) < 0.01 || Math.abs(pNorm - 2 * Math.PI) < 0.01) {
+        stateDiv.textContent = '|ψ⟩ = (1/√2)(|0⟩ + |1⟩) = |+⟩';
+      } else {
+        const reCoeff = Math.round(cosP * 100) / 100;
+        const imCoeff = Math.round(sinP * 100) / 100;
+        let coeffStr;
+        if (Math.abs(imCoeff) < 0.005) coeffStr = `${reCoeff}`;
+        else if (Math.abs(reCoeff) < 0.005) coeffStr = `${imCoeff}i`;
+        else coeffStr = `${reCoeff}${imCoeff >= 0 ? '+' : ''}${imCoeff}i`;
+        stateDiv.textContent = `|ψ⟩ = (1/√2)(|0⟩ + ${coeffStr}|1⟩)   φ = ${phaseStr}`;
+      }
+
+      if (gateHistory.length === 0) {
+        formulaDiv.textContent = 'Apply phase gates to build up phase...';
+      } else {
+        const seq = gateHistory.join(' + ');
+        const total = formatPhaseAngle(phase);
+        const equiv = getEquivalence();
+        formulaDiv.textContent = `${seq} = ${total} ${equiv}`;
+      }
+
+      counterDiv.textContent = `Gates applied: ${gatesApplied}`;
+      if (gatesApplied >= 6) discoveryDiv.style.opacity = '1';
+    }
+
+    updateDisplay();
+
+    return () => { clock.destroy(); };
+  },
+};
+
+
+// ── Chapter 14: Gate Wiring Lab ──────────────────────────────────────────────
+
+/**
+ * Ch 14 — Gate Wiring Lab (sandbox)
+ *
+ * Build multi-qubit gates from simpler ones and verify equivalence
+ * by testing all basis state inputs. Puzzles map to Ch 14 lesson content:
+ * CZ decomposition, SWAP from 3 CNOTs, CZ symmetry.
+ */
+const experiment14 = {
+  title: 'Gate Wiring Lab',
+  subtitle: 'Decompose gates — become the compiler',
+  icon: '🔧',
+
+  mount(container, { chapterColor, onComplete }) {
+    let completed = false;
+    let puzzlesExplored = 0;
+
+    container.style.flexDirection = 'column';
+
+    // ─ Puzzle definitions ─
+    const PUZZLES = [
+      {
+        label: 'Build CZ',
+        description: 'Negate only the |11⟩ component',
+        target(inputIdx) {
+          const out = Array.from({ length: 4 }, (_, i) => i === inputIdx ? { re: 1, im: 0 } : { re: 0, im: 0 });
+          if (inputIdx === 3) out[3] = { re: -1, im: 0 };
+          return out;
+        },
+      },
+      {
+        label: 'Build SWAP',
+        description: 'Exchange the two qubits',
+        target(inputIdx) {
+          const out = [{ re: 0, im: 0 }, { re: 0, im: 0 }, { re: 0, im: 0 }, { re: 0, im: 0 }];
+          const map = [0, 2, 1, 3];
+          out[map[inputIdx]] = { re: 1, im: 0 };
+          return out;
+        },
+      },
+      {
+        label: 'Build CZ (reversed)',
+        description: "Same as CZ — prove it's symmetric!",
+        target(inputIdx) {
+          const out = Array.from({ length: 4 }, (_, i) => i === inputIdx ? { re: 1, im: 0 } : { re: 0, im: 0 });
+          if (inputIdx === 3) out[3] = { re: -1, im: 0 };
+          return out;
+        },
+      },
+      {
+        label: 'Create |Φ+⟩',
+        description: 'Make a Bell state from |00⟩',
+        target(inputIdx) {
+          const sim = new CircuitSimulator(2);
+          const st = Array.from({ length: 4 }, (_, i) => i === inputIdx ? { re: 1, im: 0 } : { re: 0, im: 0 });
+          sim.setState(st);
+          sim.applyGate('H', 0);
+          sim.applyGate('X', 1, 0);
+          return sim.getState();
+        },
+      },
+      {
+        label: 'Free Build',
+        description: 'Build anything — test any circuit',
+        target: null,
+      },
+    ];
+
+    let puzzleIdx = 0;
+
+    // ─ Puzzle header ─
+    const puzzleHeader = document.createElement('div');
+    puzzleHeader.style.cssText = `
+      text-align:center;font-family:'Fira Code',monospace;font-weight:700;
+      font-size:16px;color:var(--text);
+    `;
+
+    const puzzleDescEl = document.createElement('div');
+    puzzleDescEl.style.cssText = "text-align:center;font-family:'Fira Code',monospace;font-size:12px;color:var(--text-muted);margin-top:2px;";
+
+    // ─ Circuit builder (Ch 11 pattern) ─
+    const NUM_SLOTS = 6;
+    const circuitGates = [];
+    const slotEls = [[], []];
+    let selectedGate = null;
+    let cnotControlSlot = null;
+
+    const instrDiv = document.createElement('div');
+    instrDiv.style.cssText = "text-align:center;font-family:'Fira Code',monospace;font-size:12px;color:var(--text-muted);min-height:20px;";
+    instrDiv.textContent = 'Tap a gate, then tap a slot on the wire';
+
+    const circuitArea = document.createElement('div');
+    circuitArea.style.cssText = 'display:flex;flex-direction:column;gap:2px;';
+
+    for (let wire = 0; wire < 2; wire++) {
+      const wireRow = document.createElement('div');
+      wireRow.style.cssText = 'display:flex;align-items:center;gap:0;';
+
+      const wireLabel = document.createElement('div');
+      wireLabel.style.cssText = "font-family:'Fira Code',monospace;font-size:12px;color:var(--text-muted);min-width:42px;";
+      wireLabel.textContent = `q${wire} |0⟩`;
+      wireRow.appendChild(wireLabel);
+
+      const slotsContainer = document.createElement('div');
+      slotsContainer.style.cssText = 'display:flex;gap:4px;flex:1;position:relative;';
+
+      const wireLine = document.createElement('div');
+      wireLine.style.cssText = 'position:absolute;top:50%;left:0;right:0;height:2px;background:var(--border);transform:translateY(-50%);z-index:0;';
+      slotsContainer.appendChild(wireLine);
+
+      for (let s = 0; s < NUM_SLOTS; s++) {
+        const slotEl = document.createElement('div');
+        slotEl.style.cssText = `
+          width:38px;height:38px;border:2px dashed var(--border);border-radius:var(--radius);
+          display:flex;align-items:center;justify-content:center;font-family:'Fira Code',monospace;
+          font-size:12px;font-weight:700;color:var(--text);background:var(--bg);
+          cursor:pointer;z-index:1;position:relative;
+        `;
+
+        slotEl.addEventListener('click', () => handleSlotClick(wire, s, slotEl));
+        slotsContainer.appendChild(slotEl);
+        slotEls[wire].push(slotEl);
+      }
+
+      wireRow.appendChild(slotsContainer);
+      circuitArea.appendChild(wireRow);
+    }
+
+    // ─ Toolbox ─
+    const toolbox = document.createElement('div');
+    toolbox.style.cssText = 'display:flex;gap:6px;justify-content:center;flex-wrap:wrap;';
+
+    const TOOL_GATES = ['X', 'H', 'Z', 'T', 'T†', 'CNOT'];
+    const toolBtns = {};
+
+    TOOL_GATES.forEach(g => {
+      const btn = document.createElement('button');
+      btn.className = 'btn experiment-block-btn';
+      btn.style.cssText = "padding:8px 12px;font-family:'Fira Code',monospace;font-weight:700;font-size:13px;min-width:44px;";
+      btn.textContent = g;
+      btn.addEventListener('click', () => {
+        selectedGate = g;
+        cnotControlSlot = null;
+        Object.values(toolBtns).forEach(b => { b.style.boxShadow = ''; });
+        btn.style.boxShadow = `0 0 0 3px ${chapterColor}`;
+        instrDiv.textContent = g === 'CNOT' ? 'Tap control qubit slot, then target slot' : `Tap a slot to place ${g}`;
+      });
+      toolbox.appendChild(btn);
+      toolBtns[g] = btn;
+    });
+
+    function handleSlotClick(wire, si, slotEl) {
+      if (!selectedGate) {
+        const existing = circuitGates.find(g => g.si === si && (g.wire === wire || g.wire2 === wire));
+        if (existing) {
+          circuitGates.splice(circuitGates.indexOf(existing), 1);
+          renderCircuitView();
+        }
+        return;
+      }
+
+      if (selectedGate === 'CNOT') {
+        if (cnotControlSlot === null) {
+          cnotControlSlot = { wire, si };
+          instrDiv.textContent = `CNOT control on q${wire}. Now tap the target slot.`;
+          slotEl.style.border = `2px solid ${chapterColor}`;
+          return;
+        }
+        const ctrl = cnotControlSlot;
+        if (ctrl.si !== si) {
+          instrDiv.textContent = 'CNOT control and target must be in the same column. Try again.';
+          cnotControlSlot = null;
+          renderCircuitView();
+          return;
+        }
+        if (ctrl.wire === wire) {
+          instrDiv.textContent = 'CNOT target must be on a different wire. Try again.';
+          cnotControlSlot = null;
+          renderCircuitView();
+          return;
+        }
+        for (let i = circuitGates.length - 1; i >= 0; i--) {
+          if (circuitGates[i].si === si) circuitGates.splice(i, 1);
+        }
+        circuitGates.push({ gate: 'CNOT', wire: ctrl.wire, wire2: wire, si });
+        cnotControlSlot = null;
+        selectedGate = null;
+        Object.values(toolBtns).forEach(b => { b.style.boxShadow = ''; });
+        instrDiv.textContent = 'Tap a gate, then tap a slot on the wire';
+        renderCircuitView();
+        return;
+      }
+
+      // Single-qubit gate
+      for (let i = circuitGates.length - 1; i >= 0; i--) {
+        if (circuitGates[i].si === si && circuitGates[i].wire === wire) circuitGates.splice(i, 1);
+      }
+      const simGate = selectedGate === 'T†' ? 'Tdg' : selectedGate;
+      circuitGates.push({ gate: simGate, displayGate: selectedGate, wire, si });
+      selectedGate = null;
+      Object.values(toolBtns).forEach(b => { b.style.boxShadow = ''; });
+      instrDiv.textContent = 'Tap a gate, then tap a slot on the wire';
+      renderCircuitView();
+    }
+
+    function renderCircuitView() {
+      for (let w = 0; w < 2; w++) {
+        for (let s = 0; s < NUM_SLOTS; s++) {
+          slotEls[w][s].textContent = '';
+          slotEls[w][s].style.border = '2px dashed var(--border)';
+          slotEls[w][s].style.background = 'var(--bg)';
+        }
+      }
+      for (const g of circuitGates) {
+        if (g.gate === 'CNOT') {
+          slotEls[g.wire][g.si].textContent = '●';
+          slotEls[g.wire][g.si].style.border = `2px solid ${chapterColor}`;
+          slotEls[g.wire2][g.si].textContent = '⊕';
+          slotEls[g.wire2][g.si].style.border = `2px solid ${chapterColor}`;
+        } else {
+          slotEls[g.wire][g.si].textContent = g.displayGate || g.gate;
+          slotEls[g.wire][g.si].style.border = `2px solid ${chapterColor}`;
+        }
+      }
+    }
+
+    // ─ Action row ─
+    const actionRow = document.createElement('div');
+    actionRow.style.cssText = 'display:flex;gap:8px;';
+
+    const testBtn = makeBtn('▶ Test All Inputs', 'btn');
+    testBtn.style.cssText += `flex:2;background:${chapterColor};color:#fff;border:none;`;
+
+    const clearBtn = makeBtn('Clear', 'btn experiment-block-btn');
+    clearBtn.style.cssText += 'flex:1;';
+
+    const nextBtn = makeBtn('Next Puzzle', 'btn experiment-block-btn');
+    nextBtn.style.cssText += 'flex:1;';
+
+    actionRow.append(testBtn, clearBtn, nextBtn);
+
+    // ─ Results table ─
+    const resultsWrap = document.createElement('div');
+    resultsWrap.style.cssText = 'display:none;overflow-x:auto;';
+
+    // ─ Discovery prompt ─
+    const discoveryDiv = document.createElement('div');
+    discoveryDiv.style.cssText = "font-family:'Fira Code',monospace;font-size:12px;color:var(--text-muted);text-align:center;opacity:0;transition:opacity 0.5s;line-height:1.5;";
+    discoveryDiv.textContent = "💡 Try building CZ with the qubits swapped. Same result? CZ is symmetric — there's no control or target!";
+
+    // ─ Counter ─
+    const counterDiv = document.createElement('div');
+    counterDiv.style.cssText = 'font-size:13px;color:var(--text-muted);text-align:center;';
+
+    container.append(puzzleHeader, puzzleDescEl, instrDiv, circuitArea, toolbox, actionRow, resultsWrap, discoveryDiv, counterDiv);
+
+    function loadPuzzle() {
+      const p = PUZZLES[puzzleIdx];
+      puzzleHeader.textContent = p.label;
+      puzzleDescEl.textContent = p.description;
+      circuitGates.length = 0;
+      selectedGate = null;
+      cnotControlSlot = null;
+      Object.values(toolBtns).forEach(b => { b.style.boxShadow = ''; });
+      instrDiv.textContent = 'Tap a gate, then tap a slot on the wire';
+      resultsWrap.style.display = 'none';
+      renderCircuitView();
+      counterDiv.textContent = `Puzzles explored: ${puzzlesExplored}`;
+    }
+
+    function runStudentCircuit(inputIdx) {
+      const sim = new CircuitSimulator(2);
+      const st = Array.from({ length: 4 }, (_, i) => i === inputIdx ? { re: 1, im: 0 } : { re: 0, im: 0 });
+      sim.setState(st);
+      const sorted = [...circuitGates].sort((a, b) => a.si - b.si);
+      for (const g of sorted) {
+        if (g.gate === 'CNOT') {
+          sim.applyGate('X', g.wire2, g.wire);
+        } else {
+          sim.applyGate(g.gate, g.wire);
+        }
+      }
+      return sim.getState();
+    }
+
+    function statesMatch(a, b) {
+      const TOL = 0.05;
+      for (let i = 0; i < 4; i++) {
+        if (Math.abs(a[i].re - b[i].re) > TOL || Math.abs(a[i].im - b[i].im) > TOL) return false;
+      }
+      return true;
+    }
+
+    function fmtState4(st) {
+      const labels = ['|00⟩', '|01⟩', '|10⟩', '|11⟩'];
+      const parts = [];
+      for (let i = 0; i < 4; i++) {
+        const re = Math.round(st[i].re * 100) / 100;
+        const im = Math.round(st[i].im * 100) / 100;
+        if (Math.abs(re) < 0.005 && Math.abs(im) < 0.005) continue;
+        let coeff;
+        if (Math.abs(im) < 0.005) coeff = `${re}`;
+        else if (Math.abs(re) < 0.005) coeff = `${im}i`;
+        else coeff = `${re}${im >= 0 ? '+' : ''}${im}i`;
+        if (coeff === '1') coeff = '';
+        else if (coeff === '-1') coeff = '−';
+        parts.push(`${coeff}${labels[i]}`);
+      }
+      return parts.join(' + ') || '0';
+    }
+
+    function buildResultsTable(puzzle) {
+      // Build results table using DOM methods (no innerHTML)
+      const labels = ['|00⟩', '|01⟩', '|10⟩', '|11⟩'];
+
+      // Clear previous results
+      while (resultsWrap.firstChild) resultsWrap.removeChild(resultsWrap.firstChild);
+
+      const table = document.createElement('table');
+      table.style.cssText = 'width:100%;border-collapse:collapse;font-family:"Fira Code",monospace;font-size:12px;';
+
+      // Header row
+      const thead = document.createElement('tr');
+      thead.style.cssText = 'border-bottom:1px solid var(--border);';
+      const headers = ['Input'];
+      if (puzzle.target) headers.push('Target');
+      headers.push('Yours');
+      if (puzzle.target) headers.push('Match');
+      for (const h of headers) {
+        const th = document.createElement('th');
+        th.style.cssText = `padding:6px;text-align:${h === 'Match' ? 'center' : 'left'};`;
+        th.textContent = h;
+        thead.appendChild(th);
+      }
+      table.appendChild(thead);
+
+      let allMatch = true;
+      for (let i = 0; i < 4; i++) {
+        const yours = runStudentCircuit(i);
+        const target = puzzle.target ? puzzle.target(i) : null;
+        const match = target ? statesMatch(yours, target) : null;
+        if (match === false) allMatch = false;
+
+        const bgColor = match === true ? 'rgba(88,204,2,0.08)' : match === false ? 'rgba(255,75,75,0.08)' : 'transparent';
+        const tr = document.createElement('tr');
+        tr.style.cssText = `background:${bgColor};border-bottom:1px solid var(--border);`;
+
+        const tdInput = document.createElement('td');
+        tdInput.style.cssText = 'padding:6px;';
+        tdInput.textContent = labels[i];
+        tr.appendChild(tdInput);
+
+        if (target) {
+          const tdTarget = document.createElement('td');
+          tdTarget.style.cssText = 'padding:6px;';
+          tdTarget.textContent = fmtState4(target);
+          tr.appendChild(tdTarget);
+        }
+
+        const tdYours = document.createElement('td');
+        tdYours.style.cssText = 'padding:6px;';
+        tdYours.textContent = fmtState4(yours);
+        tr.appendChild(tdYours);
+
+        if (match !== null) {
+          const tdMatch = document.createElement('td');
+          tdMatch.style.cssText = 'padding:6px;text-align:center;';
+          tdMatch.textContent = match ? '✅' : '❌';
+          tr.appendChild(tdMatch);
+        }
+
+        table.appendChild(tr);
+      }
+
+      resultsWrap.appendChild(table);
+      resultsWrap.style.display = '';
+
+      return allMatch;
+    }
+
+    testBtn.addEventListener('click', () => {
+      const puzzle = PUZZLES[puzzleIdx];
+      const allMatch = buildResultsTable(puzzle);
+
+      if (allMatch && puzzle.target) {
+        showToast(container, 'All inputs match!', 'success');
+        puzzlesExplored++;
+        counterDiv.textContent = `Puzzles explored: ${puzzlesExplored}`;
+        if (puzzlesExplored >= 1) discoveryDiv.style.opacity = '1';
+      }
+
+      if (!completed) {
+        completed = true;
+        onComplete({ puzzlesExplored });
+      }
+    });
+
+    clearBtn.addEventListener('click', () => {
+      circuitGates.length = 0;
+      selectedGate = null;
+      cnotControlSlot = null;
+      Object.values(toolBtns).forEach(b => { b.style.boxShadow = ''; });
+      instrDiv.textContent = 'Tap a gate, then tap a slot on the wire';
+      resultsWrap.style.display = 'none';
+      renderCircuitView();
+    });
+
+    nextBtn.addEventListener('click', () => {
+      puzzleIdx = (puzzleIdx + 1) % PUZZLES.length;
+      loadPuzzle();
+    });
+
+    loadPuzzle();
+
+    return () => {};
+  },
+};
+
+
 // ── Export ─────────────────────────────────────────────────────────────────────
 
 export const EXPERIMENTS = {
@@ -2590,4 +3419,7 @@ export const EXPERIMENTS = {
   9: experiment9,
   10: experiment10,
   11: experiment11,
+  12: experiment12,
+  13: experiment13,
+  14: experiment14,
 };

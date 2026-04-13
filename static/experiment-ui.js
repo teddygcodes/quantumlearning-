@@ -314,8 +314,11 @@ export class BlochSphere {
     this.ctx = canvasEl.getContext('2d');
     this.color = opts.color || '#00C9A7';
     this.showLabels = opts.showLabels !== false;
+    this.showTrails = opts.showTrails || false;
     this._theta = 0;  // 0 = |0⟩ (north pole)
     this._phi = 0;
+    this._trails = [];   // [{theta, phi, color}] — trail segments grouped by color
+    this._currentTrail = null; // current in-progress trail segment
     this.dpr = 0;
     this.w = 0;
     this.h = 0;
@@ -346,6 +349,20 @@ export class BlochSphere {
   }
 
   getState() { return { theta: this._theta, phi: this._phi }; }
+
+  // Trail API — call addTrailPoint repeatedly to build colored paths on the sphere
+  addTrailPoint(theta, phi, color) {
+    if (!this._currentTrail || this._currentTrail.color !== color) {
+      this._currentTrail = { color, points: [] };
+      this._trails.push(this._currentTrail);
+    }
+    this._currentTrail.points.push({ theta, phi });
+  }
+
+  clearTrails() {
+    this._trails = [];
+    this._currentTrail = null;
+  }
 
   setState(theta, phi) {
     this._theta = theta;
@@ -464,6 +481,35 @@ export class BlochSphere {
       ctx.fillText('|−⟩', xn - 8, xny);
     }
 
+    // Trails (drawn before state arrow so arrow is on top)
+    if (this.showTrails && this._trails.length > 0) {
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      for (const trail of this._trails) {
+        if (trail.points.length < 2) continue;
+        ctx.strokeStyle = trail.color;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        const p0 = trail.points[0];
+        const [x0, y0] = this._project(
+          Math.sin(p0.theta) * Math.cos(p0.phi),
+          Math.sin(p0.theta) * Math.sin(p0.phi),
+          Math.cos(p0.theta)
+        );
+        ctx.moveTo(x0, y0);
+        for (let i = 1; i < trail.points.length; i++) {
+          const p = trail.points[i];
+          const [px, py] = this._project(
+            Math.sin(p.theta) * Math.cos(p.phi),
+            Math.sin(p.theta) * Math.sin(p.phi),
+            Math.cos(p.theta)
+          );
+          ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+      }
+    }
+
     // State arrow
     const sx = Math.sin(this._theta) * Math.cos(this._phi);
     const sy = Math.sin(this._theta) * Math.sin(this._phi);
@@ -500,6 +546,155 @@ export class BlochSphere {
     ctx.fillStyle = 'rgba(255,255,255,0.2)';
     ctx.beginPath();
     ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+
+// ── ClockFace ────────────────────────────────────────────────────────────────
+// Canvas-based circular phase display. Used by Ch 13 (Phase Clock).
+// Shows phase angle as a clock hand with tick marks at π/4 increments.
+
+export class ClockFace {
+  constructor(canvasEl, opts = {}) {
+    this.canvas = canvasEl;
+    this.ctx = canvasEl.getContext('2d');
+    this.color = opts.color || '#00C9A7';
+    this._phase = 0; // radians
+    this.dpr = 0;
+    this.w = 0;
+    this.h = 0;
+    this._animId = null;
+
+    this._resize();
+    this._ro = new ResizeObserver(() => { this._resize(); this.render(); });
+    this._ro.observe(canvasEl);
+  }
+
+  destroy() {
+    this._ro.disconnect();
+    if (this._animId) cancelAnimationFrame(this._animId);
+  }
+
+  _resize() {
+    const w = this.canvas.offsetWidth;
+    const h = this.canvas.offsetHeight;
+    if (w === 0 || h === 0) return;
+    const d = window.devicePixelRatio || 1;
+    if (w === this.w && h === this.h && d === this.dpr) return;
+    this.dpr = d;
+    this.w = w;
+    this.h = h;
+    this.canvas.width = Math.round(w * d);
+    this.canvas.height = Math.round(h * d);
+    this.ctx.setTransform(d, 0, 0, d, 0, 0);
+  }
+
+  setPhase(radians) {
+    this._phase = radians;
+    this.render();
+  }
+
+  animatePhase(fromRad, toRad, duration = 350) {
+    return new Promise(resolve => {
+      if (this._animId) cancelAnimationFrame(this._animId);
+      const startTime = performance.now();
+      const delta = toRad - fromRad;
+      const step = (now) => {
+        const p = Math.min(1, (now - startTime) / duration);
+        const ease = 1 - Math.pow(1 - p, 3);
+        this._phase = fromRad + delta * ease;
+        this.render();
+        if (p < 1) {
+          this._animId = requestAnimationFrame(step);
+        } else {
+          this._phase = toRad;
+          this._animId = null;
+          this.render();
+          resolve();
+        }
+      };
+      this._animId = requestAnimationFrame(step);
+    });
+  }
+
+  render() {
+    const ctx = this.ctx;
+    const cx = this.w / 2;
+    const cy = this.h / 2;
+    const r = Math.min(this.w, this.h) * 0.40;
+
+    ctx.clearRect(0, 0, this.w, this.h);
+
+    // Outer circle
+    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Filled arc showing accumulated phase
+    if (Math.abs(this._phase) > 0.01) {
+      const startAngle = -Math.PI / 2; // 12 o'clock
+      const endAngle = startAngle + this._phase;
+      ctx.fillStyle = this.color + '18'; // very transparent fill
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, r - 1, startAngle, endAngle, this._phase < 0);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Tick marks and labels at every π/4
+    const labels = ['0', 'π/4', 'π/2', '3π/4', 'π', '5π/4', '3π/2', '7π/4'];
+    ctx.font = '11px "Fira Code", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    for (let i = 0; i < 8; i++) {
+      const angle = -Math.PI / 2 + (i * Math.PI / 4); // start from 12 o'clock
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+
+      // Tick mark
+      const isMajor = i % 2 === 0;
+      const tickLen = isMajor ? 10 : 6;
+      ctx.strokeStyle = isMajor ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.18)';
+      ctx.lineWidth = isMajor ? 2 : 1;
+      ctx.beginPath();
+      ctx.moveTo(cx + cos * (r - tickLen), cy + sin * (r - tickLen));
+      ctx.lineTo(cx + cos * r, cy + sin * r);
+      ctx.stroke();
+
+      // Label
+      ctx.fillStyle = isMajor ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.3)';
+      ctx.fillText(labels[i], cx + cos * (r + 16), cy + sin * (r + 16));
+    }
+
+    // Center dot
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Clock hand
+    const handAngle = -Math.PI / 2 + this._phase; // phase 0 = 12 o'clock
+    const handLen = r - 16;
+    const hx = cx + Math.cos(handAngle) * handLen;
+    const hy = cy + Math.sin(handAngle) * handLen;
+
+    ctx.strokeStyle = this.color;
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(hx, hy);
+    ctx.stroke();
+
+    // Hand tip dot
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(hx, hy, 5, 0, Math.PI * 2);
     ctx.fill();
   }
 }
@@ -804,6 +999,8 @@ export class CircuitSimulator {
       H: [{re:S,im:0},{re:S,im:0},{re:S,im:0},{re:-S,im:0}],
       S: [{re:1,im:0},{re:0,im:0},{re:0,im:0},{re:0,im:1}],
       T: [{re:1,im:0},{re:0,im:0},{re:0,im:0},{re:Math.cos(Math.PI/4),im:Math.sin(Math.PI/4)}],
+      Tdg: [{re:1,im:0},{re:0,im:0},{re:0,im:0},{re:Math.cos(Math.PI/4),im:-Math.sin(Math.PI/4)}],
+      Sdg: [{re:1,im:0},{re:0,im:0},{re:0,im:0},{re:0,im:-1}],
     };
     this.reset();
   }
