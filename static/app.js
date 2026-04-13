@@ -13,6 +13,8 @@ import { TEMPLATES } from './templates.js?v=9';
 import { CanvasManager } from './canvas.js';
 import * as KB from './keyboard.js?v=2';
 import { EXPERIMENTS } from './experiments.js?v=8';
+import { mountSandbox } from './circuit-ui.js?v=2';
+import { getUnlockedGates } from './circuit.js?v=2';
 
 // ── State ──────────────────────────────────────────────────────────────────
 
@@ -24,6 +26,7 @@ const DEFAULT_STATE = {
     ])
   ),
   tutorMode: false,
+  sandbox: { lastCircuit: null, savedCircuits: [] },
 };
 
 function loadState() {
@@ -35,6 +38,7 @@ function loadState() {
       chapters: Object.fromEntries(
         CHAPTERS.map(ch => [ch.id, { ...DEFAULT_STATE.chapters[ch.id], ...(saved.chapters?.[ch.id] || {}) }])
       ),
+      sandbox: { ...DEFAULT_STATE.sandbox, ...(saved.sandbox || {}) },
     };
     // Auto-unlock: if chapter N is completed, chapter N+1 should be unlocked.
     // Handles new chapters added after the user already passed earlier ones.
@@ -64,12 +68,14 @@ function navigate(path) { KB.hide(); window.location.hash = '#' + path; }
 // ── Experiment cleanup ─────────────────────────────────────────────────────
 
 let experimentCleanup = null;
+let sandboxCleanup = null;
 
 // ── Router ─────────────────────────────────────────────────────────────────
 
 function route() {
-  // Clean up active experiment on navigation
+  // Clean up active experiment or sandbox on navigation
   if (experimentCleanup) { experimentCleanup(); experimentCleanup = null; }
+  if (sandboxCleanup) { sandboxCleanup(); sandboxCleanup = null; }
 
   const hash  = window.location.hash.slice(1) || '/';
   const parts = hash.split('/').filter(Boolean);
@@ -78,6 +84,7 @@ function route() {
     case 'practice':   renderProblemScreen(+parts[1], false); break;
     case 'quiz':       renderProblemScreen(+parts[1], true);  break;
     case 'experiment': renderExperiment(+parts[1]);   break;
+    case 'sandbox':    renderSandbox();               break;
     default:           renderHome();
   }
 }
@@ -182,6 +189,7 @@ function renderHome() {
             </div>
           </div>
           <div class="home-actions">
+            ${state.chapters[11]?.completed ? `<button class="sandbox-btn" onclick="window.location.hash='#/sandbox'">🔬 Sandbox</button>` : ''}
             <button class="home-btn ${state.tutorMode ? 'active' : ''}" onclick="window.__toggleTutor()">
               <span class="home-btn-icon">✏️</span> Tutor ${tutorToggleLabel}
             </button>
@@ -265,6 +273,67 @@ function renderHome() {
   window.__closeModal = (e) => {
     if (e.target.id === 'chapter-modal-overlay') closeModal();
   };
+}
+
+// ── Sandbox ───────────────────────────────────────────────────────────────
+
+function renderSandbox() {
+  const ch11 = state.chapters[11];
+  if (!ch11?.completed) { navigate('/'); return; }
+
+  const unlockedGates = getUnlockedGates(state.chapters);
+  const savedCircuit = state.sandbox.lastCircuit;
+
+  // Safe: only hardcoded template literals
+  setContent(`
+    <div class="sandbox-screen">
+      <div class="sandbox-topbar">
+        <button onclick="window.location.hash='#/'" class="btn-back">← Back</button>
+        <h2 class="sandbox-title">Quantum Sandbox</h2>
+        <div class="qubit-selector">
+          <label>Qubits:</label>
+          <select id="qubit-count">
+            <option value="1">1</option>
+            <option value="2" selected>2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+          </select>
+        </div>
+      </div>
+      <div id="sandbox-container" class="sandbox-body"></div>
+    </div>
+  `);
+
+  // Set qubit count from saved circuit if available
+  if (savedCircuit) {
+    try {
+      const data = JSON.parse(savedCircuit);
+      const sel = document.getElementById('qubit-count');
+      if (sel && data.numQubits) sel.value = data.numQubits;
+    } catch (e) {}
+  }
+
+  requestAnimationFrame(() => {
+    const container = document.getElementById('sandbox-container');
+    if (!container) return;
+    sandboxCleanup = mountSandbox(container, {
+      unlockedGates,
+      savedCircuitJSON: savedCircuit,
+      onSave: (json) => {
+        state.sandbox.lastCircuit = json;
+        saveState();
+      }
+    });
+
+    // Wire up qubit selector
+    const sel = document.getElementById('qubit-count');
+    if (sel) {
+      sel.addEventListener('change', () => {
+        const n = +sel.value;
+        if (container._setQubits) container._setQubits(n);
+      });
+    }
+  });
 }
 
 function showChapterDetail(ch, cs) {

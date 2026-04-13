@@ -1549,3 +1549,337 @@ body.kb-active .problem-left {
     font-size: 16px;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   Quantum Sandbox — Circuit Builder
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Home screen sandbox button */
+.sandbox-btn {
+  padding: 8px 16px; border-radius: 20px;
+  background: linear-gradient(135deg, #228be6, #15aabf); border: none;
+  color: #fff; font-size: 14px; font-weight: 600; cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.sandbox-btn:active { transform: scale(0.95); }
+
+/* Sandbox screen */
+.sandbox-screen { display: flex; flex-direction: column; height: 100dvh; background: var(--bg); }
+.sandbox-topbar {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px; border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.sandbox-topbar .btn-back {
+  background: none; border: none; color: var(--text); font-size: 16px;
+  cursor: pointer; padding: 8px; min-width: 44px; min-height: 44px;
+}
+.sandbox-title { flex: 1; margin: 0; font-size: 18px; color: var(--text); font-weight: 700; }
+.sandbox-body { flex: 1; overflow: hidden; }
+
+/* Qubit selector */
+.qubit-selector { display: flex; align-items: center; gap: 6px; }
+.qubit-selector label { font-size: 13px; color: var(--text-muted); }
+.qubit-selector select {
+  background: var(--bg); color: var(--text);
+  border: 1px solid var(--border); border-radius: 6px;
+  padding: 4px 8px; font-size: 14px; min-height: 44px;
+}
+
+/* Sandbox layout */
+.sandbox-layout { display: flex; height: 100%; }
+
+/* Gate palette */
+.gate-palette {
+  width: 72px; min-width: 72px;
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 8px 6px; border-right: 1px solid var(--border);
+  overflow-y: auto; background: var(--surface);
+}
+.gate-palette-item {
+  width: 56px; height: 56px; border-radius: 8px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  cursor: pointer; user-select: none; touch-action: none;
+  border: 2px solid transparent; transition: border-color 0.15s, transform 0.15s;
+}
+.gate-palette-item:active { transform: scale(0.93); }
+.gate-palette-item.selected { border-width: 2px; box-shadow: 0 0 8px rgba(255,255,255,0.15); }
+.gate-palette-item .gate-letter { font-size: 20px; font-weight: 700; font-family: var(--mono); }
+.gate-palette-item .gate-label { font-size: 9px; color: var(--text-muted); margin-top: 2px; }
+.gate-palette-trash {
+  width: 56px; height: 56px; border-radius: 8px; margin-top: auto;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px dashed #555; font-size: 24px; transition: all 0.15s;
+}
+.gate-palette-trash.active { border-color: #ff6b6b; background: rgba(255,107,107,0.1); transform: scale(1.1); }
+
+/* Circuit main area */
+.circuit-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* Circuit grid */
+.circuit-grid-wrap {
+  flex: 1; overflow-x: auto; overflow-y: hidden;
+  touch-action: pan-x; position: relative;
+  min-height: 120px;
+}
+.circuit-grid {
+  position: relative; min-width: 100%;
+}
+.circuit-wire {
+  position: absolute; height: 2px; background: #555;
+}
+.circuit-wire-label {
+  position: absolute; font-family: var(--mono);
+  font-size: 13px; color: var(--text-muted); transform: translateY(-50%);
+}
+.circuit-slot {
+  position: absolute; width: 48px; height: 48px;
+  border: 2px dashed #333; border-radius: 6px;
+  transform: translate(-50%, -50%);
+  transition: border-color 0.15s;
+}
+.circuit-slot.droppable { border-color: #555; }
+.circuit-slot.droppable:hover { border-color: #4dabf7; border-style: solid; }
+
+/* Placed gates */
+.circuit-gate {
+  position: absolute; width: 44px; height: 44px;
+  border-radius: 6px; display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-weight: 700; font-size: 18px; color: #fff;
+  cursor: pointer; user-select: none; touch-action: none;
+  transform: translate(-50%, -50%);
+  transition: box-shadow 0.2s, opacity 0.2s;
+}
+.circuit-gate.selected { box-shadow: 0 0 0 2px #fff, 0 0 8px 2px rgba(255,255,255,0.3); }
+.circuit-gate.active { animation: gatePulse 1.5s ease-in-out infinite; }
+.circuit-gate.dimmed { opacity: 0.5; }
+
+/* CNOT / CZ / Toffoli visuals */
+.cnot-control {
+  width: 12px; height: 12px; border-radius: 50%;
+  position: absolute; transform: translate(-50%, -50%);
+  cursor: pointer;
+}
+.cnot-target {
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 2px solid; position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 700; cursor: pointer;
+  background: var(--bg);
+}
+.cnot-line {
+  position: absolute; width: 2px; transform: translateX(-50%);
+  pointer-events: none;
+}
+.cnot-control.active, .cnot-target.active { animation: gatePulse 1.5s ease-in-out infinite; }
+.cnot-control.dimmed, .cnot-target.dimmed, .cnot-line.dimmed { opacity: 0.5; }
+
+/* SWAP visuals */
+.swap-x {
+  position: absolute; transform: translate(-50%, -50%);
+  font-size: 20px; font-weight: 700; cursor: pointer;
+  font-family: var(--mono);
+}
+.swap-x.active { animation: gatePulse 1.5s ease-in-out infinite; }
+.swap-x.dimmed { opacity: 0.5; }
+
+/* CNOT pending prompt */
+.cnot-prompt {
+  position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%);
+  background: rgba(77, 171, 247, 0.15); color: #4dabf7;
+  padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;
+  white-space: nowrap; pointer-events: none;
+}
+
+/* State vector display */
+.state-display { padding: 12px 16px; border-top: 1px solid var(--border); overflow-y: auto; max-height: 200px; }
+.state-ket {
+  font-family: var(--mono); font-size: 15px; color: var(--text);
+  margin-bottom: 8px; white-space: nowrap; overflow-x: auto;
+}
+.state-bars { display: flex; flex-direction: column; gap: 4px; }
+.state-bar-row { display: flex; align-items: center; gap: 8px; height: 24px; }
+.state-bar-label { font-family: var(--mono); font-size: 12px; color: var(--text-muted); width: 48px; text-align: right; }
+.state-bar { flex: 1; height: 16px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.state-bar-fill { height: 100%; border-radius: 3px; transition: width 300ms ease-out; }
+.state-bar-fill.amp-pos { background: #51cf66; }
+.state-bar-fill.amp-neg { background: #ff6b6b; }
+.state-bar-fill.amp-imag { background: #4dabf7; }
+.state-bar-fill.amp-zero { background: #555; }
+.state-bar-value { font-family: var(--mono); font-size: 11px; color: var(--text-muted); width: 44px; }
+
+/* Math panel */
+.math-panel { padding: 12px 16px; border-top: 1px solid var(--border); overflow-y: auto; max-height: 240px; }
+.math-step-label { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+.math-description { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
+.math-equation { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.math-transition { font-size: 13px; margin-top: 8px; }
+.math-state-label { font-weight: 600; color: var(--text-muted); }
+
+/* Matrix rendering */
+.matrix { display: inline-flex; align-items: center; }
+.matrix-bracket { width: 6px; min-height: 40px; border: 2px solid var(--text); }
+.matrix-bracket.left { border-right: none; border-radius: 3px 0 0 3px; }
+.matrix-bracket.right { border-left: none; border-radius: 0 3px 3px 0; }
+.matrix-body { display: flex; flex-direction: column; padding: 2px 6px; }
+.matrix-row { display: flex; gap: 12px; }
+.matrix-cell { font-family: var(--mono); font-size: 13px; min-width: 40px; text-align: center; padding: 2px 0; }
+.matrix-cell.positive { color: #51cf66; }
+.matrix-cell.negative { color: #ff6b6b; }
+.matrix-cell.imaginary { color: #4dabf7; }
+.matrix-cell.zero { color: #555; }
+.math-operator { font-size: 18px; color: var(--text-muted); padding: 0 4px; }
+
+/* Histogram */
+.histogram-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 12px; }
+.histogram-bar-row { display: flex; align-items: center; gap: 8px; height: 28px; margin-bottom: 4px; }
+.histogram-bar-label { font-family: var(--mono); font-size: 13px; width: 48px; text-align: right; color: var(--text-muted); }
+.histogram-bar { flex: 1; height: 20px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.histogram-bar-fill { height: 100%; border-radius: 3px; transition: width 800ms ease-out; }
+.histogram-bar-count { font-family: var(--mono); font-size: 11px; width: 80px; color: var(--text-muted); }
+.histogram-theory { font-size: 11px; color: var(--text-muted); margin-top: 8px; font-family: var(--mono); }
+.histogram-actions { display: flex; gap: 8px; margin-top: 12px; }
+
+/* Step controls */
+.step-controls {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-top: 1px solid var(--border);
+  flex-wrap: wrap; justify-content: center;
+  background: var(--surface);
+}
+.step-btn {
+  padding: 8px 12px; border-radius: 6px; font-size: 13px; font-weight: 600;
+  min-height: 44px; min-width: 44px;
+  background: var(--bg); border: 1px solid var(--border); color: var(--text);
+  cursor: pointer; transition: background 0.15s;
+}
+.step-btn:active:not(:disabled) { background: var(--border); }
+.step-btn:disabled { opacity: 0.35; cursor: default; }
+.step-btn.sb-measure-btn { background: #228be6; color: #fff; border-color: #228be6; }
+.step-btn.sb-measure-btn:active { background: #1971c2; }
+.step-counter { font-family: var(--mono); font-size: 13px; color: var(--text-muted); padding: 0 8px; }
+
+/* ── Floating gate (drag-and-drop) ── */
+.gate-floating {
+  position: fixed;
+  width: 44px; height: 44px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 16px; font-weight: 700;
+  color: #fff;
+  opacity: 0.85;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  pointer-events: none;
+  z-index: 1000;
+  transition: none;
+}
+
+/* Drop target highlight */
+.circuit-slot.drop-target {
+  border-color: #4dabf7 !important;
+  border-style: solid !important;
+  background: rgba(77,171,247,0.1);
+}
+
+/* Ghost gate (original position during drag) */
+.circuit-gate.ghost { opacity: 0.3; }
+
+/* ── Angle popup (Rx/Ry/Rz) ── */
+.angle-popup {
+  position: fixed;
+  z-index: 900;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  display: flex; flex-direction: column; gap: 10px;
+  min-width: 220px;
+}
+.angle-popup-title {
+  font-family: var(--mono); font-size: 14px; font-weight: 700;
+  color: var(--text); text-align: center;
+}
+.angle-popup-presets {
+  display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;
+}
+.angle-preset-btn {
+  background: var(--border); color: var(--text);
+  border: none; border-radius: 6px;
+  padding: 8px 14px; font-family: var(--mono); font-size: 14px;
+  cursor: pointer; font-weight: 600;
+}
+.angle-preset-btn:active { background: #4dabf7; }
+.angle-popup-custom {
+  display: flex; gap: 6px; align-items: center;
+}
+.angle-input {
+  flex: 1; background: var(--bg); color: var(--text);
+  border: 1px solid var(--border); border-radius: 6px;
+  padding: 8px 10px; font-family: var(--mono); font-size: 14px;
+  outline: none;
+}
+.angle-input:focus { border-color: #4dabf7; }
+.angle-ok-btn {
+  background: var(--green); color: #fff; border: none;
+  border-radius: 6px; padding: 8px 14px;
+  font-family: var(--font); font-size: 14px; font-weight: 700;
+  cursor: pointer;
+}
+.angle-ok-btn:active { background: var(--green-dk); }
+.angle-cancel-btn {
+  background: none; color: var(--text-muted); border: 1px solid var(--border);
+  border-radius: 6px; padding: 6px 12px;
+  font-family: var(--font); font-size: 13px;
+  cursor: pointer; text-align: center;
+}
+.angle-cancel-btn:active { background: var(--border); }
+
+/* Gate angle subscript */
+.gate-angle {
+  display: block; font-size: 9px; line-height: 1;
+  color: rgba(255,255,255,0.7); margin-top: 1px;
+  font-family: var(--mono);
+}
+
+/* ── Bottom toolbar (presets + clear) ── */
+.sandbox-toolbar {
+  display: flex; gap: 8px; padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  align-items: center;
+}
+.preset-select {
+  flex: 1;
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 10px; font-family: var(--font); font-size: 13px;
+  outline: none; appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238B9EA7' stroke-width='2' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+}
+.preset-select:focus { border-color: #4dabf7; }
+
+/* Animations */
+@keyframes gatePulse {
+  0%, 100% { box-shadow: 0 0 4px 1px currentColor; }
+  50% { box-shadow: 0 0 12px 4px currentColor; }
+}
+
+/* Responsive: portrait */
+@media (orientation: portrait) {
+  .sandbox-layout { flex-direction: column; }
+  .gate-palette {
+    width: 100%; min-width: 100%; flex-direction: row;
+    border-right: none; border-bottom: 1px solid var(--border);
+    overflow-x: auto; overflow-y: hidden;
+    padding: 6px 8px; gap: 6px;
+  }
+  .gate-palette-item { width: 48px; height: 48px; flex-shrink: 0; }
+  .gate-palette-item .gate-label { display: none; }
+  .gate-palette-trash { width: 48px; height: 48px; margin-top: 0; margin-left: auto; flex-shrink: 0; }
+  .circuit-grid-wrap { min-height: 160px; }
+}

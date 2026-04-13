@@ -142,3 +142,32 @@ When the custom keyboard appears, it sets `--kb-height` CSS var on `:root`. CSS 
 
 ### Experiment spec reference
 Full spec for all 20 experiments is in `EXPERIMENT_SPEC.md` at the project root. It contains detailed game mechanics, completion criteria, and pedagogical rationale for each experiment.
+
+## Phase 8: Quantum Circuit Builder & Sandbox (Sessions 1-2 complete)
+Drag-and-drop quantum circuit editor with built-in state vector simulator. NOT a chapter — a persistent tool that unlocks after Chapter 11 and grows as students complete more chapters (new gates unlock progressively).
+
+Full spec in `CIRCUIT_BUILDER_SPEC.md` at the project root.
+
+### New files
+- `static/simulator.js` — 1-4 qubit state vector simulator with step-through history, complex math utilities, formatted output, measurement sampling
+- `static/circuit.js` — Circuit data model: gate placement, collision detection, serialization, gate unlock schedule
+- `static/circuit-ui.js` — Full UI: gate palette, circuit grid, drag-and-drop, state vector display, math panel, histogram, step controls, angle popup, presets, toolbar
+
+### Key features
+- **Two access modes:** Free-form Sandbox (from home screen) + Circuit Challenges (from experiments)
+- **Gate unlock schedule:** Ch 11 → H/X/Y/Z/I/CNOT, Ch 12 → Rx/Ry/Rz, Ch 13 → S/S†/T/T†, Ch 14 → CZ/SWAP/Toffoli
+- **Step-through execution:** Gate-by-gate with matrix × vector math panel at each step
+- **Measurement simulator:** 1000-shot histogram with animated bars + theory comparison
+- **iPad-first:** Pointer events for finger + Apple Pencil, 44px touch targets, landscape/portrait layouts
+- **Persistence:** Auto-save last circuit to localStorage, restores on return
+- **Drag-and-drop:** Palette drag (move 8px to start) + grid long-press drag (200ms hold), tap-to-place fallback, trash zone, drop-target highlighting
+- **8 preset circuits:** Bell Φ+/Φ-/Ψ+, Coin Flip, HZH=X, GHZ, Teleportation Setup, SWAP from CNOTs
+- **Parameterized gates:** Rx/Ry/Rz angle popup with preset buttons (π/4, π/3, π/2, 2π/3, π) + custom input, angle subscript on gate rendering
+- **Multi-qubit rendering:** CNOT (● + ⊕), CZ (● + ●), SWAP (× + ×), Toffoli (● + ● + ⊕), all with vertical connecting lines
+
+### Build sessions
+| Session | Scope | Status |
+|---------|-------|--------|
+| 1 ✅ | Simulator engine + circuit data model + basic UI with tap-to-place + step-through math panel + multi-qubit rendering + histogram + qubit selector | Complete |
+| 2 ✅ | Drag-and-drop + parameterized gate angle popup + 8 preset circuits + bottom toolbar + clear with confirmation + CSS polish | Complete |
+| 3 | Layout polish: grid horizontal scroll, landscape optimization, error toasts, keyboard shortcuts | Planned |
