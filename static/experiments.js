@@ -13,7 +13,7 @@
  * They teach through free-form interaction and live feedback.
  */
 
-import { GridCanvas, PhysicsBeam, showToast, animateValue } from './experiment-ui.js?v=2';
+import { GridCanvas, PhysicsBeam, BlochSphere, HistogramRenderer, showToast, animateValue } from './experiment-ui.js?v=3';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -614,6 +614,84 @@ function addLine(parent, text) {
 }
 
 
+// ── Quantum math helpers ────────────────────────────────────────────────────
+// Complex arithmetic, gate matrices, Bloch sphere conversions.
+
+function cmul(a, b) { return { re: a.re * b.re - a.im * b.im, im: a.re * b.im + a.im * b.re }; }
+function cadd(a, b) { return { re: a.re + b.re, im: a.im + b.im }; }
+function cabs2(a) { return a.re * a.re + a.im * a.im; }
+function cabs(a) { return Math.sqrt(cabs2(a)); }
+
+const SQRT2_INV = 1 / Math.sqrt(2);
+const GATES = {
+  X: [{ re: 0, im: 0 }, { re: 1, im: 0 }, { re: 1, im: 0 }, { re: 0, im: 0 }],
+  Y: [{ re: 0, im: 0 }, { re: 0, im: -1 }, { re: 0, im: 1 }, { re: 0, im: 0 }],
+  Z: [{ re: 1, im: 0 }, { re: 0, im: 0 }, { re: 0, im: 0 }, { re: -1, im: 0 }],
+  H: [{ re: SQRT2_INV, im: 0 }, { re: SQRT2_INV, im: 0 }, { re: SQRT2_INV, im: 0 }, { re: -SQRT2_INV, im: 0 }],
+};
+
+function applyGate(gate, alpha, beta) {
+  return [
+    cadd(cmul(gate[0], alpha), cmul(gate[1], beta)),
+    cadd(cmul(gate[2], alpha), cmul(gate[3], beta)),
+  ];
+}
+
+function stateToBloch(alpha, beta) {
+  const absAlpha = cabs(alpha);
+  const theta = 2 * Math.acos(Math.min(1, Math.max(0, absAlpha)));
+  let phi = Math.atan2(beta.im, beta.re) - Math.atan2(alpha.im, alpha.re);
+  phi = ((phi % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+  return { theta, phi };
+}
+
+function blochToState(theta, phi) {
+  return [
+    { re: Math.cos(theta / 2), im: 0 },
+    { re: Math.sin(theta / 2) * Math.cos(phi), im: Math.sin(theta / 2) * Math.sin(phi) },
+  ];
+}
+
+// Remove global phase so alpha is real and non-negative
+function normalizeGlobalPhase(alpha, beta) {
+  if (cabs(alpha) < 1e-10) return [{ re: 0, im: 0 }, { re: cabs(beta), im: 0 }];
+  const phase = Math.atan2(alpha.im, alpha.re);
+  const c = Math.cos(-phase), s = Math.sin(-phase);
+  return [
+    { re: alpha.re * c - alpha.im * s, im: alpha.re * s + alpha.im * c },
+    { re: beta.re * c - beta.im * s, im: beta.re * s + beta.im * c },
+  ];
+}
+
+function fmtKet(alpha, beta) {
+  const a = Math.abs(alpha.re) < 0.005 ? 0 : +alpha.re.toFixed(2);
+  const bre = +beta.re.toFixed(2);
+  const bim = +beta.im.toFixed(2);
+  let bStr;
+  if (Math.abs(bim) < 0.005) {
+    bStr = `${bre}`;
+  } else if (Math.abs(bre) < 0.005) {
+    bStr = bim === 1 ? 'i' : bim === -1 ? '\u2212i' : `${bim}i`;
+  } else {
+    const sign = bim > 0 ? '+' : '';
+    bStr = `(${bre}${sign}${bim}i)`;
+  }
+  if (a === 0 && bre === 0 && bim === 0) return '|ψ⟩ = 0';
+  if (a === 0) return `|ψ⟩ = ${bStr}|1⟩`;
+  if (Math.abs(bre) < 0.005 && Math.abs(bim) < 0.005) return `|ψ⟩ = ${a}|0⟩`;
+  const sign = bre >= 0 && bim >= 0 ? ' + ' : ' \u2212 ';
+  const absB = sign === ' \u2212 ' ? fmtKetCoeff(-bre, -bim) : bStr;
+  return `|ψ⟩ = ${a}|0⟩${sign}${absB}|1⟩`;
+}
+
+function fmtKetCoeff(re, im) {
+  if (Math.abs(im) < 0.005) return `${+re.toFixed(2)}`;
+  if (Math.abs(re) < 0.005) return im === 1 ? 'i' : im === -1 ? '\u2212i' : `${+im.toFixed(2)}i`;
+  const sign = im > 0 ? '+' : '';
+  return `(${+re.toFixed(2)}${sign}${+im.toFixed(2)}i)`;
+}
+
+
 // ── Chapter 4: Complex Multiplier ───────────────────────────────────────────
 
 /**
@@ -1108,6 +1186,592 @@ const experiment5 = {
 };
 
 
+// ── Chapter 6: State Explorer ───────────────────────────────────────────────
+
+/**
+ * Ch 6 — State Explorer (sandbox)
+ *
+ * Adjust α and β sliders to build qubit states. Watch probability bars
+ * respond in real time. Presets for |0⟩, |1⟩, |+⟩, |−⟩. The insight:
+ * amplitudes control measurement probabilities and must sum to 1.
+ */
+const experiment6 = {
+  title: 'State Explorer',
+  subtitle: 'Build qubit states — see probabilities change',
+  icon: '🎚️',
+
+  mount(container, { chapterColor, onComplete }) {
+    let completed = false;
+    let statesExplored = 0;
+    let rawA = 1, rawB = 0; // slider values before normalization
+
+    container.style.flexDirection = 'column';
+
+    // ─ Ket display ─
+    const ketDiv = document.createElement('div');
+    ketDiv.style.cssText = `
+      background:var(--surface);border:2px solid var(--border);border-radius:var(--radius-lg);
+      padding:20px;text-align:center;font-family:'Fira Code',monospace;font-size:20px;
+      font-weight:700;color:var(--text);line-height:1.6;
+    `;
+
+    // ─ Probability bars ─
+    const probDiv = document.createElement('div');
+    probDiv.style.cssText = 'display:flex;flex-direction:column;gap:8px;';
+
+    function makeProbBar(label, color) {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:10px;';
+      const lbl = document.createElement('div');
+      lbl.style.cssText = `font-family:'Fira Code',monospace;font-size:13px;color:var(--text);font-weight:700;min-width:50px;`;
+      lbl.textContent = label;
+      const barBg = document.createElement('div');
+      barBg.style.cssText = `flex:1;height:28px;background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden;position:relative;`;
+      const fill = document.createElement('div');
+      fill.style.cssText = `height:100%;width:0%;background:${color};border-radius:5px;transition:width 0.25s ease;`;
+      const val = document.createElement('div');
+      val.style.cssText = `position:absolute;right:8px;top:50%;transform:translateY(-50%);font-family:'Fira Code',monospace;font-size:12px;color:var(--text);font-weight:700;`;
+      barBg.append(fill, val);
+      row.append(lbl, barBg);
+      return { row, fill, val };
+    }
+
+    const p0 = makeProbBar('P(|0⟩)', chapterColor);
+    const p1 = makeProbBar('P(|1⟩)', '#FF9600');
+    const normBar = makeProbBar('Σ', '#58CC02');
+    probDiv.append(p0.row, p1.row, normBar.row);
+
+    // ─ Sliders ─
+    const slidersDiv = document.createElement('div');
+    slidersDiv.style.cssText = 'display:flex;flex-direction:column;gap:10px;';
+
+    function makeSlider(label, min, max, initial, color) {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:10px;';
+      const lbl = document.createElement('div');
+      lbl.style.cssText = `font-family:'Fira Code',monospace;font-size:14px;color:${color};font-weight:700;min-width:24px;`;
+      lbl.textContent = label;
+      const slider = document.createElement('input');
+      slider.type = 'range';
+      slider.min = min;
+      slider.max = max;
+      slider.step = '0.01';
+      slider.value = initial;
+      slider.style.cssText = `flex:1;accent-color:${color};`;
+      const valEl = document.createElement('div');
+      valEl.style.cssText = `font-family:'Fira Code',monospace;font-size:13px;color:var(--text-muted);min-width:48px;text-align:right;`;
+      row.append(lbl, slider, valEl);
+      return { row, slider, valEl };
+    }
+
+    const alphaSlider = makeSlider('α', '0', '1', '1', chapterColor);
+    const betaSlider = makeSlider('β', '-1', '1', '0', '#FF9600');
+    slidersDiv.append(alphaSlider.row, betaSlider.row);
+
+    alphaSlider.slider.addEventListener('input', () => {
+      rawA = parseFloat(alphaSlider.slider.value);
+      update();
+    });
+    betaSlider.slider.addEventListener('input', () => {
+      rawB = parseFloat(betaSlider.slider.value);
+      update();
+    });
+
+    // ─ Preset buttons ─
+    const presetDiv = document.createElement('div');
+    presetDiv.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;';
+    const presets = [
+      { label: '|0⟩', a: 1, b: 0 },
+      { label: '|1⟩', a: 0, b: 1 },
+      { label: '|+⟩', a: SQRT2_INV, b: SQRT2_INV },
+      { label: '|−⟩', a: SQRT2_INV, b: -SQRT2_INV },
+    ];
+    presets.forEach(p => {
+      const btn = makeBtn(p.label, 'btn experiment-block-btn');
+      btn.style.cssText += 'font-size:15px;padding:12px 4px;';
+      btn.addEventListener('click', () => {
+        rawA = p.a;
+        rawB = p.b;
+        alphaSlider.slider.value = rawA;
+        betaSlider.slider.value = rawB;
+        update();
+        showToast(container, `Set to ${p.label}`, 'info');
+      });
+      presetDiv.appendChild(btn);
+    });
+
+    // ─ Counter ─
+    const counterDiv = document.createElement('div');
+    counterDiv.style.cssText = 'font-size:13px;color:var(--text-muted);text-align:center;';
+    counterDiv.textContent = 'States explored: 0';
+
+    container.append(ketDiv, probDiv, slidersDiv, presetDiv, counterDiv);
+
+    function update() {
+      const norm = Math.sqrt(rawA * rawA + rawB * rawB);
+      let alpha, beta;
+      if (norm < 1e-10) {
+        alpha = 1; beta = 0; // default to |0⟩ if both zero
+      } else {
+        alpha = rawA / norm;
+        beta = rawB / norm;
+      }
+
+      const p0v = alpha * alpha;
+      const p1v = beta * beta;
+
+      // Ket display
+      const aStr = Math.abs(alpha) < 0.005 ? '0' : alpha.toFixed(2);
+      const bAbs = Math.abs(beta);
+      const bStr = bAbs < 0.005 ? '0' : bAbs.toFixed(2);
+      const sign = beta >= 0 ? ' + ' : ' − ';
+      if (bAbs < 0.005) {
+        ketDiv.textContent = `|ψ⟩ = ${aStr}|0⟩`;
+      } else if (Math.abs(alpha) < 0.005) {
+        ketDiv.textContent = `|ψ⟩ = ${beta.toFixed(2)}|1⟩`;
+      } else {
+        ketDiv.textContent = `|ψ⟩ = ${aStr}|0⟩${sign}${bStr}|1⟩`;
+      }
+
+      // Slider value displays
+      alphaSlider.valEl.textContent = alpha.toFixed(2);
+      betaSlider.valEl.textContent = beta.toFixed(2);
+
+      // Probability bars
+      p0.fill.style.width = `${(p0v * 100).toFixed(1)}%`;
+      p0.val.textContent = `${(p0v * 100).toFixed(0)}%`;
+      p1.fill.style.width = `${(p1v * 100).toFixed(1)}%`;
+      p1.val.textContent = `${(p1v * 100).toFixed(0)}%`;
+      normBar.fill.style.width = '100%';
+      normBar.val.textContent = '= 1.00';
+
+      statesExplored++;
+      counterDiv.textContent = `States explored: ${statesExplored}`;
+
+      if (!completed) {
+        completed = true;
+        onComplete({ statesExplored });
+      }
+    }
+
+    update();
+    return () => {};
+  },
+};
+
+
+// ── Chapter 7: Gate Laboratory ──────────────────────────────────────────────
+
+/**
+ * Ch 7 — Gate Laboratory (sandbox)
+ *
+ * Pick a gate, watch the Bloch sphere arrow rotate. Chain gates, undo,
+ * discover identities. The insight: gates are rotations of the state vector.
+ */
+const experiment7 = {
+  title: 'Gate Laboratory',
+  subtitle: 'Apply gates — watch the Bloch sphere rotate',
+  icon: '⚡',
+
+  mount(container, { chapterColor, onComplete }) {
+    let completed = false;
+    let gateCount = 0;
+    let animating = false;
+
+    // State as complex 2-vector
+    let state = [{ re: 1, im: 0 }, { re: 0, im: 0 }]; // |0⟩
+    let stateStack = []; // for undo
+    let gateHistory = [];
+
+    container.style.flexDirection = 'column';
+
+    // ─ Bloch sphere ─
+    const canvasWrap = document.createElement('div');
+    canvasWrap.className = 'experiment-canvas-wrap';
+    const canvasEl = document.createElement('canvas');
+    canvasWrap.appendChild(canvasEl);
+
+    // ─ Controls ─
+    const controlsDiv = document.createElement('div');
+    controlsDiv.className = 'experiment-controls';
+
+    container.append(canvasWrap, controlsDiv);
+
+    const bloch = new BlochSphere(canvasEl, { color: chapterColor });
+
+    // ─ State display ─
+    const stateDiv = document.createElement('div');
+    stateDiv.style.cssText = `
+      font-family:'Fira Code',monospace;font-size:16px;font-weight:700;
+      color:var(--text);text-align:center;padding:8px;
+      background:var(--surface);border:2px solid var(--border);border-radius:var(--radius);
+    `;
+
+    // ─ Gate buttons (2×2) ─
+    const gateGrid = document.createElement('div');
+    gateGrid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;';
+    ['X', 'Y', 'Z', 'H'].forEach(name => {
+      const btn = makeBtn(name, 'btn experiment-block-btn');
+      btn.style.cssText += `font-size:18px;padding:14px;font-weight:800;`;
+      btn.addEventListener('click', () => {
+        if (animating) return;
+        applyGateAction(name);
+      });
+      gateGrid.appendChild(btn);
+    });
+
+    // ─ Reset buttons ─
+    const resetRow = document.createElement('div');
+    resetRow.style.cssText = 'display:flex;gap:8px;';
+    [
+      { label: 'Reset |0⟩', t: 0, p: 0 },
+      { label: 'Reset |1⟩', t: Math.PI, p: 0 },
+      { label: 'Reset |+⟩', t: Math.PI / 2, p: 0 },
+    ].forEach(r => {
+      const btn = makeBtn(r.label, 'btn btn-ghost');
+      btn.style.cssText += 'flex:1;font-size:12px;';
+      btn.addEventListener('click', () => {
+        if (animating) return;
+        state = blochToState(r.t, r.p);
+        stateStack = [];
+        gateHistory = [];
+        animating = true;
+        bloch.animateState(r.t, r.p, 300).then(() => {
+          animating = false;
+          updateDisplay();
+        });
+        updateDisplay();
+      });
+      resetRow.appendChild(btn);
+    });
+
+    // ─ Gate history ─
+    const historyLabel = document.createElement('div');
+    historyLabel.style.cssText = "font-size:11px;text-transform:uppercase;font-weight:800;letter-spacing:1px;color:var(--text-muted);";
+    historyLabel.textContent = 'Gate History';
+    const historyDiv = document.createElement('div');
+    historyDiv.style.cssText = `
+      font-family:'Fira Code',monospace;font-size:14px;color:${chapterColor};
+      min-height:24px;overflow-x:auto;white-space:nowrap;padding:6px 0;
+    `;
+    historyDiv.textContent = '(none)';
+
+    // ─ Undo ─
+    const undoBtn = makeBtn('Undo', 'btn btn-ghost btn-full');
+    undoBtn.addEventListener('click', () => {
+      if (animating || stateStack.length === 0) return;
+      state = stateStack.pop();
+      gateHistory.pop();
+      const { theta, phi } = stateToBloch(state[0], state[1]);
+      animating = true;
+      bloch.animateState(theta, phi, 300).then(() => {
+        animating = false;
+        updateDisplay();
+      });
+      gateCount++;
+      updateDisplay();
+    });
+
+    // ─ Counter ─
+    const counterDiv = document.createElement('div');
+    counterDiv.style.cssText = 'font-size:13px;color:var(--text-muted);text-align:center;';
+    counterDiv.textContent = 'Gates applied: 0';
+
+    // ─ Discovery prompt ─
+    const discoveryDiv = document.createElement('div');
+    discoveryDiv.style.cssText = 'font-size:12px;color:var(--text-muted);text-align:center;opacity:0;transition:opacity 0.5s;padding:4px;';
+    discoveryDiv.textContent = 'Try applying any gate twice. What happens?';
+
+    controlsDiv.append(stateDiv, gateGrid, resetRow, historyLabel, historyDiv, undoBtn, counterDiv, discoveryDiv);
+
+    function applyGateAction(name) {
+      stateStack.push([{ ...state[0] }, { ...state[1] }]);
+      gateHistory.push(name);
+
+      const gate = GATES[name];
+      state = applyGate(gate, state[0], state[1]);
+      state = normalizeGlobalPhase(state[0], state[1]);
+
+      const { theta, phi } = stateToBloch(state[0], state[1]);
+      animating = true;
+      bloch.animateState(theta, phi, 400).then(() => {
+        animating = false;
+        updateDisplay();
+      });
+
+      gateCount++;
+      counterDiv.textContent = `Gates applied: ${gateCount}`;
+      if (gateCount >= 5) discoveryDiv.style.opacity = '1';
+
+      updateDisplay();
+
+      if (!completed) {
+        completed = true;
+        onComplete({ explored: true });
+      }
+    }
+
+    function updateDisplay() {
+      const [a, b] = normalizeGlobalPhase(state[0], state[1]);
+      stateDiv.textContent = fmtKet(a, b);
+      historyDiv.textContent = gateHistory.length > 0 ? gateHistory.join(' → ') : '(none)';
+      counterDiv.textContent = `Gates applied: ${gateCount}`;
+    }
+
+    bloch.setState(0, 0);
+    updateDisplay();
+
+    return () => { bloch.destroy(); };
+  },
+};
+
+
+// ── Chapter 8: Quantum Coin Toss Lab ────────────────────────────────────────
+
+/**
+ * Ch 8 — Quantum Coin Toss Lab (sandbox)
+ *
+ * Set a quantum state, hit MEASURE, watch the histogram build up.
+ * Experience quantum randomness firsthand. The insight: measurement
+ * is genuinely random and the histogram converges but never perfectly.
+ */
+const experiment8 = {
+  title: 'Quantum Coin Toss',
+  subtitle: 'Measure qubits — experience quantum randomness',
+  icon: '🎲',
+
+  mount(container, { chapterColor, onComplete }) {
+    let completed = false;
+    let rawA = SQRT2_INV, rawB = SQRT2_INV; // start at |+⟩
+    let counts = [0, 0];
+    let totalMeasurements = 0;
+    let collapsed = false;
+    let animating = false;
+
+    container.style.flexDirection = 'column';
+
+    // ─ Top row: Bloch sphere + histogram ─
+    const topRow = document.createElement('div');
+    topRow.style.cssText = 'display:flex;gap:12px;min-height:180px;';
+
+    const canvasWrap = document.createElement('div');
+    canvasWrap.className = 'experiment-canvas-wrap';
+    canvasWrap.style.cssText += 'flex:1;min-height:160px;';
+    const canvasEl = document.createElement('canvas');
+    canvasWrap.appendChild(canvasEl);
+
+    const histWrap = document.createElement('div');
+    histWrap.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:8px 0;';
+
+    topRow.append(canvasWrap, histWrap);
+
+    // ─ Controls ─
+    const controlsDiv = document.createElement('div');
+    controlsDiv.className = 'experiment-controls';
+
+    container.append(topRow, controlsDiv);
+
+    const bloch = new BlochSphere(canvasEl, { color: chapterColor });
+    const histogram = new HistogramRenderer(histWrap, {
+      labels: ['|0⟩', '|1⟩'],
+      colors: [chapterColor, '#FF9600'],
+      height: 100,
+    });
+
+    // ─ State + probability display ─
+    const infoDiv = document.createElement('div');
+    infoDiv.style.cssText = `
+      font-family:'Fira Code',monospace;font-size:14px;color:var(--text);
+      text-align:center;line-height:1.8;
+      background:var(--surface);border:2px solid var(--border);border-radius:var(--radius);
+      padding:10px;
+    `;
+
+    // ─ Sliders ─
+    const slidersDiv = document.createElement('div');
+    slidersDiv.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+
+    function makeSlider8(label, min, max, initial, color) {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;';
+      const lbl = document.createElement('div');
+      lbl.style.cssText = `font-family:'Fira Code',monospace;font-size:13px;color:${color};font-weight:700;min-width:20px;`;
+      lbl.textContent = label;
+      const slider = document.createElement('input');
+      slider.type = 'range';
+      slider.min = min;
+      slider.max = max;
+      slider.step = '0.01';
+      slider.value = initial;
+      slider.style.cssText = `flex:1;accent-color:${color};`;
+      row.append(lbl, slider);
+      return { row, slider };
+    }
+
+    const aSlider = makeSlider8('α', '0', '1', SQRT2_INV.toFixed(2), chapterColor);
+    const bSlider = makeSlider8('β', '-1', '1', SQRT2_INV.toFixed(2), '#FF9600');
+    slidersDiv.append(aSlider.row, bSlider.row);
+
+    aSlider.slider.addEventListener('input', () => {
+      rawA = parseFloat(aSlider.slider.value);
+      collapsed = false;
+      updateState();
+    });
+    bSlider.slider.addEventListener('input', () => {
+      rawB = parseFloat(bSlider.slider.value);
+      collapsed = false;
+      updateState();
+    });
+
+    // ─ Measure buttons ─
+    const measureBtn = makeBtn('MEASURE', 'btn');
+    measureBtn.style.cssText += `width:100%;padding:16px;font-size:18px;font-weight:800;background:${chapterColor};color:#fff;border:none;border-bottom:4px solid rgba(0,0,0,0.2);`;
+    measureBtn.addEventListener('click', () => {
+      if (animating) return;
+      doMeasure();
+    });
+
+    const rapidBtn = makeBtn('Measure 100×', 'btn btn-ghost btn-full');
+    rapidBtn.addEventListener('click', () => {
+      if (animating) return;
+      doRapidMeasure();
+    });
+
+    // ─ Reset + counter ─
+    const bottomRow = document.createElement('div');
+    bottomRow.style.cssText = 'display:flex;gap:8px;align-items:center;';
+    const resetBtn = makeBtn('Reset State', 'btn btn-ghost');
+    resetBtn.style.cssText += 'flex:1;';
+    resetBtn.addEventListener('click', () => {
+      if (animating) return;
+      collapsed = false;
+      counts = [0, 0];
+      totalMeasurements = 0;
+      histogram.reset();
+      updateState();
+      showToast(container, 'Fresh quantum state prepared', 'info');
+    });
+    const counterDiv = document.createElement('div');
+    counterDiv.style.cssText = "font-family:'Fira Code',monospace;font-size:13px;color:var(--text-muted);text-align:right;flex:1;";
+    counterDiv.textContent = 'Measurements: 0';
+    bottomRow.append(resetBtn, counterDiv);
+
+    // ─ Discovery prompt ─
+    const discoveryDiv = document.createElement('div');
+    discoveryDiv.style.cssText = 'font-size:12px;color:var(--text-muted);text-align:center;opacity:0;transition:opacity 0.5s;padding:4px;';
+    discoveryDiv.textContent = 'Set P(|0⟩) = 50%. Measure 10 times. Exactly 5-5?';
+
+    controlsDiv.append(infoDiv, slidersDiv, measureBtn, rapidBtn, bottomRow, discoveryDiv);
+
+    function getNormalized() {
+      const norm = Math.sqrt(rawA * rawA + rawB * rawB);
+      if (norm < 1e-10) return { alpha: 1, beta: 0 };
+      return { alpha: rawA / norm, beta: rawB / norm };
+    }
+
+    function updateState() {
+      const { alpha, beta } = getNormalized();
+      const p0 = alpha * alpha;
+      const p1 = beta * beta;
+
+      // Info display
+      infoDiv.textContent = '';
+      const ketLine = document.createElement('div');
+      ketLine.style.fontWeight = '700';
+      ketLine.textContent = `|ψ⟩ = ${alpha.toFixed(2)}|0⟩ ${beta >= 0 ? '+' : '−'} ${Math.abs(beta).toFixed(2)}|1⟩`;
+      const probLine = document.createElement('div');
+      probLine.style.cssText = 'font-size:13px;color:var(--text-muted);';
+      probLine.textContent = `P(|0⟩) = ${p0.toFixed(2)}    P(|1⟩) = ${p1.toFixed(2)}`;
+      infoDiv.append(ketLine, probLine);
+
+      // Update expected on histogram
+      if (totalMeasurements > 0) {
+        histogram.setExpected([p0, p1]);
+      }
+
+      // Bloch sphere — show the superposition state
+      if (!collapsed) {
+        const theta = 2 * Math.acos(Math.max(0, Math.min(1, Math.abs(alpha))));
+        const phi = beta < 0 ? Math.PI : 0;
+        bloch.setState(theta, phi);
+      }
+    }
+
+    function doMeasure() {
+      const { alpha, beta } = getNormalized();
+      const p0 = alpha * alpha;
+      const result = Math.random() < p0 ? 0 : 1;
+
+      counts[result]++;
+      totalMeasurements++;
+      collapsed = true;
+
+      // Animate Bloch sphere to collapsed state
+      const targetTheta = result === 0 ? 0 : Math.PI;
+      animating = true;
+      bloch.animateState(targetTheta, 0, 250).then(() => {
+        animating = false;
+      });
+
+      // Flash effect
+      showToast(container, result === 0 ? 'Measured |0⟩' : 'Measured |1⟩', result === 0 ? 'info' : 'success');
+
+      updateHistogram();
+      counterDiv.textContent = `Measurements: ${totalMeasurements}`;
+
+      if (totalMeasurements >= 20) discoveryDiv.style.opacity = '1';
+
+      if (!completed) {
+        completed = true;
+        onComplete({ totalMeasurements });
+      }
+    }
+
+    function doRapidMeasure() {
+      const { alpha } = getNormalized();
+      const p0 = alpha * alpha;
+
+      for (let i = 0; i < 100; i++) {
+        const result = Math.random() < p0 ? 0 : 1;
+        counts[result]++;
+      }
+      totalMeasurements += 100;
+      collapsed = true;
+
+      // Snap Bloch sphere to whichever was the last result
+      const lastResult = Math.random() < p0 ? 0 : 1;
+      bloch.setState(lastResult === 0 ? 0 : Math.PI, 0);
+
+      updateHistogram();
+      counterDiv.textContent = `Measurements: ${totalMeasurements}`;
+      showToast(container, `+100 measurements`, 'info');
+
+      if (totalMeasurements >= 20) discoveryDiv.style.opacity = '1';
+
+      if (!completed) {
+        completed = true;
+        onComplete({ totalMeasurements });
+      }
+    }
+
+    function updateHistogram() {
+      const total = counts[0] + counts[1];
+      if (total === 0) return;
+      histogram.setData([counts[0] / total, counts[1] / total]);
+
+      // Show expected overlay
+      const { alpha, beta } = getNormalized();
+      histogram.setExpected([alpha * alpha, beta * beta]);
+    }
+
+    // Initial render
+    updateState();
+
+    return () => { bloch.destroy(); histogram.destroy(); };
+  },
+};
+
+
 // ── Export ─────────────────────────────────────────────────────────────────────
 
 export const EXPERIMENTS = {
@@ -1116,4 +1780,7 @@ export const EXPERIMENTS = {
   3: experiment3,
   4: experiment4,
   5: experiment5,
+  6: experiment6,
+  7: experiment7,
+  8: experiment8,
 };

@@ -304,6 +304,287 @@ export class GridCanvas {
 }
 
 
+// ── BlochSphere ──────────────────────────────────────────────────────────────
+// 2D projected Bloch sphere renderer. DPR-aware, animated, reusable.
+// Used by Ch 7 (Gate Lab), Ch 8 (Coin Toss), Ch 9, 10, 12.
+
+export class BlochSphere {
+  constructor(canvasEl, opts = {}) {
+    this.canvas = canvasEl;
+    this.ctx = canvasEl.getContext('2d');
+    this.color = opts.color || '#00C9A7';
+    this.showLabels = opts.showLabels !== false;
+    this._theta = 0;  // 0 = |0⟩ (north pole)
+    this._phi = 0;
+    this.dpr = 0;
+    this.w = 0;
+    this.h = 0;
+    this._animId = null;
+
+    this._resize();
+    this._ro = new ResizeObserver(() => { this._resize(); this.render(); });
+    this._ro.observe(canvasEl);
+  }
+
+  destroy() {
+    this._ro.disconnect();
+    if (this._animId) cancelAnimationFrame(this._animId);
+  }
+
+  _resize() {
+    const w = this.canvas.offsetWidth;
+    const h = this.canvas.offsetHeight;
+    if (w === 0 || h === 0) return;
+    const d = window.devicePixelRatio || 1;
+    if (w === this.w && h === this.h && d === this.dpr) return;
+    this.dpr = d;
+    this.w = w;
+    this.h = h;
+    this.canvas.width = Math.round(w * d);
+    this.canvas.height = Math.round(h * d);
+    this.ctx.setTransform(d, 0, 0, d, 0, 0);
+  }
+
+  getState() { return { theta: this._theta, phi: this._phi }; }
+
+  setState(theta, phi) {
+    this._theta = theta;
+    this._phi = phi;
+    this.render();
+  }
+
+  animateState(theta, phi, duration = 400) {
+    return new Promise(resolve => {
+      if (this._animId) cancelAnimationFrame(this._animId);
+      const t0theta = this._theta;
+      const t0phi = this._phi;
+      const dTheta = theta - t0theta;
+      // Shortest-arc phi interpolation
+      let dPhi = phi - t0phi;
+      while (dPhi > Math.PI) dPhi -= 2 * Math.PI;
+      while (dPhi < -Math.PI) dPhi += 2 * Math.PI;
+      const startTime = performance.now();
+      const step = (now) => {
+        const p = Math.min(1, (now - startTime) / duration);
+        const ease = 1 - Math.pow(1 - p, 3);
+        this._theta = t0theta + dTheta * ease;
+        this._phi = t0phi + dPhi * ease;
+        this.render();
+        if (p < 1) {
+          this._animId = requestAnimationFrame(step);
+        } else {
+          this._theta = theta;
+          this._phi = phi;
+          this._animId = null;
+          this.render();
+          resolve();
+        }
+      };
+      this._animId = requestAnimationFrame(step);
+    });
+  }
+
+  // Project 3D Bloch point to 2D screen coords
+  _project(x, y, z) {
+    const r = Math.min(this.w, this.h) * 0.38;
+    const cx = this.w / 2;
+    const cy = this.h / 2;
+    // Oblique projection: Y axis goes into screen at an angle
+    const foreshorten = 0.35;
+    const angle = -0.5;
+    const sx = cx + r * (x + y * foreshorten * Math.cos(angle));
+    const sy = cy - r * (z + y * foreshorten * Math.sin(angle));
+    return [sx, sy];
+  }
+
+  render() {
+    const ctx = this.ctx;
+    const r = Math.min(this.w, this.h) * 0.38;
+    const cx = this.w / 2;
+    const cy = this.h / 2;
+
+    ctx.clearRect(0, 0, this.w, this.h);
+
+    // Sphere outline
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Equator ellipse (foreshortened)
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, r, r * 0.35, -0.15, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Axes (dashed)
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 1;
+
+    // Z-axis (vertical)
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - r - 8);
+    ctx.lineTo(cx, cy + r + 8);
+    ctx.stroke();
+
+    // X-axis (horizontal through equator)
+    const [xp, xpy] = this._project(1, 0, 0);
+    const [xn, xny] = this._project(-1, 0, 0);
+    ctx.beginPath();
+    ctx.moveTo(xn, xny);
+    ctx.lineTo(xp, xpy);
+    ctx.stroke();
+
+    // Y-axis
+    const [yp, ypy] = this._project(0, 1, 0);
+    const [yn, yny] = this._project(0, -1, 0);
+    ctx.beginPath();
+    ctx.moveTo(yn, yny);
+    ctx.lineTo(yp, ypy);
+    ctx.stroke();
+
+    ctx.setLineDash([]);
+
+    // Labels
+    if (this.showLabels) {
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.font = '13px "Fira Code", monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText('|0⟩', cx, cy - r - 10);
+      ctx.textBaseline = 'top';
+      ctx.fillText('|1⟩', cx, cy + r + 10);
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('|+⟩', xp + 8, xpy);
+      ctx.textAlign = 'right';
+      ctx.fillText('|−⟩', xn - 8, xny);
+    }
+
+    // State arrow
+    const sx = Math.sin(this._theta) * Math.cos(this._phi);
+    const sy = Math.sin(this._theta) * Math.sin(this._phi);
+    const sz = Math.cos(this._theta);
+    const [ax, ay] = this._project(sx, sy, sz);
+
+    // Arrow line
+    ctx.strokeStyle = this.color;
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(ax, ay);
+    ctx.stroke();
+
+    // Arrowhead
+    const angle = Math.atan2(ay - cy, ax - cx);
+    const hs = 10;
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.moveTo(ax, ay);
+    ctx.lineTo(ax - hs * Math.cos(angle - 0.4), ay - hs * Math.sin(angle - 0.4));
+    ctx.lineTo(ax - hs * Math.cos(angle + 0.4), ay - hs * Math.sin(angle + 0.4));
+    ctx.closePath();
+    ctx.fill();
+
+    // State dot
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(ax, ay, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Origin dot
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+
+// ── HistogramRenderer ────────────────────────────────────────────────────────
+// DOM-based animated bar chart. Used by Ch 8, 10, 17, 18.
+
+export class HistogramRenderer {
+  constructor(containerEl, opts = {}) {
+    this.container = containerEl;
+    this.labels = opts.labels || ['|0⟩', '|1⟩'];
+    this.colors = opts.colors || ['#1CB0F6', '#FF9600'];
+    this.barHeight = opts.height || 120;
+
+    // Build DOM
+    this.el = document.createElement('div');
+    this.el.style.cssText = `display:flex;align-items:flex-end;justify-content:center;gap:12px;width:100%;`;
+    this._bars = [];
+    this._values = [];
+    this._expected = [];
+
+    this.labels.forEach((label, i) => {
+      const group = document.createElement('div');
+      group.style.cssText = 'display:flex;flex-direction:column;align-items:center;flex:1;max-width:80px;';
+
+      const valEl = document.createElement('div');
+      valEl.style.cssText = "font-family:'Fira Code',monospace;font-size:12px;color:var(--text-muted);height:18px;";
+      valEl.textContent = '0';
+
+      const barWrap = document.createElement('div');
+      barWrap.style.cssText = `position:relative;width:100%;height:${this.barHeight}px;background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden;`;
+
+      const bar = document.createElement('div');
+      const color = Array.isArray(this.colors) ? (this.colors[i] || this.colors[0]) : this.colors;
+      bar.style.cssText = `position:absolute;bottom:0;left:0;right:0;height:0%;background:${color};border-radius:0 0 5px 5px;transition:height 0.3s ease;opacity:0.85;`;
+
+      const exp = document.createElement('div');
+      exp.style.cssText = 'position:absolute;bottom:0;left:0;right:0;height:0%;border-top:2px dashed rgba(255,255,255,0.3);transition:height 0.3s ease;pointer-events:none;';
+
+      barWrap.append(bar, exp);
+
+      const labelEl = document.createElement('div');
+      labelEl.style.cssText = "font-family:'Fira Code',monospace;font-size:13px;color:var(--text);font-weight:700;margin-top:4px;";
+      labelEl.textContent = label;
+
+      group.append(valEl, barWrap, labelEl);
+      this.el.appendChild(group);
+      this._bars.push(bar);
+      this._values.push(valEl);
+      this._expected.push(exp);
+    });
+
+    containerEl.appendChild(this.el);
+  }
+
+  setData(values) {
+    values.forEach((v, i) => {
+      if (i < this._bars.length) {
+        this._bars[i].style.height = `${(v * 100).toFixed(1)}%`;
+        this._values[i].textContent = v >= 0.01 ? v.toFixed(2) : v > 0 ? '<.01' : '0';
+      }
+    });
+  }
+
+  setExpected(values) {
+    values.forEach((v, i) => {
+      if (i < this._expected.length) {
+        this._expected[i].style.height = `${(v * 100).toFixed(1)}%`;
+      }
+    });
+  }
+
+  reset() {
+    this._bars.forEach(b => b.style.height = '0%');
+    this._values.forEach(v => v.textContent = '0');
+    this._expected.forEach(e => e.style.height = '0%');
+  }
+
+  destroy() {
+    this.el.remove();
+  }
+}
+
+
 // ── PhysicsBeam ───────────────────────────────────────────────────────────────
 // Balance beam renderer for Ch 1 — Equation Balancer.
 

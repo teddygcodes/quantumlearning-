@@ -186,6 +186,8 @@ A 2D grid with a shape (letter F) that the student transforms by applying matric
 
 **Live feedback**: Ket notation, probability bars, and normalization sum all update continuously as sliders move.
 
+**Built in Session 3** ✅
+
 ---
 
 ### Chapter 7: Quantum Gates
@@ -214,6 +216,8 @@ Pick a gate, pick an input state, watch the transformation on the Bloch sphere. 
 - "Apply any gate twice. What happens?" → Most return to start (X² = I, Z² = I, H² = I)
 - "Apply H, then Z, then H. Compare to just X." → HZH = X
 
+**Built in Session 3** ✅
+
 ---
 
 ### Chapter 8: Measurement
@@ -238,6 +242,8 @@ Create quantum states and measure them repeatedly, building up histograms and ex
 **Discovery prompts** (optional):
 - "Set P(|0⟩) = 0.5. Measure 10 times. Did you get exactly 5-5?" → Probably not — randomness is real
 - "Can you find a state where measurement is ALWAYS |1⟩?" → |1⟩ pure state
+
+**Built in Session 3** ✅
 
 ---
 
@@ -566,7 +572,7 @@ Run circuits with and without error correction. A noise slider lets you feel how
 |---------|-------------|----------------------|
 | 1 ✅ | Ch 1-3 (Equation Balancer, Vector Playground, Normalization Machine) | GridCanvas, PhysicsBeam |
 | 2 ✅ | Ch 4-5 (Complex Multiplier, Transformation Sandbox) | Extended GridCanvas: drawArc, drawPolygon, drawAxisLabels |
-| 3 | Ch 6-8 (State Space Navigator, Gate Laboratory, Quantum Coin Toss Lab) | BlochSphere renderer, HistogramRenderer |
+| 3 ✅ | Ch 6-8 (State Explorer, Gate Laboratory, Quantum Coin Toss Lab) | BlochSphere renderer, HistogramRenderer |
 | 4 | Ch 9-11 (Qubit Combiner, Entanglement Lab, Circuit Puzzler) | CircuitSimulator |
 | 5 | Ch 12-14 (Bloch Sphere Painter, Phase Clock, Gate Wiring Lab) | BlochSphere trails, clock face |
 | 6 | Ch 15-17 (Teleportation Simulator, Oracle Detective, Quantum Search Race) | Animation sequencer |
