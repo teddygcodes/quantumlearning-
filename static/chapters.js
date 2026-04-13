@@ -677,8 +677,9 @@ export const CHAPTERS = [
         problemType: 'bloch_identification',
         progression: [
           { difficulty: 1, variation: 'basic' },
-          { difficulty: 1, variation: 'basic' },
-          { difficulty: 2, variation: 'basic' },
+          { difficulty: 1, variation: 'basis_states' },
+          { difficulty: 2, variation: 'superposition' },
+          { difficulty: 2, variation: 'phase_state' },
         ],
       },
       {
@@ -686,8 +687,9 @@ export const CHAPTERS = [
         problemType: 'rz_apply',
         progression: [
           { difficulty: 1, variation: 'basic' },
-          { difficulty: 1, variation: 'basic' },
-          { difficulty: 2, variation: 'basic' },
+          { difficulty: 1, variation: 'simple_angle' },
+          { difficulty: 2, variation: 'superposition' },
+          { difficulty: 2, variation: 'verify_probability' },
         ],
       },
       {
@@ -695,8 +697,9 @@ export const CHAPTERS = [
         problemType: 'rx_apply',
         progression: [
           { difficulty: 1, variation: 'basic' },
-          { difficulty: 1, variation: 'basic' },
-          { difficulty: 2, variation: 'basic' },
+          { difficulty: 1, variation: 'half_pi' },
+          { difficulty: 2, variation: 'probability_after' },
+          { difficulty: 2, variation: 'superposition_input' },
         ],
       },
       {
@@ -704,8 +707,9 @@ export const CHAPTERS = [
         problemType: 'ry_apply',
         progression: [
           { difficulty: 1, variation: 'basic' },
-          { difficulty: 1, variation: 'basic' },
-          { difficulty: 2, variation: 'basic' },
+          { difficulty: 1, variation: 'half_pi' },
+          { difficulty: 2, variation: 'create_target_state' },
+          { difficulty: 2, variation: 'compare_rx_ry' },
         ],
       },
       {
@@ -713,8 +717,8 @@ export const CHAPTERS = [
         problemType: 'euler_decompose',
         progression: [
           { difficulty: 1, variation: 'basic' },
-          { difficulty: 1, variation: 'basic' },
-          { difficulty: 2, variation: 'basic' },
+          { difficulty: 1, variation: 'hadamard' },
+          { difficulty: 2, variation: 'compose_two' },
         ],
       },
     ],
@@ -737,8 +741,9 @@ export const CHAPTERS = [
         problemType: 's_gate_apply',
         progression: [
           { difficulty: 1, variation: 'basic' },
-          { difficulty: 1, variation: 'basic' },
-          { difficulty: 2, variation: 'basic' },
+          { difficulty: 1, variation: 'superposition' },
+          { difficulty: 2, variation: 'double_s' },
+          { difficulty: 2, variation: 'probability_unchanged' },
         ],
       },
       {
@@ -746,8 +751,8 @@ export const CHAPTERS = [
         problemType: 's_dagger_apply',
         progression: [
           { difficulty: 1, variation: 'basic' },
-          { difficulty: 1, variation: 'basic' },
-          { difficulty: 2, variation: 'basic' },
+          { difficulty: 1, variation: 'superposition' },
+          { difficulty: 2, variation: 'undo_s' },
         ],
       },
       {
@@ -755,8 +760,9 @@ export const CHAPTERS = [
         problemType: 't_gate_apply',
         progression: [
           { difficulty: 1, variation: 'basic' },
-          { difficulty: 1, variation: 'basic' },
-          { difficulty: 2, variation: 'basic' },
+          { difficulty: 1, variation: 'compute_phase' },
+          { difficulty: 2, variation: 'double_t' },
+          { difficulty: 2, variation: 'quad_t' },
         ],
       },
       {
@@ -764,8 +770,8 @@ export const CHAPTERS = [
         problemType: 't_dagger_apply',
         progression: [
           { difficulty: 1, variation: 'basic' },
-          { difficulty: 1, variation: 'basic' },
-          { difficulty: 2, variation: 'basic' },
+          { difficulty: 1, variation: 'superposition' },
+          { difficulty: 2, variation: 'undo_t' },
         ],
       },
       {

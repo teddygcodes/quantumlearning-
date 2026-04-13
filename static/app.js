@@ -7,7 +7,7 @@
  * never injected into the DOM. If user-generated content is ever rendered in
  * the future, add DOMPurify first.
  */
-import { CHAPTERS } from './chapters.js?v=13';
+import { CHAPTERS } from './chapters.js?v=14';
 import { generateRandomProblem, generateProblem, checkAnswer } from './problems.js?v=13';
 import { TEMPLATES } from './templates.js?v=9';
 import { CanvasManager } from './canvas.js';
