@@ -171,3 +171,25 @@ Full spec in `CIRCUIT_BUILDER_SPEC.md` at the project root.
 | 1 ✅ | Simulator engine + circuit data model + basic UI with tap-to-place + step-through math panel + multi-qubit rendering + histogram + qubit selector | Complete |
 | 2 ✅ | Drag-and-drop + parameterized gate angle popup + 8 preset circuits + bottom toolbar + clear with confirmation + CSS polish | Complete |
 | 3 ✅ | Keyboard shortcuts, grid scroll indicator, named saves, toast notifications, gate animations, landscape split layout | Complete |
+
+## Phase 9: Codebase Refactor — Split Monoliths & Polish
+
+Full spec in `REFACTOR_SPEC.md`. Three files grew too large through rapid feature shipping:
+- `experiments.js` (5,288 lines) — 20 experiments in one file
+- `problems.js` (6,061 lines) — 50+ generators + parsers
+- `app.js` (1,600 lines) — router + state + 5 screen renderers
+
+### Refactor sessions
+| Session | Scope | Status |
+|---------|-------|--------|
+| 1 | Split experiments.js → 20 individual modules + helpers.js + barrel file | Planned |
+| 2 | Split app.js → state.js + router + 5 screen modules in screens/ | Planned |
+| 3 | Split problems.js → parsers.js + chapter generator modules + barrel | Planned |
+| 4 | CSS cleanup — extract 274 inline cssText assignments into utility classes | Planned |
+| 5 | Event listener cleanup utility + final audit + polish | Planned |
+
+### Key constraints
+- **Zero behavior changes** — pure structural refactor
+- **No build tooling** — stays as vanilla ES modules
+- **Each session is independently shippable** — app works after every session
+- **No file over ~500 lines** (experiments) or ~800 lines (screens/generators)
