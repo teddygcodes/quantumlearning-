@@ -177,9 +177,13 @@ The `variation` parameter controls problem **structure** (negatives, pure-real t
 
 ## Screenshots
 
-| Home Screen | Lesson + Notepad |
-|:-----------:|:----------------:|
-| ![Home screen with skill path](screenshot-home.jpg) | ![Lesson with Apple Pencil notepad](screenshot-app.png) |
+| Home Screen | Lesson View |
+|:-----------:|:-----------:|
+| ![Home screen with chapter skill path](screenshot-home-new.png) | ![Lesson with teaching panel and worked example](screenshot-lesson.png) |
+
+| Circuit Builder | Hardware Explorer |
+|:---------------:|:-----------------:|
+| ![Quantum circuit sandbox with Bell State and step-through math](screenshot-circuit.png) | ![Radar chart comparing quantum hardware technologies](screenshot-experiment.png) |
 
 ## License
 
