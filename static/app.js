@@ -12,7 +12,7 @@ import { generateRandomProblem, generateProblem, checkAnswer } from './problems.
 import { TEMPLATES } from './templates.js?v=9';
 import { CanvasManager } from './canvas.js';
 import * as KB from './keyboard.js?v=2';
-import { EXPERIMENTS } from './experiments.js?v=8';
+import { EXPERIMENTS } from './experiments.js?v=9';
 import { mountSandbox } from './circuit-ui.js?v=3';
 import { getUnlockedGates } from './circuit.js?v=3';
 

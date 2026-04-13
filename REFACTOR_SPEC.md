@@ -30,7 +30,7 @@ Three files have grown too large through 8 phases of rapid feature shipping:
 
 ---
 
-## Session 1: Split experiments.js (20 files)
+## Session 1: Split experiments.js (20 files) ✅ COMPLETE
 
 **Current:** `experiments.js` exports a flat `EXPERIMENTS` object with 20 keys. Each experiment is a self-contained `{ title, subtitle, icon, mount(container, callbacks) → cleanup }` object. They share 5 small inline helpers (`rnd`, `shuffle`, `snap`, `makeLabel`, `makeBtn`) at the top of the file.
 
@@ -38,7 +38,7 @@ Three files have grown too large through 8 phases of rapid feature shipping:
 ```
 static/
   experiments/
-    helpers.js          — rnd, shuffle, snap, makeLabel, makeBtn (~50 lines)
+    helpers.js          — rnd, shuffle, snap, makeLabel, makeBtn + quantum math + rotation gates + ket formatting (~230 lines)
     ch01-equation-balancer.js
     ch02-vector-playground.js
     ch03-normalization-machine.js
@@ -202,7 +202,7 @@ static/
 
 | Session | Scope | Files touched | Estimated lines moved |
 |---------|-------|---------------|----------------------|
-| 1 | Split experiments.js → 20 modules + helpers + barrel | experiments.js → 22 new files | ~5,250 |
+| 1 ✅ | Split experiments.js → 20 modules + helpers + barrel | experiments.js → 22 new files | ~5,250 |
 | 2 | Split app.js → router + state + 5 screens | app.js → 7 new files | ~1,480 |
 | 3 | Split problems.js → parsers + chapter generators + barrel | problems.js → ~22 new files | ~5,900 |
 | 4 | CSS cleanup — inline styles → utility classes | style.css + 20 experiment files | ~300 new CSS, ~274 JS edits |

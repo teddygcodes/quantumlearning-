@@ -14,7 +14,9 @@ python app.py          # serves at http://0.0.0.0:8000
 - `static/chapters.js` — 20 chapters of curriculum with progression arrays and lesson structure
 - `static/keyboard.js`  — Custom answer keyboard (context-aware per answer type)
 - `static/canvas.js`   — Apple Pencil drawing engine
-- `static/experiments.js` — Interactive experiment definitions per chapter (mount/cleanup pattern)
+- `static/experiments.js` — Barrel file re-exporting all 20 experiments from `experiments/` modules
+- `static/experiments/helpers.js` — Shared experiment helpers (rnd, shuffle, snap, makeLabel, makeBtn, quantum math, rotation gates, ket formatting)
+- `static/experiments/ch01-*.js` through `ch20-*.js` — Individual experiment modules (mount/cleanup pattern)
 - `static/experiment-ui.js` — Shared experiment components (GridCanvas, PhysicsBeam, BlochSphere, HistogramRenderer, CircuitSimulator, ClockFace, drag, tween, toast)
 - `static/style.css`   — Full Duolingo-inspired design system
 
@@ -77,7 +79,7 @@ the original code.
 | `choice` | Trim, uppercase first char | Exact letter match | A/B/C/D choice buttons |
 
 ## Cache busting
-ES module imports in app.js use query params: `./chapters.js?v=14`, `./problems.js?v=13`, `./templates.js?v=9`, `./keyboard.js?v=2`, `./experiments.js?v=6`, `./experiment-ui.js?v=5`.
+ES module imports in app.js use query params: `./chapters.js?v=14`, `./problems.js?v=13`, `./templates.js?v=9`, `./keyboard.js?v=2`, `./experiments.js?v=9`, `./experiment-ui.js?v=7`.
 Bump these when modifying those files. Also bump `app.js?v=N` in index.html (currently v=51).
 
 ## Security note on innerHTML
@@ -182,7 +184,7 @@ Full spec in `REFACTOR_SPEC.md`. Three files grew too large through rapid featur
 ### Refactor sessions
 | Session | Scope | Status |
 |---------|-------|--------|
-| 1 | Split experiments.js → 20 individual modules + helpers.js + barrel file | Planned |
+| 1 | Split experiments.js → 20 individual modules + helpers.js + barrel file | Complete |
 | 2 | Split app.js → state.js + router + 5 screen modules in screens/ | Planned |
 | 3 | Split problems.js → parsers.js + chapter generator modules + barrel | Planned |
 | 4 | CSS cleanup — extract 274 inline cssText assignments into utility classes | Planned |
