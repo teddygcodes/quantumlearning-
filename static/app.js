@@ -12,7 +12,7 @@ import { generateRandomProblem, generateProblem, checkAnswer } from './problems.
 import { TEMPLATES } from './templates.js?v=9';
 import { CanvasManager } from './canvas.js';
 import * as KB from './keyboard.js?v=2';
-import { EXPERIMENTS } from './experiments.js?v=4';
+import { EXPERIMENTS } from './experiments.js?v=5';
 
 // ── State ──────────────────────────────────────────────────────────────────
 

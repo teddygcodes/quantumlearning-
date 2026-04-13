@@ -1383,6 +1383,53 @@ code { font-family: var(--mono); font-size: 14px; background: var(--border); pad
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
 }
 
+/* Circuit Puzzler (Ch 11) */
+.circuit-wire-row {
+  display: flex;
+  align-items: center;
+  height: 52px;
+  gap: 0;
+}
+.circuit-wire-label {
+  min-width: 56px;
+  font-family: 'Fira Code', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.circuit-gate-slot {
+  width: 44px;
+  height: 44px;
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-family: 'Fira Code', monospace;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text);
+  position: relative;
+  z-index: 2;
+  background: var(--bg);
+  transition: border-color 0.15s, box-shadow 0.15s;
+  flex-shrink: 0;
+}
+.circuit-gate-slot.filled {
+  border-style: solid;
+  background: var(--surface);
+}
+.circuit-gate-slot:active {
+  transform: scale(0.95);
+}
+.circuit-toolbox {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
 /* Landscape layout for experiments */
 @media (min-width: 768px) and (orientation: landscape) {
   .experiment-body {

@@ -13,7 +13,7 @@
  * They teach through free-form interaction and live feedback.
  */
 
-import { GridCanvas, PhysicsBeam, BlochSphere, HistogramRenderer, showToast, animateValue } from './experiment-ui.js?v=3';
+import { GridCanvas, PhysicsBeam, BlochSphere, HistogramRenderer, CircuitSimulator, showToast, animateValue } from './experiment-ui.js?v=4';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -689,6 +689,42 @@ function fmtKetCoeff(re, im) {
   if (Math.abs(re) < 0.005) return im === 1 ? 'i' : im === -1 ? '\u2212i' : `${+im.toFixed(2)}i`;
   const sign = im > 0 ? '+' : '';
   return `(${+re.toFixed(2)}${sign}${+im.toFixed(2)}i)`;
+}
+
+function tensorProduct(stateA, stateB) {
+  const result = [];
+  for (let i = 0; i < stateA.length; i++) {
+    for (let j = 0; j < stateB.length; j++) {
+      result.push(cmul(stateA[i], stateB[j]));
+    }
+  }
+  return result;
+}
+
+function fmtKet2Q(state) {
+  const labels = ['|00⟩', '|01⟩', '|10⟩', '|11⟩'];
+  const terms = [];
+  for (let i = 0; i < 4; i++) {
+    const amp = state[i];
+    if (cabs(amp) < 0.005) continue;
+    const c = fmtKetCoeff(amp.re, amp.im);
+    terms.push({ c, label: labels[i] });
+  }
+  if (terms.length === 0) return '|ψ⟩ = 0';
+  let s = '|ψ⟩ = ';
+  terms.forEach((t, idx) => {
+    if (idx > 0) {
+      if (t.c.startsWith('\u2212') || t.c.startsWith('-')) {
+        s += ' \u2212 ' + (t.c.startsWith('\u2212') ? t.c.slice(1) : t.c.slice(1));
+      } else {
+        s += ' + ' + t.c;
+      }
+    } else {
+      s += t.c;
+    }
+    s += t.label;
+  });
+  return s;
 }
 
 
@@ -1772,6 +1808,774 @@ const experiment8 = {
 };
 
 
+// ── Chapter 9: Qubit Combiner ─────────────────────────────────────────────────
+
+/**
+ * Ch 9 — Qubit Combiner (sandbox)
+ *
+ * Two independent qubits combine into a 4-element state vector via tensor
+ * product. Adjust each qubit's state and watch the combined probabilities
+ * update live. The insight: independent qubits CAN'T create entanglement.
+ */
+const experiment9 = {
+  title: 'Qubit Combiner',
+  subtitle: 'Combine two qubits — see the tensor product live',
+  icon: '🔗',
+
+  mount(container, { chapterColor, onComplete }) {
+    let completed = false;
+    let combosExplored = 0;
+
+    let thetaA = 0, phiA = 0;
+    let thetaB = 0, phiB = 0;
+
+    container.style.flexDirection = 'column';
+
+    // ─ Bloch sphere row ─
+    const sphereRow = document.createElement('div');
+    sphereRow.style.cssText = 'display:flex;gap:12px;';
+
+    function makeSphereCol(label) {
+      const col = document.createElement('div');
+      col.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;';
+      const lbl = document.createElement('div');
+      lbl.style.cssText = "font-family:'Fira Code',monospace;font-size:13px;font-weight:700;color:var(--text);";
+      lbl.textContent = label;
+      const wrap = document.createElement('div');
+      wrap.className = 'experiment-canvas-wrap';
+      wrap.style.cssText += 'min-height:140px;max-height:180px;width:100%;';
+      const canvas = document.createElement('canvas');
+      wrap.appendChild(canvas);
+      const slider = document.createElement('input');
+      slider.type = 'range';
+      slider.min = '0';
+      slider.max = String(Math.PI);
+      slider.step = '0.02';
+      slider.value = '0';
+      slider.style.cssText = `width:100%;accent-color:${chapterColor};`;
+      const valEl = document.createElement('div');
+      valEl.style.cssText = "font-family:'Fira Code',monospace;font-size:11px;color:var(--text-muted);";
+      valEl.textContent = 'θ = 0';
+      col.append(lbl, wrap, slider, valEl);
+      return { col, canvas, slider, valEl };
+    }
+
+    const colA = makeSphereCol('Qubit A');
+    const colB = makeSphereCol('Qubit B');
+    sphereRow.append(colA.col, colB.col);
+
+    const blochA = new BlochSphere(colA.canvas, { color: chapterColor });
+    const blochB = new BlochSphere(colB.canvas, { color: '#FF9600' });
+
+    // ─ Ket display ─
+    const ketDiv = document.createElement('div');
+    ketDiv.style.cssText = `
+      background:var(--surface);border:2px solid var(--border);border-radius:var(--radius-lg);
+      padding:14px;text-align:center;font-family:'Fira Code',monospace;font-size:15px;
+      font-weight:700;color:var(--text);line-height:1.5;word-break:break-word;
+    `;
+
+    // ─ Histogram ─
+    const histWrap = document.createElement('div');
+    histWrap.style.cssText = 'width:100%;';
+    const histogram = new HistogramRenderer(histWrap, {
+      labels: ['|00⟩', '|01⟩', '|10⟩', '|11⟩'],
+      colors: [chapterColor, '#FF9600', '#CE82FF', '#FF4B4B'],
+      height: 100,
+    });
+
+    // ─ Separability badge ─
+    const sepDiv = document.createElement('div');
+    sepDiv.style.cssText = `
+      text-align:center;padding:8px 16px;border-radius:var(--radius);
+      background:rgba(88,204,2,0.12);border:1px solid rgba(88,204,2,0.3);
+      font-family:'Fira Code',monospace;font-size:13px;font-weight:700;color:#58CC02;
+    `;
+    sepDiv.textContent = '✓ This state IS separable';
+
+    // ─ Presets ─
+    const presetDiv = document.createElement('div');
+    presetDiv.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;';
+    const presets = [
+      { label: '|0⟩⊗|0⟩', a: [0, 0], b: [0, 0] },
+      { label: '|+⟩⊗|−⟩', a: [Math.PI / 2, 0], b: [Math.PI / 2, Math.PI] },
+      { label: '|1⟩⊗|+⟩', a: [Math.PI, 0], b: [Math.PI / 2, 0] },
+      { label: '|0⟩⊗|1⟩', a: [0, 0], b: [Math.PI, 0] },
+      { label: '|+⟩⊗|+⟩', a: [Math.PI / 2, 0], b: [Math.PI / 2, 0] },
+      { label: '|1⟩⊗|1⟩', a: [Math.PI, 0], b: [Math.PI, 0] },
+    ];
+    presets.forEach(p => {
+      const btn = makeBtn(p.label, 'btn experiment-block-btn');
+      btn.style.cssText += 'font-size:13px;padding:10px 4px;';
+      btn.addEventListener('click', () => {
+        thetaA = p.a[0]; phiA = p.a[1];
+        thetaB = p.b[0]; phiB = p.b[1];
+        colA.slider.value = thetaA;
+        colB.slider.value = thetaB;
+        update();
+        showToast(container, `Set to ${p.label}`, 'info');
+      });
+      presetDiv.appendChild(btn);
+    });
+
+    // ─ Discovery prompt ─
+    const discoveryDiv = document.createElement('div');
+    discoveryDiv.style.cssText = "font-family:'Fira Code',monospace;font-size:12px;color:var(--text-muted);text-align:center;opacity:0;transition:opacity 0.5s;line-height:1.5;";
+    discoveryDiv.textContent = '💡 Can you make P(|00⟩) = P(|11⟩) = 0.5 with P(|01⟩) = P(|10⟩) = 0? Try it — then come back for Chapter 10.';
+
+    // ─ Counter ─
+    const counterDiv = document.createElement('div');
+    counterDiv.style.cssText = 'font-size:13px;color:var(--text-muted);text-align:center;';
+    counterDiv.textContent = 'Combinations explored: 0';
+
+    container.append(sphereRow, ketDiv, histWrap, sepDiv, presetDiv, discoveryDiv, counterDiv);
+
+    colA.slider.addEventListener('input', () => {
+      thetaA = parseFloat(colA.slider.value);
+      phiA = 0;
+      update();
+    });
+    colB.slider.addEventListener('input', () => {
+      thetaB = parseFloat(colB.slider.value);
+      phiB = 0;
+      update();
+    });
+
+    function update() {
+      blochA.setState(thetaA, phiA);
+      blochB.setState(thetaB, phiB);
+
+      colA.valEl.textContent = `θ = ${(thetaA / Math.PI).toFixed(2)}π`;
+      colB.valEl.textContent = `θ = ${(thetaB / Math.PI).toFixed(2)}π`;
+
+      const stA = blochToState(thetaA, phiA);
+      const stB = blochToState(thetaB, phiB);
+      const combined = tensorProduct(stA, stB);
+
+      ketDiv.textContent = fmtKet2Q(combined);
+
+      const probs = combined.map(c => c.re * c.re + c.im * c.im);
+      histogram.setData(probs);
+
+      combosExplored++;
+      counterDiv.textContent = `Combinations explored: ${combosExplored}`;
+
+      if (combosExplored >= 5) discoveryDiv.style.opacity = '1';
+
+      if (!completed) {
+        completed = true;
+        onComplete({ combosExplored });
+      }
+    }
+
+    update();
+
+    return () => { blochA.destroy(); blochB.destroy(); histogram.destroy(); };
+  },
+};
+
+
+// ── Chapter 10: Entanglement Lab ──────────────────────────────────────────────
+
+/**
+ * Ch 10 — Entanglement Lab (sandbox)
+ *
+ * Prepare Bell states and measure one qubit — the other instantly collapses.
+ * Repeated measurements build up a log showing perfect correlations.
+ * The insight: entangled qubits are correlated in a way no classical system can replicate.
+ */
+const experiment10 = {
+  title: 'Entanglement Lab',
+  subtitle: 'Measure one qubit — the other instantly responds',
+  icon: '🔮',
+
+  mount(container, { chapterColor, onComplete }) {
+    let completed = false;
+    let pairsMeasured = 0;
+    let matched = 0;
+    let bellType = 'phi+';
+    let measured = false;
+
+    const sim = new CircuitSimulator(2);
+
+    container.style.flexDirection = 'column';
+
+    // ─ Bell state display ─
+    const bellDisplay = document.createElement('div');
+    bellDisplay.style.cssText = `
+      background:var(--surface);border:2px solid var(--border);border-radius:var(--radius-lg);
+      padding:14px;text-align:center;font-family:'Fira Code',monospace;font-size:16px;
+      font-weight:700;color:var(--text);line-height:1.5;
+    `;
+
+    // ─ Sphere row ─
+    const sphereRow = document.createElement('div');
+    sphereRow.style.cssText = 'display:flex;gap:12px;';
+
+    function makeMeasureCol(label, color) {
+      const col = document.createElement('div');
+      col.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;';
+      const lbl = document.createElement('div');
+      lbl.style.cssText = `font-family:'Fira Code',monospace;font-size:13px;font-weight:700;color:${color};`;
+      lbl.textContent = label;
+      const wrap = document.createElement('div');
+      wrap.className = 'experiment-canvas-wrap';
+      wrap.style.cssText += 'min-height:140px;max-height:180px;width:100%;';
+      const canvas = document.createElement('canvas');
+      wrap.appendChild(canvas);
+      const statusEl = document.createElement('div');
+      statusEl.style.cssText = `font-family:'Fira Code',monospace;font-size:12px;font-weight:700;color:${color};text-align:center;min-height:18px;`;
+      const btn = makeBtn(`Measure ${label}`, 'btn');
+      btn.style.cssText += `width:100%;background:${color};color:#fff;border:none;border-bottom:4px solid rgba(0,0,0,0.2);padding:12px;font-size:14px;`;
+      col.append(lbl, wrap, statusEl, btn);
+      return { col, canvas, statusEl, btn };
+    }
+
+    const colQ0 = makeMeasureCol('Qubit 0', chapterColor);
+    const colQ1 = makeMeasureCol('Qubit 1', '#FF9600');
+    sphereRow.append(colQ0.col, colQ1.col);
+
+    const blochQ0 = new BlochSphere(colQ0.canvas, { color: chapterColor });
+    const blochQ1 = new BlochSphere(colQ1.canvas, { color: '#FF9600' });
+
+    // ─ Bell selector ─
+    const bellRow = document.createElement('div');
+    bellRow.style.cssText = 'display:flex;gap:8px;';
+    const btnPhi = makeBtn('|Φ+⟩ correlated', 'btn btn-green');
+    btnPhi.style.cssText += 'flex:1;font-size:13px;';
+    const btnPsi = makeBtn('|Ψ+⟩ anti-corr.', 'btn btn-ghost');
+    btnPsi.style.cssText += 'flex:1;font-size:13px;';
+    bellRow.append(btnPhi, btnPsi);
+
+    btnPhi.addEventListener('click', () => {
+      bellType = 'phi+';
+      btnPhi.className = 'btn btn-green'; btnPsi.className = 'btn btn-ghost';
+      preparePair();
+    });
+    btnPsi.addEventListener('click', () => {
+      bellType = 'psi+';
+      btnPsi.className = 'btn btn-green'; btnPhi.className = 'btn btn-ghost';
+      preparePair();
+    });
+
+    // ─ New Pair button ─
+    const newPairBtn = makeBtn('New Pair', 'btn btn-full');
+    newPairBtn.style.cssText += `width:100%;padding:14px;font-size:16px;background:${chapterColor};color:#fff;border:none;border-bottom:4px solid rgba(0,0,0,0.2);`;
+    newPairBtn.addEventListener('click', () => preparePair());
+
+    // ─ Correlation display ─
+    const corrDiv = document.createElement('div');
+    corrDiv.style.cssText = `
+      background:var(--surface);border:2px solid var(--border);border-radius:var(--radius-lg);
+      padding:12px 16px;font-family:'Fira Code',monospace;font-size:14px;color:var(--text);
+      text-align:center;font-weight:700;
+    `;
+
+    // ─ Measurement log ─
+    const logWrap = document.createElement('div');
+    logWrap.style.cssText = 'max-height:140px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius);';
+    const logTable = document.createElement('table');
+    logTable.style.cssText = "width:100%;border-collapse:collapse;font-family:'Fira Code',monospace;font-size:12px;";
+    const logHead = document.createElement('thead');
+    const headRow = document.createElement('tr');
+    headRow.style.cssText = 'color:var(--text-muted);border-bottom:1px solid var(--border);';
+    ['#', 'Q0', 'Q1', 'Match?'].forEach(text => {
+      const th = document.createElement('th');
+      th.style.cssText = 'padding:6px;';
+      th.textContent = text;
+      headRow.appendChild(th);
+    });
+    logHead.appendChild(headRow);
+    const logBody = document.createElement('tbody');
+    logTable.append(logHead, logBody);
+    logWrap.appendChild(logTable);
+
+    // ─ Counter ─
+    const counterDiv = document.createElement('div');
+    counterDiv.style.cssText = 'font-size:13px;color:var(--text-muted);text-align:center;';
+
+    // ─ Discovery prompt ─
+    const discoveryDiv = document.createElement('div');
+    discoveryDiv.style.cssText = "font-family:'Fira Code',monospace;font-size:12px;color:var(--text-muted);text-align:center;opacity:0;transition:opacity 0.5s;line-height:1.5;";
+    discoveryDiv.textContent = '💡 Switch to |Ψ+⟩. Now what happens when you measure?';
+
+    container.append(bellDisplay, sphereRow, bellRow, newPairBtn, corrDiv, logWrap, counterDiv, discoveryDiv);
+
+    // ─ Measure handlers ─
+    colQ0.btn.addEventListener('click', () => doMeasure(0));
+    colQ1.btn.addEventListener('click', () => doMeasure(1));
+
+    function preparePair() {
+      measured = false;
+      sim.reset();
+      sim.applyGate('H', 0);
+      sim.applyGate('X', 1, 0); // CNOT
+      if (bellType === 'psi+') {
+        sim.applyGate('X', 1);
+      }
+
+      blochQ0.setState(Math.PI / 2, 0);
+      blochQ1.setState(Math.PI / 2, 0);
+      colQ0.statusEl.textContent = '~ entangled ~';
+      colQ0.statusEl.style.opacity = '0.6';
+      colQ1.statusEl.textContent = '~ entangled ~';
+      colQ1.statusEl.style.opacity = '0.6';
+      colQ0.btn.disabled = false;
+      colQ1.btn.disabled = false;
+      colQ0.btn.style.opacity = '1';
+      colQ1.btn.style.opacity = '1';
+
+      updateBellDisplay();
+    }
+
+    function updateBellDisplay() {
+      if (bellType === 'phi+') {
+        bellDisplay.textContent = '|Φ+⟩ = (1/√2)(|00⟩ + |11⟩)';
+      } else {
+        bellDisplay.textContent = '|Ψ+⟩ = (1/√2)(|01⟩ + |10⟩)';
+      }
+    }
+
+    function doMeasure(qubit) {
+      if (measured) return;
+      measured = true;
+
+      const result = sim.measureQubit(qubit);
+      const otherQubit = qubit === 0 ? 1 : 0;
+      const otherResult = sim.measureQubit(otherQubit);
+
+      const q0Result = qubit === 0 ? result : otherResult;
+      const q1Result = qubit === 1 ? result : otherResult;
+
+      blochQ0.animateState(q0Result === 0 ? 0 : Math.PI, 0, 300);
+      blochQ1.animateState(q1Result === 0 ? 0 : Math.PI, 0, 300);
+
+      colQ0.statusEl.textContent = q0Result === 0 ? '|0⟩' : '|1⟩';
+      colQ0.statusEl.style.opacity = '1';
+      colQ1.statusEl.textContent = q1Result === 0 ? '|0⟩' : '|1⟩';
+      colQ1.statusEl.style.opacity = '1';
+
+      colQ0.btn.disabled = true;
+      colQ1.btn.disabled = true;
+      colQ0.btn.style.opacity = '0.5';
+      colQ1.btn.style.opacity = '0.5';
+
+      pairsMeasured++;
+      const isMatch = q0Result === q1Result;
+      if (bellType === 'phi+') {
+        if (isMatch) matched++;
+      } else {
+        if (!isMatch) matched++;
+      }
+
+      const pct = pairsMeasured > 0 ? ((matched / pairsMeasured) * 100).toFixed(0) : '0';
+      const corrLabel = bellType === 'phi+' ? 'matched' : 'anti-correlated';
+      corrDiv.textContent = `${corrLabel}: ${matched}/${pairsMeasured} (${pct}%)`;
+
+      // Add log row via DOM
+      const row = document.createElement('tr');
+      row.style.cssText = 'border-bottom:1px solid var(--border);';
+      const matchOk = bellType === 'phi+' ? isMatch : !isMatch;
+      const cells = [
+        { text: String(pairsMeasured), color: 'var(--text-muted)' },
+        { text: q0Result === 0 ? '|0⟩' : '|1⟩', color: chapterColor },
+        { text: q1Result === 0 ? '|0⟩' : '|1⟩', color: '#FF9600' },
+        { text: matchOk ? '✓' : '✗', color: matchOk ? '#58CC02' : '#FF4B4B' },
+      ];
+      cells.forEach(c => {
+        const td = document.createElement('td');
+        td.style.cssText = `padding:4px 6px;text-align:center;font-weight:700;color:${c.color};`;
+        td.textContent = c.text;
+        row.appendChild(td);
+      });
+      logBody.prepend(row);
+
+      counterDiv.textContent = `Pairs measured: ${pairsMeasured}`;
+
+      if (pairsMeasured >= 3) discoveryDiv.style.opacity = '1';
+
+      if (!completed) {
+        completed = true;
+        onComplete({ pairsMeasured });
+      }
+    }
+
+    // Initial state
+    preparePair();
+    corrDiv.textContent = 'Correlation: 0/0 (—)';
+
+    return () => { blochQ0.destroy(); blochQ1.destroy(); };
+  },
+};
+
+
+// ── Chapter 11: Circuit Puzzler ───────────────────────────────────────────────
+
+/**
+ * Ch 11 — Circuit Puzzler (sandbox)
+ *
+ * Tap gates from the toolbox, then tap wire slots to place them. CNOT uses
+ * a two-tap flow (control then target). Run the circuit to see output state
+ * and histogram. Optional targets give inspiration without pressure.
+ */
+const experiment11 = {
+  title: 'Circuit Puzzler',
+  subtitle: 'Build circuits — see what they do',
+  icon: '🔧',
+
+  mount(container, { chapterColor, onComplete }) {
+    let completed = false;
+    let circuitsRun = 0;
+    let selectedGate = null;
+    let cnotStep = null;
+    const NUM_SLOTS = 6;
+
+    const wire0 = new Array(NUM_SLOTS).fill(null);
+    const wire1 = new Array(NUM_SLOTS).fill(null);
+
+    const sim = new CircuitSimulator(2);
+
+    let target = null;
+
+    container.style.flexDirection = 'column';
+
+    // ─ Instruction bar ─
+    const instrDiv = document.createElement('div');
+    instrDiv.style.cssText = "font-family:'Fira Code',monospace;font-size:12px;color:var(--text-muted);text-align:center;min-height:20px;";
+    instrDiv.textContent = 'Tap a gate, then tap a slot on the wire';
+
+    // ─ Circuit area ─
+    const circuitArea = document.createElement('div');
+    circuitArea.style.cssText = `
+      background:var(--surface);border:2px solid var(--border);border-radius:var(--radius-lg);
+      padding:16px 12px;position:relative;
+    `;
+
+    const gateColors = { X: '#FF4B4B', H: '#1CB0F6', Z: '#CE82FF', CNOT: '#FF9600' };
+
+    function makeWireRow(qubitIdx) {
+      const row = document.createElement('div');
+      row.className = 'circuit-wire-row';
+      const label = document.createElement('div');
+      label.className = 'circuit-wire-label';
+      label.textContent = `q${qubitIdx} |0⟩`;
+      const slotsDiv = document.createElement('div');
+      slotsDiv.style.cssText = 'display:flex;gap:4px;flex:1;align-items:center;position:relative;';
+
+      const wireLine = document.createElement('div');
+      wireLine.style.cssText = 'position:absolute;left:0;right:0;top:50%;height:2px;background:var(--text-muted);opacity:0.3;z-index:0;';
+      slotsDiv.appendChild(wireLine);
+
+      const slotEls = [];
+      for (let i = 0; i < NUM_SLOTS; i++) {
+        const slot = document.createElement('div');
+        slot.className = 'circuit-gate-slot';
+        slot.dataset.qubit = qubitIdx;
+        slot.dataset.col = i;
+        slot.addEventListener('click', () => onSlotClick(qubitIdx, i));
+        slotsDiv.appendChild(slot);
+        slotEls.push(slot);
+      }
+      row.append(label, slotsDiv);
+      return { row, slotEls, slotsDiv };
+    }
+
+    const wireRow0 = makeWireRow(0);
+    const wireRow1 = makeWireRow(1);
+    circuitArea.append(wireRow0.row, wireRow1.row);
+
+    // ─ Toolbox ─
+    const toolbox = document.createElement('div');
+    toolbox.className = 'circuit-toolbox';
+    const gateNames = ['X', 'H', 'Z', 'CNOT'];
+    const gateBtns = {};
+
+    gateNames.forEach(name => {
+      const btn = makeBtn(name, 'btn experiment-block-btn');
+      btn.style.cssText += 'flex:1;font-size:16px;font-weight:800;padding:12px 6px;min-width:60px;';
+      btn.addEventListener('click', () => selectGate(name));
+      toolbox.appendChild(btn);
+      gateBtns[name] = btn;
+    });
+
+    // ─ Action row ─
+    const actionRow = document.createElement('div');
+    actionRow.style.cssText = 'display:flex;gap:8px;';
+    const runBtn = makeBtn('▶ Run', 'btn');
+    runBtn.style.cssText += `flex:2;padding:14px;font-size:16px;background:${chapterColor};color:#fff;border:none;border-bottom:4px solid rgba(0,0,0,0.2);`;
+    const clearBtn = makeBtn('Clear', 'btn btn-ghost');
+    clearBtn.style.cssText += 'flex:1;font-size:14px;';
+    const targetBtn = makeBtn('🎯 Target', 'btn btn-ghost');
+    targetBtn.style.cssText += 'flex:1;font-size:14px;';
+    actionRow.append(runBtn, clearBtn, targetBtn);
+
+    // ─ Target display ─
+    const targetDiv = document.createElement('div');
+    targetDiv.style.cssText = 'display:none;background:var(--surface);border:2px dashed var(--border);border-radius:var(--radius-lg);padding:10px 14px;text-align:center;';
+    const targetLabel = document.createElement('div');
+    targetLabel.style.cssText = "font-family:'Fira Code',monospace;font-size:12px;color:var(--text-muted);margin-bottom:4px;";
+    const matchIndicator = document.createElement('div');
+    matchIndicator.style.cssText = 'font-size:24px;min-height:32px;';
+    targetDiv.append(targetLabel, matchIndicator);
+
+    // ─ Result area ─
+    const resultDiv = document.createElement('div');
+    resultDiv.style.cssText = 'display:none;';
+    const stateDisplay = document.createElement('div');
+    stateDisplay.style.cssText = `
+      background:var(--surface);border:2px solid var(--border);border-radius:var(--radius-lg);
+      padding:12px;text-align:center;font-family:'Fira Code',monospace;font-size:14px;
+      font-weight:700;color:var(--text);word-break:break-word;
+    `;
+    const histWrap = document.createElement('div');
+    histWrap.style.cssText = 'width:100%;';
+    const histogram = new HistogramRenderer(histWrap, {
+      labels: ['|00⟩', '|01⟩', '|10⟩', '|11⟩'],
+      colors: [chapterColor, '#FF9600', '#CE82FF', '#FF4B4B'],
+      height: 100,
+    });
+    resultDiv.append(stateDisplay, histWrap);
+
+    // ─ Stats ─
+    const statsRow = document.createElement('div');
+    statsRow.style.cssText = 'display:flex;justify-content:space-between;';
+    const gateCountDiv = document.createElement('div');
+    gateCountDiv.style.cssText = 'font-size:13px;color:var(--text-muted);';
+    gateCountDiv.textContent = 'Gates: 0';
+    const circuitCountDiv = document.createElement('div');
+    circuitCountDiv.style.cssText = 'font-size:13px;color:var(--text-muted);';
+    circuitCountDiv.textContent = 'Circuits run: 0';
+    statsRow.append(gateCountDiv, circuitCountDiv);
+
+    container.append(instrDiv, circuitArea, toolbox, actionRow, targetDiv, resultDiv, statsRow);
+
+    function selectGate(name) {
+      if (selectedGate === name && !cnotStep) {
+        selectedGate = null;
+        cnotStep = null;
+        updateToolboxHighlight();
+        instrDiv.textContent = 'Tap a gate, then tap a slot on the wire';
+        return;
+      }
+      selectedGate = name;
+      cnotStep = null;
+      updateToolboxHighlight();
+      if (name === 'CNOT') {
+        instrDiv.textContent = 'Tap the CONTROL qubit wire slot';
+      } else {
+        instrDiv.textContent = `Tap a slot to place ${name}`;
+      }
+    }
+
+    function updateToolboxHighlight() {
+      gateNames.forEach(n => {
+        gateBtns[n].style.borderColor = (n === selectedGate) ? gateColors[n] : '';
+        gateBtns[n].style.boxShadow = (n === selectedGate) ? `0 0 8px ${gateColors[n]}40` : '';
+      });
+    }
+
+    function onSlotClick(qubit, col) {
+      const wire = qubit === 0 ? wire0 : wire1;
+
+      if (wire[col]) {
+        if (wire[col].gate === 'CNOT') {
+          wire0[col] = null;
+          wire1[col] = null;
+        } else {
+          wire[col] = null;
+        }
+        renderCircuit();
+        return;
+      }
+
+      if (!selectedGate) return;
+
+      if (selectedGate === 'CNOT') {
+        if (!cnotStep) {
+          cnotStep = { control: qubit, col };
+          instrDiv.textContent = 'Now tap the TARGET qubit wire (same column)';
+          renderCircuit();
+          return;
+        } else {
+          if (qubit === cnotStep.control) {
+            showToast(container, 'Target must be a different wire', 'info');
+            return;
+          }
+          const cCol = cnotStep.col;
+          wire0[cCol] = { gate: 'CNOT', control: cnotStep.control, target: qubit, col: cCol };
+          wire1[cCol] = { gate: 'CNOT', control: cnotStep.control, target: qubit, col: cCol };
+          cnotStep = null;
+          instrDiv.textContent = 'Tap a gate, then tap a slot on the wire';
+          renderCircuit();
+          return;
+        }
+      }
+
+      wire[col] = { gate: selectedGate, qubit };
+      renderCircuit();
+    }
+
+    function renderCircuit() {
+      for (let col = 0; col < NUM_SLOTS; col++) {
+        const slot0 = wireRow0.slotEls[col];
+        const slot1 = wireRow1.slotEls[col];
+        const g0 = wire0[col];
+
+        // Remove old CNOT connectors
+        const oldConn = circuitArea.querySelector(`.cnot-conn-${col}`);
+        if (oldConn) oldConn.remove();
+
+        if (g0 && g0.gate === 'CNOT') {
+          const isControl0 = g0.control === 0;
+          slot0.textContent = isControl0 ? '●' : '⊕';
+          slot0.className = 'circuit-gate-slot filled';
+          slot0.style.color = gateColors.CNOT;
+          slot0.style.borderColor = gateColors.CNOT;
+          slot0.style.fontSize = isControl0 ? '18px' : '22px';
+
+          slot1.textContent = isControl0 ? '⊕' : '●';
+          slot1.className = 'circuit-gate-slot filled';
+          slot1.style.color = gateColors.CNOT;
+          slot1.style.borderColor = gateColors.CNOT;
+          slot1.style.fontSize = isControl0 ? '22px' : '18px';
+
+          const conn = document.createElement('div');
+          conn.className = `cnot-conn-${col}`;
+          conn.style.cssText = `position:absolute;width:2px;background:${gateColors.CNOT};opacity:0.6;z-index:1;`;
+          requestAnimationFrame(() => {
+            const top0 = slot0.offsetTop + slot0.offsetHeight;
+            const top1 = slot1.offsetTop;
+            conn.style.top = `${top0}px`;
+            conn.style.height = `${top1 - top0}px`;
+            conn.style.left = `${slot0.offsetLeft + slot0.offsetWidth / 2 - 1}px`;
+          });
+          circuitArea.appendChild(conn);
+        } else {
+          renderSlot(slot0, g0, 0, col);
+          renderSlot(slot1, wire1[col], 1, col);
+        }
+      }
+      updateGateCount();
+    }
+
+    function renderSlot(slotEl, gateData, qubit, col) {
+      if (gateData && gateData.gate !== 'CNOT') {
+        slotEl.textContent = gateData.gate;
+        slotEl.className = 'circuit-gate-slot filled';
+        slotEl.style.color = gateColors[gateData.gate] || '#fff';
+        slotEl.style.borderColor = gateColors[gateData.gate] || 'var(--border)';
+        slotEl.style.fontSize = '14px';
+      } else if (!gateData) {
+        slotEl.textContent = '';
+        slotEl.className = 'circuit-gate-slot';
+        slotEl.style.color = '';
+        slotEl.style.borderColor = '';
+        slotEl.style.fontSize = '';
+        if (cnotStep && cnotStep.col === col && qubit !== cnotStep.control) {
+          slotEl.style.borderColor = gateColors.CNOT;
+        }
+      }
+    }
+
+    function updateGateCount() {
+      let count = 0;
+      for (let col = 0; col < NUM_SLOTS; col++) {
+        if (wire0[col]) {
+          if (wire0[col].gate === 'CNOT') count++;
+          else count++;
+        }
+        if (wire1[col] && (!wire1[col] || wire1[col].gate !== 'CNOT')) {
+          count++;
+        }
+      }
+      gateCountDiv.textContent = `Gates: ${count}`;
+    }
+
+    runBtn.addEventListener('click', () => {
+      sim.clearCircuit();
+
+      for (let col = 0; col < NUM_SLOTS; col++) {
+        const g0 = wire0[col];
+        const g1 = wire1[col];
+
+        if (g0 && g0.gate === 'CNOT') {
+          sim.addGate('X', g0.target, g0.control);
+        } else {
+          if (g0) sim.addGate(g0.gate, 0);
+          if (g1) sim.addGate(g1.gate, 1);
+        }
+      }
+
+      sim.run();
+      const probs = sim.probabilities();
+      const state = sim.getState();
+
+      resultDiv.style.display = 'flex';
+      resultDiv.style.flexDirection = 'column';
+      resultDiv.style.gap = '8px';
+
+      stateDisplay.textContent = fmtKet2Q(state);
+      histogram.setData(probs);
+
+      if (target) {
+        const isMatch = target.probs.every((tp, i) => Math.abs(tp - probs[i]) < 0.05);
+        matchIndicator.textContent = isMatch ? '✅ Match!' : '❌ Not quite';
+        matchIndicator.style.color = isMatch ? '#58CC02' : '#FF4B4B';
+        histogram.setExpected(target.probs);
+      }
+
+      circuitsRun++;
+      circuitCountDiv.textContent = `Circuits run: ${circuitsRun}`;
+
+      if (!completed) {
+        completed = true;
+        onComplete({ circuitsRun });
+      }
+    });
+
+    clearBtn.addEventListener('click', () => {
+      wire0.fill(null);
+      wire1.fill(null);
+      selectedGate = null;
+      cnotStep = null;
+      updateToolboxHighlight();
+      instrDiv.textContent = 'Tap a gate, then tap a slot on the wire';
+      resultDiv.style.display = 'none';
+      histogram.reset();
+
+      for (let col = 0; col < NUM_SLOTS; col++) {
+        const c = circuitArea.querySelector(`.cnot-conn-${col}`);
+        if (c) c.remove();
+      }
+      renderCircuit();
+    });
+
+    const targets = [
+      { label: 'Make |01⟩', probs: [0, 1, 0, 0] },
+      { label: 'Make |10⟩', probs: [0, 0, 1, 0] },
+      { label: 'Equal superposition', probs: [0.25, 0.25, 0.25, 0.25] },
+      { label: 'Bell state |Φ+⟩', probs: [0.5, 0, 0, 0.5] },
+      { label: 'Make |+0⟩', probs: [0.5, 0, 0.5, 0] },
+      { label: 'Make |11⟩', probs: [0, 0, 0, 1] },
+    ];
+    let targetIdx = -1;
+
+    targetBtn.addEventListener('click', () => {
+      targetIdx = (targetIdx + 1) % targets.length;
+      target = targets[targetIdx];
+      targetDiv.style.display = '';
+      targetLabel.textContent = `Target: ${target.label}`;
+      matchIndicator.textContent = '';
+      histogram.setExpected(target.probs);
+    });
+
+    renderCircuit();
+
+    return () => { histogram.destroy(); };
+  },
+};
+
+
 // ── Export ─────────────────────────────────────────────────────────────────────
 
 export const EXPERIMENTS = {
@@ -1783,4 +2587,7 @@ export const EXPERIMENTS = {
   6: experiment6,
   7: experiment7,
   8: experiment8,
+  9: experiment9,
+  10: experiment10,
+  11: experiment11,
 };

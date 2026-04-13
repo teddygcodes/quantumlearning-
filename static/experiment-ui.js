@@ -785,6 +785,147 @@ export function animateValue(from, to, duration, onUpdate, onDone) {
 }
 
 
+// ── CircuitSimulator ────────────────────────────────────────────────────────
+// 1-2 qubit quantum circuit simulator. Used by Ch 10, 11, 14, 15.
+// Qubit ordering: qubit 0 = MSB. Index 0b10 = q0=|1⟩, q1=|0⟩.
+
+export class CircuitSimulator {
+  constructor(numQubits = 1) {
+    this.numQubits = numQubits;
+    this.dim = 1 << numQubits;
+    this.state = [];
+    this.gates = [];
+    // Single-qubit gate matrices (2x2 flat: [a,b,c,d])
+    const S = 1 / Math.sqrt(2);
+    this.GATES = {
+      X: [{re:0,im:0},{re:1,im:0},{re:1,im:0},{re:0,im:0}],
+      Y: [{re:0,im:0},{re:0,im:-1},{re:0,im:1},{re:0,im:0}],
+      Z: [{re:1,im:0},{re:0,im:0},{re:0,im:0},{re:-1,im:0}],
+      H: [{re:S,im:0},{re:S,im:0},{re:S,im:0},{re:-S,im:0}],
+      S: [{re:1,im:0},{re:0,im:0},{re:0,im:0},{re:0,im:1}],
+      T: [{re:1,im:0},{re:0,im:0},{re:0,im:0},{re:Math.cos(Math.PI/4),im:Math.sin(Math.PI/4)}],
+    };
+    this.reset();
+  }
+
+  reset() {
+    this.state = Array.from({length: this.dim}, (_, i) =>
+      i === 0 ? {re:1,im:0} : {re:0,im:0}
+    );
+    this.gates = [];
+  }
+
+  setState(vec) { this.state = vec.map(c => ({re:c.re, im:c.im})); }
+  getState() { return this.state.map(c => ({re:c.re, im:c.im})); }
+
+  probabilities() {
+    return this.state.map(c => c.re * c.re + c.im * c.im);
+  }
+
+  addGate(name, qubit, control = null) {
+    this.gates.push({name, qubit, control});
+  }
+
+  clearCircuit() { this.gates = []; }
+
+  run() {
+    this.state = Array.from({length: this.dim}, (_, i) =>
+      i === 0 ? {re:1,im:0} : {re:0,im:0}
+    );
+    for (const g of this.gates) {
+      this.applyGate(g.name, g.qubit, g.control);
+    }
+  }
+
+  applyGate(name, qubit, control = null) {
+    if (control !== null) {
+      this._applyControlled(name, control, qubit);
+    } else if (this.numQubits === 1) {
+      const gate = this.GATES[name];
+      const [a, b] = [this.state[0], this.state[1]];
+      this.state[0] = this._cadd(this._cmul(gate[0], a), this._cmul(gate[1], b));
+      this.state[1] = this._cadd(this._cmul(gate[2], a), this._cmul(gate[3], b));
+    } else {
+      this._applySingleOn2Q(name, qubit);
+    }
+  }
+
+  measure() {
+    const probs = this.probabilities();
+    const r = Math.random();
+    let cum = 0, result = probs.length - 1;
+    for (let i = 0; i < probs.length; i++) {
+      cum += probs[i];
+      if (r < cum) { result = i; break; }
+    }
+    const norm = Math.sqrt(probs[result]);
+    this.state = this.state.map((c, i) =>
+      i === result ? {re: c.re / norm, im: c.im / norm} : {re:0, im:0}
+    );
+    return result;
+  }
+
+  measureQubit(qubit) {
+    let p0 = 0;
+    for (let i = 0; i < this.dim; i++) {
+      const bit = (i >> (this.numQubits - 1 - qubit)) & 1;
+      if (bit === 0) p0 += this.state[i].re * this.state[i].re + this.state[i].im * this.state[i].im;
+    }
+    const result = Math.random() < p0 ? 0 : 1;
+    let norm2 = 0;
+    for (let i = 0; i < this.dim; i++) {
+      const bit = (i >> (this.numQubits - 1 - qubit)) & 1;
+      if (bit !== result) {
+        this.state[i] = {re:0, im:0};
+      } else {
+        norm2 += this.state[i].re * this.state[i].re + this.state[i].im * this.state[i].im;
+      }
+    }
+    const norm = Math.sqrt(norm2);
+    if (norm > 1e-12) {
+      for (let i = 0; i < this.dim; i++) {
+        this.state[i].re /= norm;
+        this.state[i].im /= norm;
+      }
+    }
+    return result;
+  }
+
+  _applySingleOn2Q(name, qubit) {
+    const gate = this.GATES[name];
+    const newState = this.state.map(c => ({re:c.re, im:c.im}));
+    const shift = this.numQubits - 1 - qubit;
+    for (let i = 0; i < this.dim; i++) {
+      if (((i >> shift) & 1) !== 0) continue;
+      const j = i | (1 << shift);
+      newState[i] = this._cadd(this._cmul(gate[0], this.state[i]), this._cmul(gate[1], this.state[j]));
+      newState[j] = this._cadd(this._cmul(gate[2], this.state[i]), this._cmul(gate[3], this.state[j]));
+    }
+    this.state = newState;
+  }
+
+  _applyControlled(name, control, target) {
+    const gate = this.GATES[name];
+    const newState = this.state.map(c => ({re:c.re, im:c.im}));
+    const cShift = this.numQubits - 1 - control;
+    const tShift = this.numQubits - 1 - target;
+    for (let i = 0; i < this.dim; i++) {
+      if (((i >> cShift) & 1) !== 1) continue;
+      if (((i >> tShift) & 1) !== 0) continue;
+      const j = i | (1 << tShift);
+      newState[i] = this._cadd(this._cmul(gate[0], this.state[i]), this._cmul(gate[1], this.state[j]));
+      newState[j] = this._cadd(this._cmul(gate[2], this.state[i]), this._cmul(gate[3], this.state[j]));
+    }
+    this.state = newState;
+  }
+
+  _cmul(a, b) { return {re: a.re*b.re - a.im*b.im, im: a.re*b.im + a.im*b.re}; }
+  _cadd(a, b) { return {re: a.re+b.re, im: a.im+b.im}; }
+
+  destroy() {}
+}
+
+
 // ── Utility: showToast ────────────────────────────────────────────────────────
 
 export function showToast(container, message, type = 'info') {

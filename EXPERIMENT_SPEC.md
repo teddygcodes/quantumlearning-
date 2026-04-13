@@ -267,6 +267,8 @@ Combine two single-qubit states into a two-qubit state, seeing the tensor produc
 **Discovery prompt** (optional):
 - "Can you make P(|00⟩) = P(|11⟩) = 0.5 with P(|01⟩) = P(|10⟩) = 0?" → Impossible with this tool — that's a Bell state (entangled). Teases Chapter 10.
 
+**Built in Session 4** ✅
+
 ---
 
 ### Chapter 10: Entanglement
@@ -292,6 +294,8 @@ Build Bell states and measure one qubit — watch the other qubit's state instan
 **Discovery prompt** (optional):
 - "Switch to |Ψ+⟩. Now what happens?" → Always opposite results
 
+**Built in Session 4** ✅
+
 ---
 
 ### Chapter 11: Quantum Circuits
@@ -314,6 +318,8 @@ A sandbox circuit builder where the student drags gates onto wires and tests cir
 - Free-build mode is the default — targets are just for inspiration
 
 **Live feedback**: Output state and histogram update each time the circuit runs.
+
+**Built in Session 4** ✅
 
 ---
 
@@ -573,7 +579,7 @@ Run circuits with and without error correction. A noise slider lets you feel how
 | 1 ✅ | Ch 1-3 (Equation Balancer, Vector Playground, Normalization Machine) | GridCanvas, PhysicsBeam |
 | 2 ✅ | Ch 4-5 (Complex Multiplier, Transformation Sandbox) | Extended GridCanvas: drawArc, drawPolygon, drawAxisLabels |
 | 3 ✅ | Ch 6-8 (State Explorer, Gate Laboratory, Quantum Coin Toss Lab) | BlochSphere renderer, HistogramRenderer |
-| 4 | Ch 9-11 (Qubit Combiner, Entanglement Lab, Circuit Puzzler) | CircuitSimulator |
+| 4 ✅ | Ch 9-11 (Qubit Combiner, Entanglement Lab, Circuit Puzzler) | CircuitSimulator |
 | 5 | Ch 12-14 (Bloch Sphere Painter, Phase Clock, Gate Wiring Lab) | BlochSphere trails, clock face |
 | 6 | Ch 15-17 (Teleportation Simulator, Oracle Detective, Quantum Search Race) | Animation sequencer |
 | 7 | Ch 18-20 (Noisy Quantum Lab, Period Finder, Hardware Explorer) | Noise sim, RadarChart |
