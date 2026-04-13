@@ -170,4 +170,4 @@ Full spec in `CIRCUIT_BUILDER_SPEC.md` at the project root.
 |---------|-------|--------|
 | 1 ✅ | Simulator engine + circuit data model + basic UI with tap-to-place + step-through math panel + multi-qubit rendering + histogram + qubit selector | Complete |
 | 2 ✅ | Drag-and-drop + parameterized gate angle popup + 8 preset circuits + bottom toolbar + clear with confirmation + CSS polish | Complete |
-| 3 | Layout polish: grid horizontal scroll, landscape optimization, error toasts, keyboard shortcuts | Planned |
+| 3 ✅ | Keyboard shortcuts, grid scroll indicator, named saves, toast notifications, gate animations, landscape split layout | Complete |

@@ -46,7 +46,7 @@ An interactive, Duolingo-style quantum computing course built for iPad with Appl
 
 ## Features
 
-- **Quantum Circuit Builder** — drag-and-drop circuit editor with 1-4 qubit state vector simulator, step-through execution with matrix math panel, 1000-shot measurement histogram, 8 preset circuits, parameterized rotation gates (Rx/Ry/Rz) with angle popup, gate unlock progression tied to chapter completion
+- **Quantum Circuit Builder** — drag-and-drop circuit editor with 1-4 qubit state vector simulator, step-through execution with matrix math panel, 1000-shot measurement histogram, 8 preset circuits, parameterized rotation gates (Rx/Ry/Rz) with angle popup, gate unlock progression tied to chapter completion, named circuit saves (up to 20), keyboard shortcuts, gate placement/removal animations, toast notifications, scroll indicators, and landscape split layout
 - **361 sub-problems** across 102 lesson steps in 20 chapters
 - **86 problem generators** with structural variations (negatives, edge cases, extended operations) and 10 answer types (numeric, vector, vector4, vector8, complex, matrix, yesno, angle, gate_name, choice)
 - **Dynamic teaching units** — teaching text, worked examples, and practice problems advance together in lockstep per sub-problem. The worked example always matches the problem being asked, with different random numbers so students can't copy answers

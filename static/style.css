@@ -1615,6 +1615,7 @@ body.kb-active .problem-left {
 
 /* Circuit main area */
 .circuit-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.circuit-info-panel { display: flex; flex-direction: column; overflow-y: auto; }
 
 /* Circuit grid */
 .circuit-grid-wrap {
@@ -1622,6 +1623,19 @@ body.kb-active .problem-left {
   touch-action: pan-x; position: relative;
   min-height: 120px;
 }
+.circuit-grid-wrap::before,
+.circuit-grid-wrap::after {
+  content: ''; position: absolute; top: 0; bottom: 0; width: 32px;
+  pointer-events: none; opacity: 0; transition: opacity 200ms; z-index: 5;
+}
+.circuit-grid-wrap::before {
+  left: 0; background: linear-gradient(to right, var(--bg), transparent);
+}
+.circuit-grid-wrap::after {
+  right: 0; background: linear-gradient(to left, var(--bg), transparent);
+}
+.circuit-grid-wrap.has-scroll-left::before { opacity: 1; }
+.circuit-grid-wrap.has-scroll-right::after { opacity: 1; }
 .circuit-grid {
   position: relative; min-width: 100%;
 }
@@ -1867,6 +1881,82 @@ body.kb-active .problem-left {
 @keyframes gatePulse {
   0%, 100% { box-shadow: 0 0 4px 1px currentColor; }
   50% { box-shadow: 0 0 12px 4px currentColor; }
+}
+@keyframes gatePlace {
+  from { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+  to   { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+@keyframes gateRemove {
+  from { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  to   { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+}
+.circuit-gate.just-placed { animation: gatePlace 200ms ease-out; }
+.circuit-gate.removing { animation: gateRemove 150ms ease-in forwards; pointer-events: none; }
+
+/* ── Save input ── */
+.save-input-wrap {
+  display: flex; gap: 4px; align-items: center; flex: 1;
+}
+.save-name-input {
+  flex: 1; background: var(--bg); color: var(--text);
+  border: 1px solid var(--border); border-radius: 6px;
+  padding: 6px 10px; font-family: var(--font); font-size: 13px;
+  outline: none;
+}
+.save-name-input:focus { border-color: #4dabf7; }
+.save-ok-btn { background: var(--green) !important; color: #fff !important; }
+.save-cancel-btn { background: var(--border) !important; }
+
+/* ── Manage saves overlay ── */
+.manage-saves-overlay {
+  position: fixed; z-index: 900;
+  left: 50%; top: 50%; transform: translate(-50%, -50%);
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  min-width: 260px; max-width: 400px; max-height: 60vh;
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.manage-saves-title {
+  font-family: var(--mono); font-size: 14px; font-weight: 700;
+  color: var(--text); text-align: center; margin-bottom: 4px;
+}
+.manage-save-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px; background: var(--bg); border-radius: 6px;
+}
+.manage-save-name {
+  flex: 1; font-size: 13px; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.manage-save-date {
+  font-size: 11px; color: var(--text-muted); font-family: var(--mono);
+}
+.manage-save-del {
+  background: none; border: none; color: var(--red);
+  font-size: 16px; cursor: pointer; padding: 2px 6px;
+  border-radius: 4px;
+}
+.manage-save-del:active { background: rgba(255,75,75,0.2); }
+
+/* Responsive: landscape split */
+@media (min-width: 900px) and (orientation: landscape) {
+  .circuit-main {
+    flex-direction: row; flex-wrap: wrap;
+  }
+  .circuit-grid-wrap {
+    flex: 2; min-width: 60%;
+    border-right: 1px solid var(--border);
+    border-bottom: none;
+  }
+  .circuit-info-panel {
+    flex: 1; min-width: 280px;
+    max-height: calc(100vh - 120px);
+  }
+  .sandbox-toolbar {
+    width: 100%;
+  }
 }
 
 /* Responsive: portrait */

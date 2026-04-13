@@ -7,6 +7,7 @@
 
 import { Simulator, formatComplex, formatAngle, cAbs2, GATE_MATRICES } from './simulator.js?v=1';
 import { QuantumCircuit, GATE_INFO, getUnlockedGates } from './circuit.js?v=1';
+import { showToast } from './experiment-ui.js?v=7';
 
 // ── Helpers ───────────────────────────────────────────────────────
 
@@ -103,7 +104,8 @@ const PRESETS = [
 // ── Mount Sandbox ─────────────────────────────────────────────────
 
 export function mountSandbox(container, options) {
-  const { unlockedGates = ['H','X','Y','Z','I','CNOT'], savedCircuitJSON = null, onSave = null } = options;
+  const { unlockedGates = ['H','X','Y','Z','I','CNOT'], savedCircuitJSON = null, onSave = null, savedCircuits: initialSavedCircuits = [], onSaveCircuit = null } = options;
+  let savedCircuits = [...initialSavedCircuits];
 
   let circuit = savedCircuitJSON
     ? QuantumCircuit.deserialize(savedCircuitJSON)
@@ -118,6 +120,8 @@ export function mountSandbox(container, options) {
   let dragHoldTimer = null;
   let pointerStartX = 0, pointerStartY = 0;
   let paletteDragStart = null;  // { type, x, y } — set on palette pointerdown, promoted to dragState on move
+  let lastPlacedId = null;     // gate ID to animate on next render (set automatically)
+  let removingId = null;       // gate ID currently animating removal
   const cleanupFns = [];   // event listener cleanup
 
   // ── Build DOM ──
@@ -132,9 +136,11 @@ export function mountSandbox(container, options) {
       <div class="circuit-grid-wrap" id="sb-grid-wrap">
         <div class="circuit-grid" id="sb-grid"></div>
       </div>
-      <div class="state-display" id="sb-state"></div>
-      <div class="math-panel" id="sb-math" style="display:none"></div>
-      <div class="step-controls" id="sb-controls"></div>
+      <div class="circuit-info-panel">
+        <div class="state-display" id="sb-state"></div>
+        <div class="math-panel" id="sb-math" style="display:none"></div>
+        <div class="step-controls" id="sb-controls"></div>
+      </div>
       <div class="sandbox-toolbar" id="sb-toolbar"></div>
     </div>
   `;
@@ -349,7 +355,7 @@ export function mountSandbox(container, options) {
     // Check drop target
     if (isOverTrash(e.clientX, e.clientY) && source === 'grid' && gateId) {
       // Drop on trash — delete gate
-      try { circuit.removeGate(gateId); } catch (err) {}
+      try { circuit.removeGate(gateId); } catch (err) { showToast(container, 'Could not remove gate', 'error'); }
       removeFloating();
       onCircuitChange();
       return;
@@ -363,7 +369,7 @@ export function mountSandbox(container, options) {
         // Move existing gate
         try {
           circuit.moveGate(gateId, hit.slot, hit.qubit);
-        } catch (err) { /* collision */ }
+        } catch (err) { showToast(container, 'Slot occupied', 'error'); }
         removeFloating();
         onCircuitChange();
         return;
@@ -388,7 +394,7 @@ export function mountSandbox(container, options) {
       }
 
       // Single-qubit gate
-      try { circuit.addGate({ type, qubit: hit.qubit, slot: hit.slot }); } catch (err) {}
+      try { circuit.addGate({ type, qubit: hit.qubit, slot: hit.slot }); } catch (err) { showToast(container, 'Slot occupied', 'error'); }
       removeFloating();
       selectedPaletteGate = null;
       onCircuitChange();
@@ -410,6 +416,40 @@ export function mountSandbox(container, options) {
     container.removeEventListener('pointerup', onPointerUp);
     container.removeEventListener('pointercancel', onPointerUp);
   });
+
+  // ── Keyboard Shortcuts ──
+
+  function onKeyDown(e) {
+    // Don't handle if an input is focused
+    if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'SELECT') return;
+
+    switch (e.key) {
+      case 'ArrowRight': stepping = true; sim.stepForward(); fullRender(); e.preventDefault(); break;
+      case 'ArrowLeft':  stepping = true; sim.stepBack();    fullRender(); e.preventDefault(); break;
+      case 'Home':       stepping = true; sim.goToStart();   fullRender(); e.preventDefault(); break;
+      case 'End':        stepping = true; sim.goToEnd();     fullRender(); e.preventDefault(); break;
+      case ' ':          showHistogram(); e.preventDefault(); break;
+      case 'Escape':
+        if (document.querySelector('.angle-popup')) {
+          document.querySelector('.angle-popup').remove();
+        } else if (document.querySelector('.manage-saves-overlay')) {
+          document.querySelector('.manage-saves-overlay').remove();
+        } else if (cnotPendingSlot !== null) {
+          cnotPendingSlot = null; selectedPaletteGate = null; fullRender();
+        }
+        break;
+      case 'Backspace': case 'Delete':
+        if (!circuit.isEmpty()) {
+          const last = circuit.gates[circuit.gates.length - 1];
+          try { circuit.removeGate(last.id); } catch (err) {}
+          onCircuitChange();
+        }
+        e.preventDefault();
+        break;
+    }
+  }
+  document.addEventListener('keydown', onKeyDown);
+  cleanupFns.push(() => document.removeEventListener('keydown', onKeyDown));
 
   // ── Angle Popup (Rx, Ry, Rz) ──
 
@@ -449,7 +489,7 @@ export function mountSandbox(container, options) {
       popup.remove();
       try {
         circuit.addGate({ type, qubit, slot, theta });
-      } catch (err) {}
+      } catch (err) { showToast(container, err.message, 'error'); }
       onCircuitChange();
     }
 
@@ -598,7 +638,18 @@ export function mountSandbox(container, options) {
 
     // Attach grid pointer handler for slots and gate taps/drags
     gridEl.addEventListener('pointerdown', onGridPointerDown);
+
+    // Update scroll indicators
+    updateScrollIndicators();
   }
+
+  function updateScrollIndicators() {
+    const w = gridWrap;
+    w.classList.toggle('has-scroll-left', w.scrollLeft > 4);
+    w.classList.toggle('has-scroll-right', w.scrollLeft + w.clientWidth < w.scrollWidth - 4);
+  }
+  gridWrap.addEventListener('scroll', updateScrollIndicators);
+  cleanupFns.push(() => gridWrap.removeEventListener('scroll', updateScrollIndicators));
 
   // ── Slot Tap Logic ──
 
@@ -610,6 +661,7 @@ export function mountSandbox(container, options) {
       cnotPendingSlot = null;
 
       if (qubit === pending.controlQubit) {
+        showToast(container, 'Target must be a different wire', 'error');
         selectedPaletteGate = null;
         fullRender();
         return;
@@ -621,7 +673,7 @@ export function mountSandbox(container, options) {
         } else {
           circuit.addGate({ type: pending.type, control: pending.controlQubit, target: qubit, slot: pending.slot });
         }
-      } catch (e) {}
+      } catch (e) { showToast(container, e.message, 'error'); }
 
       selectedPaletteGate = null;
       onCircuitChange();
@@ -643,13 +695,25 @@ export function mountSandbox(container, options) {
       return;
     }
 
-    try { circuit.addGate({ type, qubit, slot }); } catch (e) {}
+    try { circuit.addGate({ type, qubit, slot }); } catch (e) { showToast(container, 'Slot occupied', 'error'); }
     onCircuitChange();
   }
 
   function handleGateTap(gateId) {
-    try { circuit.removeGate(gateId); } catch (e) {}
-    onCircuitChange();
+    if (removingId) return; // animation in progress
+    const el = gridEl.querySelector(`[data-id="${gateId}"]`);
+    if (el) {
+      removingId = gateId;
+      el.classList.add('removing');
+      setTimeout(() => {
+        removingId = null;
+        try { circuit.removeGate(gateId); } catch (e) { showToast(container, 'Could not remove gate', 'error'); }
+        onCircuitChange();
+      }, 150);
+    } else {
+      try { circuit.removeGate(gateId); } catch (e) { showToast(container, 'Could not remove gate', 'error'); }
+      onCircuitChange();
+    }
   }
 
   // ── State Vector Display ──
@@ -844,34 +908,71 @@ export function mountSandbox(container, options) {
     return `hsl(210, ${60 + t * 20}%, ${40 + t * 15}%)`;
   }
 
-  // ── Bottom Toolbar (Presets + Clear) ──
+  // ── Bottom Toolbar (Save + Presets + Clear) ──
 
   function renderToolbar() {
-    // Safe: preset names are hardcoded strings
+    // Safe: preset names and saved circuit names are our own strings
+    const savedOpts = savedCircuits.length
+      ? `<optgroup label="── Your Circuits ──">
+          ${savedCircuits.map((s, i) => `<option value="s${i}">${s.name}</option>`).join('')}
+          <option value="manage">Manage Saves...</option>
+         </optgroup>`
+      : '';
+
     toolbarEl.innerHTML = `
+      <button class="step-btn" id="sb-save">💾 Save</button>
       <select class="preset-select" id="sb-presets">
         <option value="">📋 Load Preset...</option>
-        ${PRESETS.map((p, i) => `<option value="${i}">${p.name}</option>`).join('')}
+        ${PRESETS.map((p, i) => `<option value="p${i}">${p.name}</option>`).join('')}
+        ${savedOpts}
       </select>
       <button class="step-btn" id="sb-clear">🗑 Clear</button>
     `;
 
+    // Save button
+    toolbarEl.querySelector('#sb-save').addEventListener('click', () => {
+      if (circuit.isEmpty()) { showToast(container, 'Nothing to save', 'error'); return; }
+      showSaveInput();
+    });
+
+    // Presets + saved circuits dropdown
     toolbarEl.querySelector('#sb-presets').addEventListener('change', (e) => {
-      const idx = +e.target.value;
-      if (isNaN(idx)) return;
-      const preset = PRESETS[idx];
-      if (!preset) return;
-      loadPreset(preset);
+      const val = e.target.value;
+      if (!val) return;
+
+      if (val === 'manage') {
+        e.target.value = '';
+        showManageSaves();
+        return;
+      }
+
+      if (val.startsWith('p')) {
+        const preset = PRESETS[+val.slice(1)];
+        if (preset) loadPreset(preset);
+      } else if (val.startsWith('s')) {
+        const saved = savedCircuits[+val.slice(1)];
+        if (saved) {
+          circuit = QuantumCircuit.deserialize(saved.json);
+          const sel = document.getElementById('qubit-count');
+          if (sel) sel.value = circuit.numQubits;
+          sim = new Simulator(circuit.numQubits);
+          stepping = false;
+          if (onSave) onSave(circuit.serialize());
+          fullRender();
+          showToast(container, 'Loaded: ' + saved.name, 'info');
+        }
+      }
       e.target.value = '';
     });
 
+    // Clear button
     toolbarEl.querySelector('#sb-clear').addEventListener('click', () => {
       if (circuit.isEmpty()) return;
-      // Simple inline confirmation
       const btn = toolbarEl.querySelector('#sb-clear');
       if (btn.dataset.confirm) {
         circuit.clear();
         onCircuitChange();
+        showToast(container, 'Circuit cleared', 'info');
         btn.dataset.confirm = '';
         btn.textContent = '🗑 Clear';
       } else {
@@ -887,6 +988,79 @@ export function mountSandbox(container, options) {
     });
   }
 
+  function showSaveInput() {
+    const saveBtn = toolbarEl.querySelector('#sb-save');
+    if (!saveBtn) return;
+    // Replace save button area with inline input
+    saveBtn.outerHTML = `<div class="save-input-wrap" id="sb-save-wrap">
+      <input class="save-name-input" id="sb-save-name" placeholder="Circuit name..." maxlength="30">
+      <button class="step-btn save-ok-btn" id="sb-save-ok">OK</button>
+      <button class="step-btn save-cancel-btn" id="sb-save-cancel">✕</button>
+    </div>`;
+    const input = toolbarEl.querySelector('#sb-save-name');
+    input.focus();
+
+    const doSave = () => {
+      const name = input.value.trim();
+      if (!name) { showToast(container, 'Enter a name', 'error'); return; }
+      savedCircuits.push({ name, json: circuit.serialize(), date: new Date().toISOString().slice(0, 10) });
+      if (savedCircuits.length > 20) savedCircuits.shift();
+      if (onSaveCircuit) onSaveCircuit(savedCircuits);
+      showToast(container, 'Saved: ' + name, 'success');
+      renderToolbar();
+    };
+
+    toolbarEl.querySelector('#sb-save-ok').addEventListener('click', doSave);
+    toolbarEl.querySelector('#sb-save-cancel').addEventListener('click', () => renderToolbar());
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') doSave();
+      if (e.key === 'Escape') renderToolbar();
+    });
+  }
+
+  function showManageSaves() {
+    if (!savedCircuits.length) return;
+    const overlay = document.createElement('div');
+    overlay.className = 'manage-saves-overlay';
+    // Safe: saved circuit names are user-provided but rendered as textContent below
+    const list = savedCircuits.map((s, i) => {
+      const div = document.createElement('div');
+      div.className = 'manage-save-row';
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'manage-save-name';
+      nameSpan.textContent = s.name;
+      const dateSpan = document.createElement('span');
+      dateSpan.className = 'manage-save-date';
+      dateSpan.textContent = s.date || '';
+      const delBtn = document.createElement('button');
+      delBtn.className = 'manage-save-del';
+      delBtn.textContent = '✕';
+      delBtn.addEventListener('click', () => {
+        savedCircuits.splice(i, 1);
+        if (onSaveCircuit) onSaveCircuit(savedCircuits);
+        overlay.remove();
+        renderToolbar();
+        showToast(container, 'Deleted: ' + s.name, 'info');
+      });
+      div.appendChild(nameSpan);
+      div.appendChild(dateSpan);
+      div.appendChild(delBtn);
+      return div;
+    });
+
+    const title = document.createElement('div');
+    title.className = 'manage-saves-title';
+    title.textContent = 'Saved Circuits';
+    overlay.appendChild(title);
+    list.forEach(row => overlay.appendChild(row));
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'angle-cancel-btn';
+    closeBtn.textContent = 'Close';
+    closeBtn.addEventListener('click', () => overlay.remove());
+    overlay.appendChild(closeBtn);
+    container.appendChild(overlay);
+  }
+
   function loadPreset(preset) {
     circuit = new QuantumCircuit(preset.qubits, 10);
     for (const g of preset.gates) {
@@ -899,16 +1073,41 @@ export function mountSandbox(container, options) {
     stepping = false;
     if (onSave) onSave(circuit.serialize());
     fullRender();
+    showToast(container, 'Loaded: ' + preset.name, 'info');
   }
 
   // ── Circuit Change Handler ──
 
+  let prevGateCount = circuit.gates.length;
+
   function onCircuitChange() {
+    // Detect newly placed gate for animation
+    if (circuit.gates.length > prevGateCount) {
+      lastPlacedId = circuit.gates[circuit.gates.length - 1]?.id;
+    }
+    prevGateCount = circuit.gates.length;
+
     sim = new Simulator(circuit.numQubits);
     sim.loadGates(circuit.getGatesInOrder());
     stepping = false;
     if (onSave) onSave(circuit.serialize());
     fullRender();
+
+    // Animate newly placed gate
+    if (lastPlacedId) {
+      const el = gridEl.querySelector(`[data-id="${lastPlacedId}"]`);
+      if (el) el.classList.add('just-placed');
+      lastPlacedId = null;
+    }
+
+    // Auto-scroll grid to keep latest gate visible
+    if (!circuit.isEmpty()) {
+      const lastSlot = Math.max(...circuit.gates.map(g => g.slot), 0);
+      const targetX = slotX(lastSlot) - gridWrap.clientWidth + SLOT_W * 2;
+      if (targetX > gridWrap.scrollLeft) {
+        gridWrap.scrollTo({ left: targetX, behavior: 'smooth' });
+      }
+    }
   }
 
   // ── Full Render ──

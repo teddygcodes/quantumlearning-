@@ -13,8 +13,8 @@ import { TEMPLATES } from './templates.js?v=9';
 import { CanvasManager } from './canvas.js';
 import * as KB from './keyboard.js?v=2';
 import { EXPERIMENTS } from './experiments.js?v=8';
-import { mountSandbox } from './circuit-ui.js?v=2';
-import { getUnlockedGates } from './circuit.js?v=2';
+import { mountSandbox } from './circuit-ui.js?v=3';
+import { getUnlockedGates } from './circuit.js?v=3';
 
 // ── State ──────────────────────────────────────────────────────────────────
 
@@ -319,8 +319,13 @@ function renderSandbox() {
     sandboxCleanup = mountSandbox(container, {
       unlockedGates,
       savedCircuitJSON: savedCircuit,
+      savedCircuits: state.sandbox.savedCircuits || [],
       onSave: (json) => {
         state.sandbox.lastCircuit = json;
+        saveState();
+      },
+      onSaveCircuit: (circuits) => {
+        state.sandbox.savedCircuits = circuits;
         saveState();
       }
     });
