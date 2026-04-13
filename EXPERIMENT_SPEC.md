@@ -480,6 +480,7 @@ Visual side-by-side race between classical search and Grover's algorithm. Watch 
 
 ### Chapter 18: Quantum Error Correction
 **Experiment: "Noisy Quantum Lab"**
+**Built in Session 7** ✅
 
 **ONE JOB**: Error correction protects results from noise — watch clean histograms degrade, then watch error correction save them.
 
@@ -509,6 +510,7 @@ Run circuits with and without error correction. A noise slider lets you feel how
 
 ### Chapter 19: Shor's Algorithm
 **Experiment: "Period Finder"**
+**Built in Session 7** ✅
 
 **ONE JOB**: Factoring reduces to finding a repeating pattern. The student should SEE the period in modular exponentiation — that visual pattern is the entire insight.
 
@@ -529,7 +531,8 @@ Run circuits with and without error correction. A noise slider lets you feel how
 ---
 
 ### Chapter 20: The Landscape
-**Experiment: "Hardware Tradeoffs"**
+**Experiment: "Hardware Explorer"**
+**Built in Session 7** ✅
 
 **ONE JOB**: Every quantum hardware approach has tradeoffs — there is no "best" technology. The student explores those tradeoffs visually.
 
@@ -588,4 +591,4 @@ Run circuits with and without error correction. A noise slider lets you feel how
 | 4 ✅ | Ch 9-11 (Qubit Combiner, Entanglement Lab, Circuit Puzzler) | CircuitSimulator |
 | 5 ✅ | Ch 12-14 (Bloch Sphere Painter, Phase Clock, Gate Wiring Lab) | BlochSphere trails, clock face |
 | 6 ✅ | Ch 15-17 (Teleportation Simulator, Oracle Detective, Quantum Search Race) | StepSequencer, 3-qubit CircuitSimulator usage |
-| 7 | Ch 18-20 (Noisy Quantum Lab, Period Finder, Hardware Explorer) | Noise sim, RadarChart |
+| 7 ✅ | Ch 18-20 (Noisy Quantum Lab, Period Finder, Hardware Explorer) | RadarChart (animated spider chart with comparison overlay) |

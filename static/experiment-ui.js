@@ -1152,6 +1152,190 @@ export class StepSequencer {
 }
 
 
+// ── RadarChart ───────────────────────────────────────────────────────────────
+// 5-axis spider/radar chart on HTML5 Canvas. DPR-aware. Used by Ch 20.
+
+export class RadarChart {
+  constructor(canvasEl, opts = {}) {
+    this.canvas = canvasEl;
+    this.ctx = canvasEl.getContext('2d');
+    this.axes = opts.axes || ['A', 'B', 'C', 'D', 'E'];
+    this.color = opts.color || '#1CB0F6';
+    this.gridRings = opts.gridRings || 4;
+    this.dpr = 0;
+    this.w = 0;
+    this.h = 0;
+    this._data = this.axes.map(() => 0);
+    this._current = this.axes.map(() => 0);
+    this._overlay = null;     // { values, color }
+    this._overlayCur = null;
+    this._animId = null;
+    this._animStart = 0;
+    this._animDur = 300;
+
+    this._resize();
+    this._ro = new ResizeObserver(() => { this._resize(); this._render(); });
+    this._ro.observe(canvasEl);
+    this._render();
+  }
+
+  _resize() {
+    const w = this.canvas.offsetWidth;
+    const h = this.canvas.offsetHeight;
+    if (w === 0 || h === 0) return;
+    const d = window.devicePixelRatio || 1;
+    if (w === this.w && h === this.h && d === this.dpr) return;
+    this.dpr = d;
+    this.w = w;
+    this.h = h;
+    this.canvas.width = Math.round(w * d);
+    this.canvas.height = Math.round(h * d);
+    this.ctx.setTransform(d, 0, 0, d, 0, 0);
+  }
+
+  _axisAngle(i) {
+    return (Math.PI * 2 * i) / this.axes.length - Math.PI / 2;
+  }
+
+  _vertex(cx, cy, r, i, value) {
+    const a = this._axisAngle(i);
+    return [cx + Math.cos(a) * r * value, cy + Math.sin(a) * r * value];
+  }
+
+  _render() {
+    const { ctx, w, h } = this;
+    if (w === 0) return;
+    ctx.clearRect(0, 0, w, h);
+    const cx = w / 2;
+    const cy = h / 2;
+    const r = Math.min(cx, cy) * 0.72;
+    const n = this.axes.length;
+
+    // Grid rings
+    for (let ring = 1; ring <= this.gridRings; ring++) {
+      const frac = ring / this.gridRings;
+      ctx.beginPath();
+      for (let i = 0; i <= n; i++) {
+        const [x, y] = this._vertex(cx, cy, r, i % n, frac);
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    // Axis lines + labels
+    ctx.font = "11px 'Fira Code', monospace";
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (let i = 0; i < n; i++) {
+      const [x, y] = this._vertex(cx, cy, r, i, 1);
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(x, y);
+      ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      // Label
+      const [lx, ly] = this._vertex(cx, cy, r, i, 1.18);
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.fillText(this.axes[i], lx, ly);
+    }
+
+    // Data polygon
+    this._drawPolygon(cx, cy, r, this._current, this.color, false);
+
+    // Overlay polygon
+    if (this._overlay && this._overlayCur) {
+      this._drawPolygon(cx, cy, r, this._overlayCur, this._overlay.color, true);
+    }
+  }
+
+  _drawPolygon(cx, cy, r, values, color, dashed) {
+    const { ctx } = this;
+    const n = values.length;
+    // Fill
+    ctx.beginPath();
+    for (let i = 0; i <= n; i++) {
+      const [x, y] = this._vertex(cx, cy, r, i % n, values[i % n]);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = color + (dashed ? '22' : '33');
+    ctx.fill();
+    // Stroke
+    ctx.setLineDash(dashed ? [6, 4] : []);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // Vertex dots
+    for (let i = 0; i < n; i++) {
+      const [x, y] = this._vertex(cx, cy, r, i, values[i]);
+      ctx.beginPath();
+      ctx.arc(x, y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+    }
+  }
+
+  _startAnim() {
+    if (this._animId) cancelAnimationFrame(this._animId);
+    const from = [...this._current];
+    const overlayFrom = this._overlayCur ? [...this._overlayCur] : null;
+    this._animStart = performance.now();
+    const tick = (now) => {
+      const t = Math.min((now - this._animStart) / this._animDur, 1);
+      const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      for (let i = 0; i < this._data.length; i++) {
+        this._current[i] = from[i] + (this._data[i] - from[i]) * ease;
+      }
+      if (this._overlay && this._overlayCur && overlayFrom) {
+        for (let i = 0; i < this._overlay.values.length; i++) {
+          this._overlayCur[i] = overlayFrom[i] + (this._overlay.values[i] - overlayFrom[i]) * ease;
+        }
+      }
+      this._render();
+      if (t < 1) {
+        this._animId = requestAnimationFrame(tick);
+      } else {
+        this._animId = null;
+      }
+    };
+    this._animId = requestAnimationFrame(tick);
+  }
+
+  setData(values) {
+    this._data = values.map(v => Math.max(0, Math.min(1, v)));
+    this._startAnim();
+  }
+
+  setColor(color) {
+    this.color = color;
+    this._render();
+  }
+
+  setOverlay(values, color) {
+    const clamped = values.map(v => Math.max(0, Math.min(1, v)));
+    if (!this._overlayCur) this._overlayCur = this.axes.map(() => 0);
+    this._overlay = { values: clamped, color };
+    this._startAnim();
+  }
+
+  clearOverlay() {
+    this._overlay = null;
+    this._overlayCur = null;
+    this._render();
+  }
+
+  destroy() {
+    if (this._animId) cancelAnimationFrame(this._animId);
+    this._ro.disconnect();
+  }
+}
+
+
 // ── Utility: showToast ────────────────────────────────────────────────────────
 
 export function showToast(container, message, type = 'info') {

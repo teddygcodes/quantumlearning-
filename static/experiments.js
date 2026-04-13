@@ -13,7 +13,7 @@
  * They teach through free-form interaction and live feedback.
  */
 
-import { GridCanvas, PhysicsBeam, BlochSphere, HistogramRenderer, CircuitSimulator, ClockFace, StepSequencer, showToast, animateValue } from './experiment-ui.js?v=6';
+import { GridCanvas, PhysicsBeam, BlochSphere, HistogramRenderer, CircuitSimulator, ClockFace, StepSequencer, RadarChart, showToast, animateValue } from './experiment-ui.js?v=7';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -4432,6 +4432,836 @@ const experiment17 = {
 };
 
 
+// ── Chapter 18: Noisy Quantum Lab ────────────────────────────────────────────
+// Error correction protects results from noise — watch clean histograms degrade,
+// then watch the 3-qubit bit-flip code save them. Crank the noise to feel the threshold.
+
+const experiment18 = {
+  title: 'Noisy Quantum Lab',
+  subtitle: 'See error correction fight noise',
+  icon: '📡',
+
+  mount(container, { chapterColor, chapterColorDk, onComplete }) {
+    let completed = false;
+    let noiseRate = 0;
+    let logicalBit = 0;
+    let running = false;
+    let totalRuns = 0;
+    let errorsCaught = 0;
+
+    container.style.cssText += 'display:flex;flex-direction:column;gap:8px;padding:12px;';
+
+    // Title
+    const titleDiv = document.createElement('div');
+    titleDiv.style.cssText = "font-size:15px;font-weight:800;color:var(--text);text-align:center;font-family:'Nunito',sans-serif;";
+    titleDiv.textContent = '3-Qubit Bit-Flip Code';
+
+    // State toggle row
+    const stateRow = document.createElement('div');
+    stateRow.style.cssText = 'display:flex;gap:6px;justify-content:center;align-items:center;';
+    const stateLabel = document.createElement('div');
+    stateLabel.style.cssText = "font-size:13px;color:var(--text-muted);font-family:'Fira Code',monospace;";
+    stateLabel.textContent = 'Send:';
+    const btn0 = makeBtn('|0⟩', 'btn experiment-block-btn');
+    const btn1 = makeBtn('|1⟩', 'btn experiment-block-btn');
+    btn0.style.cssText += 'min-width:52px;padding:6px 12px;font-size:14px;';
+    btn1.style.cssText += 'min-width:52px;padding:6px 12px;font-size:14px;';
+    function updateBitBtns() {
+      btn0.style.background = logicalBit === 0 ? chapterColor : 'var(--surface)';
+      btn0.style.color = logicalBit === 0 ? '#fff' : 'var(--text)';
+      btn1.style.background = logicalBit === 1 ? chapterColor : 'var(--surface)';
+      btn1.style.color = logicalBit === 1 ? '#fff' : 'var(--text)';
+    }
+    btn0.addEventListener('click', () => { logicalBit = 0; updateBitBtns(); });
+    btn1.addEventListener('click', () => { logicalBit = 1; updateBitBtns(); });
+    stateRow.append(stateLabel, btn0, btn1);
+    updateBitBtns();
+
+    // Noise slider
+    const sliderRow = document.createElement('div');
+    sliderRow.style.cssText = 'display:flex;align-items:center;gap:8px;padding:0 4px;';
+    const sliderLabel = document.createElement('div');
+    sliderLabel.style.cssText = "font-size:13px;color:var(--text-muted);font-family:'Fira Code',monospace;white-space:nowrap;";
+    sliderLabel.textContent = 'Noise:';
+    const slider = document.createElement('input');
+    slider.type = 'range'; slider.min = '0'; slider.max = '50'; slider.step = '1'; slider.value = '0';
+    slider.style.cssText = 'flex:1;accent-color:' + chapterColor + ';height:28px;';
+    const sliderVal = document.createElement('div');
+    sliderVal.style.cssText = "font-size:14px;font-weight:700;color:var(--text);font-family:'Fira Code',monospace;min-width:38px;text-align:right;";
+    sliderVal.textContent = '0%';
+    slider.addEventListener('input', () => {
+      noiseRate = parseInt(slider.value) / 100;
+      sliderVal.textContent = slider.value + '%';
+    });
+    sliderRow.append(sliderLabel, slider, sliderVal);
+
+    // Circuit diagram
+    const circuitDiv = document.createElement('div');
+    circuitDiv.style.cssText = "font-family:'Fira Code',monospace;font-size:11px;color:var(--text-muted);text-align:center;padding:4px 0;line-height:1.5;";
+    circuitDiv.textContent = 'Encode |ψ⟩→|ψψψ⟩  ▸  Noise (random flips)  ▸  Majority vote decode';
+
+    // Side-by-side panels
+    const panelsRow = document.createElement('div');
+    panelsRow.style.cssText = 'display:flex;gap:8px;flex:1;min-height:0;';
+
+    function makePanelBox(title) {
+      const panel = document.createElement('div');
+      panel.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--surface);border-radius:12px;padding:8px 4px;border:1px solid var(--border);';
+      const t = document.createElement('div');
+      t.style.cssText = "font-size:11px;font-weight:800;color:var(--text-muted);letter-spacing:0.5px;font-family:'Nunito',sans-serif;";
+      t.textContent = title;
+      const histWrap = document.createElement('div');
+      histWrap.style.cssText = 'width:100%;flex:1;min-height:80px;';
+      const accDiv = document.createElement('div');
+      accDiv.style.cssText = "font-size:14px;font-weight:700;color:var(--text);font-family:'Fira Code',monospace;";
+      accDiv.textContent = '—';
+      panel.append(t, histWrap, accDiv);
+      return { panel, histWrap, accDiv };
+    }
+
+    const unc = makePanelBox('NO CORRECTION');
+    const cor = makePanelBox('3-QUBIT CODE');
+    panelsRow.append(unc.panel, cor.panel);
+
+    const uncHist = new HistogramRenderer(unc.histWrap, {
+      labels: ['Correct', 'Wrong'], colors: ['#58CC02', '#FF4B4B'], height: 90,
+    });
+    const corHist = new HistogramRenderer(cor.histWrap, {
+      labels: ['Correct', 'Wrong'], colors: ['#58CC02', '#FF4B4B'], height: 90,
+    });
+
+    // Errors caught
+    const statsDiv = document.createElement('div');
+    statsDiv.style.cssText = "font-size:13px;color:var(--text-muted);text-align:center;font-family:'Fira Code',monospace;";
+    statsDiv.textContent = 'Errors detected & fixed: 0';
+
+    // Action row
+    const actionRow = document.createElement('div');
+    actionRow.style.cssText = 'display:flex;gap:8px;justify-content:center;';
+    const runBtn = makeBtn('▶  Run 100 Measurements', 'btn experiment-block-btn');
+    runBtn.style.cssText += `background:${chapterColor};color:#fff;font-weight:800;padding:10px 16px;font-size:14px;border-radius:10px;min-width:180px;`;
+    const resetBtn = makeBtn('Reset', 'btn experiment-block-btn');
+    resetBtn.style.cssText += 'padding:10px 14px;font-size:13px;';
+    actionRow.append(runBtn, resetBtn);
+
+    // Discovery
+    const discoveryDiv = document.createElement('div');
+    discoveryDiv.style.cssText = "font-size:12px;color:#FF9600;text-align:center;font-family:'Nunito',sans-serif;font-style:italic;opacity:0;transition:opacity 0.5s;padding:2px 0;";
+    discoveryDiv.textContent = '⚡ Crank noise above ~40% — even error correction starts to fail!';
+
+    container.append(titleDiv, stateRow, sliderRow, circuitDiv, panelsRow, statsDiv, actionRow, discoveryDiv);
+
+    // Simulation
+    function simulateUncorrected() {
+      let correct = 0;
+      for (let i = 0; i < 100; i++) {
+        const flipped = Math.random() < noiseRate ? 1 : 0;
+        const result = logicalBit ^ flipped;
+        if (result === logicalBit) correct++;
+      }
+      return correct;
+    }
+
+    function simulateCorrected() {
+      let correct = 0;
+      let caught = 0;
+      for (let i = 0; i < 100; i++) {
+        let b0 = logicalBit, b1 = logicalBit, b2 = logicalBit;
+        if (Math.random() < noiseRate) b0 ^= 1;
+        if (Math.random() < noiseRate) b1 ^= 1;
+        if (Math.random() < noiseRate) b2 ^= 1;
+        const decoded = (b0 + b1 + b2) >= 2 ? 1 : 0;
+        const hadError = (b0 !== logicalBit || b1 !== logicalBit || b2 !== logicalBit);
+        if (decoded === logicalBit) {
+          correct++;
+          if (hadError) caught++;
+        }
+      }
+      return { correct, caught };
+    }
+
+    function runExperiment() {
+      if (running) return;
+      running = true;
+      runBtn.disabled = true;
+
+      const uncCorrect = simulateUncorrected();
+      const { correct: corCorrect, caught } = simulateCorrected();
+      totalRuns++;
+      errorsCaught += caught;
+
+      uncHist.setData([uncCorrect / 100, (100 - uncCorrect) / 100]);
+      unc.accDiv.textContent = uncCorrect + '% accurate';
+      unc.accDiv.style.color = uncCorrect >= 90 ? '#58CC02' : uncCorrect >= 70 ? '#FF9600' : '#FF4B4B';
+
+      corHist.setData([corCorrect / 100, (100 - corCorrect) / 100]);
+      cor.accDiv.textContent = corCorrect + '% accurate';
+      cor.accDiv.style.color = corCorrect >= 90 ? '#58CC02' : corCorrect >= 70 ? '#FF9600' : '#FF4B4B';
+
+      statsDiv.textContent = 'Errors detected & fixed: ' + errorsCaught;
+
+      if (noiseRate >= 0.35) discoveryDiv.style.opacity = '1';
+
+      running = false;
+      runBtn.disabled = false;
+      if (!completed) { completed = true; onComplete({ totalRuns, errorsCaught }); }
+    }
+
+    function resetAll() {
+      totalRuns = 0;
+      errorsCaught = 0;
+      uncHist.reset();
+      corHist.reset();
+      unc.accDiv.textContent = '—';
+      unc.accDiv.style.color = 'var(--text)';
+      cor.accDiv.textContent = '—';
+      cor.accDiv.style.color = 'var(--text)';
+      statsDiv.textContent = 'Errors detected & fixed: 0';
+    }
+
+    runBtn.addEventListener('click', runExperiment);
+    resetBtn.addEventListener('click', resetAll);
+
+    return () => { uncHist.destroy(); corHist.destroy(); };
+  },
+};
+
+
+// ── Chapter 19: Period Finder ────────────────────────────────────────────────
+// Factoring reduces to finding a repeating pattern in modular exponentiation.
+// See the period in a^x mod N, tap it, and extract the factors.
+
+const experiment19 = {
+  title: 'Period Finder',
+  subtitle: 'Factor numbers like a quantum computer',
+  icon: '🔁',
+
+  mount(container, { chapterColor, chapterColorDk, onComplete }) {
+    let completed = false;
+    let N = 15, a = 2;
+    let powers = [];
+    let period = null;
+    let revealedCount = 0;
+    let factorizations = 0;
+    let animTimer = null;
+    let guessedCorrect = false;
+
+    function gcd(x, y) { while (y) { [x, y] = [y, x % y]; } return x; }
+    function modPow(base, exp, mod) {
+      let r = 1; base = base % mod;
+      for (let i = 0; i < exp; i++) r = (r * base) % mod;
+      return r;
+    }
+    function getValidBases(n) {
+      const bases = [];
+      for (let b = 2; b < n && bases.length < 8; b++) {
+        if (gcd(b, n) === 1) bases.push(b);
+      }
+      return bases;
+    }
+
+    container.style.cssText += 'display:flex;flex-direction:column;gap:6px;padding:12px;';
+
+    // Title
+    const titleDiv = document.createElement('div');
+    titleDiv.style.cssText = "font-size:15px;font-weight:800;color:var(--text);text-align:center;font-family:'Nunito',sans-serif;";
+    titleDiv.textContent = 'Period Finder';
+
+    // Selector row
+    const selectorRow = document.createElement('div');
+    selectorRow.style.cssText = 'display:flex;gap:12px;justify-content:center;align-items:center;flex-wrap:wrap;';
+    const nLabel = document.createElement('span');
+    nLabel.style.cssText = "font-family:'Fira Code',monospace;font-size:13px;color:var(--text-muted);";
+    nLabel.textContent = 'N =';
+    const nBtnWrap = document.createElement('div');
+    nBtnWrap.style.cssText = 'display:flex;gap:4px;';
+    const aLabel = document.createElement('span');
+    aLabel.style.cssText = "font-family:'Fira Code',monospace;font-size:13px;color:var(--text-muted);";
+    aLabel.textContent = 'a =';
+    const aBtnWrap = document.createElement('div');
+    aBtnWrap.style.cssText = 'display:flex;gap:4px;flex-wrap:wrap;';
+    selectorRow.append(nLabel, nBtnWrap, aLabel, aBtnWrap);
+
+    // Formula
+    const formulaDiv = document.createElement('div');
+    formulaDiv.style.cssText = "font-family:'Fira Code',monospace;font-size:14px;color:var(--text);text-align:center;font-weight:700;";
+
+    // Main area: table + graph
+    const mainArea = document.createElement('div');
+    mainArea.style.cssText = 'display:flex;gap:8px;flex:1;min-height:0;overflow:hidden;';
+
+    // Table panel
+    const tablePanel = document.createElement('div');
+    tablePanel.style.cssText = 'flex:1;display:flex;flex-direction:column;background:var(--surface);border-radius:12px;border:1px solid var(--border);overflow:hidden;';
+    const tableTitle = document.createElement('div');
+    tableTitle.style.cssText = "font-size:11px;font-weight:800;color:var(--text-muted);letter-spacing:0.5px;padding:6px 8px;font-family:'Nunito',sans-serif;";
+    tableTitle.textContent = 'MODULAR POWERS';
+    const tableScroll = document.createElement('div');
+    tableScroll.style.cssText = 'flex:1;overflow-y:auto;padding:0 6px 6px;';
+    const tableEl = document.createElement('table');
+    tableEl.style.cssText = "width:100%;border-collapse:collapse;font-family:'Fira Code',monospace;font-size:12px;";
+    tableScroll.appendChild(tableEl);
+    tablePanel.append(tableTitle, tableScroll);
+
+    // Graph panel
+    const graphPanel = document.createElement('div');
+    graphPanel.style.cssText = 'flex:1.2;display:flex;flex-direction:column;background:var(--surface);border-radius:12px;border:1px solid var(--border);overflow:hidden;';
+    const graphTitle = document.createElement('div');
+    graphTitle.style.cssText = "font-size:11px;font-weight:800;color:var(--text-muted);letter-spacing:0.5px;padding:6px 8px;font-family:'Nunito',sans-serif;";
+    graphTitle.textContent = 'PATTERN';
+    const graphWrap = document.createElement('div');
+    graphWrap.style.cssText = 'flex:1;position:relative;min-height:80px;';
+    const graphCanvas = document.createElement('canvas');
+    graphCanvas.style.cssText = 'width:100%;height:100%;display:block;';
+    graphWrap.appendChild(graphCanvas);
+    graphPanel.append(graphTitle, graphWrap);
+    mainArea.append(tablePanel, graphPanel);
+
+    // Period guess row
+    const periodRow = document.createElement('div');
+    periodRow.style.cssText = 'display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap;';
+    const periodLabel = document.createElement('span');
+    periodLabel.style.cssText = "font-family:'Fira Code',monospace;font-size:13px;color:var(--text-muted);";
+    periodLabel.textContent = 'Period r =';
+    const periodBtns = document.createElement('div');
+    periodBtns.style.cssText = 'display:flex;gap:4px;';
+    const periodFeedback = document.createElement('div');
+    periodFeedback.style.cssText = "font-family:'Fira Code',monospace;font-size:12px;font-weight:700;min-height:18px;";
+    periodRow.append(periodLabel, periodBtns, periodFeedback);
+
+    // Factor result
+    const factorDiv = document.createElement('div');
+    factorDiv.style.cssText = "font-family:'Fira Code',monospace;font-size:14px;color:var(--text);text-align:center;font-weight:700;min-height:20px;padding:2px 0;";
+
+    // QFT caption
+    const qftDiv = document.createElement('div');
+    qftDiv.style.cssText = "font-size:12px;color:#CE82FF;text-align:center;font-family:'Nunito',sans-serif;font-style:italic;opacity:0;transition:opacity 0.5s;";
+    qftDiv.textContent = '⚡ A quantum computer finds this period exponentially faster using QFT';
+
+    // Action row
+    const actionRow = document.createElement('div');
+    actionRow.style.cssText = 'display:flex;gap:8px;justify-content:center;';
+    const fillBtn = makeBtn('▶  Fill Table', 'btn experiment-block-btn');
+    fillBtn.style.cssText += `background:${chapterColor};color:#fff;font-weight:800;padding:10px 16px;font-size:14px;border-radius:10px;`;
+    const newBtn = makeBtn('New Number', 'btn experiment-block-btn');
+    newBtn.style.cssText += 'padding:10px 14px;font-size:13px;';
+    actionRow.append(fillBtn, newBtn);
+
+    // Counter
+    const counterDiv = document.createElement('div');
+    counterDiv.style.cssText = "font-size:13px;color:var(--text-muted);text-align:center;font-family:'Fira Code',monospace;";
+    counterDiv.textContent = 'Numbers factored: 0';
+
+    container.append(titleDiv, selectorRow, formulaDiv, mainArea, periodRow, factorDiv, qftDiv, actionRow, counterDiv);
+
+    // Graph rendering
+    function renderGraph() {
+      const c = graphCanvas;
+      const parent = c.parentElement;
+      const w = parent.offsetWidth;
+      const h = parent.offsetHeight;
+      if (w === 0 || h === 0) return;
+      const dpr = window.devicePixelRatio || 1;
+      c.width = Math.round(w * dpr);
+      c.height = Math.round(h * dpr);
+      const ctx = c.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+
+      if (revealedCount === 0) return;
+
+      const pad = { top: 8, bottom: 20, left: 28, right: 8 };
+      const plotW = w - pad.left - pad.right;
+      const plotH = h - pad.top - pad.bottom;
+      const maxX = Math.max(revealedCount, 8);
+      const maxY = N;
+      const xStep = plotW / maxX;
+      const yScale = plotH / maxY;
+
+      // Axes
+      ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(pad.left, pad.top);
+      ctx.lineTo(pad.left, h - pad.bottom);
+      ctx.lineTo(w - pad.right, h - pad.bottom);
+      ctx.stroke();
+
+      // Y-axis labels
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.font = "9px 'Fira Code',monospace";
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      const yTick = Math.ceil(maxY / 4);
+      for (let v = 0; v <= maxY; v += yTick) {
+        const y = h - pad.bottom - v * yScale;
+        ctx.fillText(String(v), pad.left - 4, y);
+      }
+
+      // Period highlight bands
+      if (guessedCorrect && period) {
+        const colors = ['rgba(88,204,2,0.08)', 'rgba(28,176,246,0.08)'];
+        for (let i = 0; i < revealedCount; i++) {
+          const band = Math.floor(i / period) % 2;
+          const x = pad.left + (i + 0.5) * xStep;
+          ctx.fillStyle = colors[band];
+          ctx.fillRect(x - xStep * 0.45, pad.top, xStep * 0.9, plotH);
+        }
+      }
+
+      // Dots + lines
+      ctx.strokeStyle = chapterColor;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let i = 0; i < revealedCount; i++) {
+        const x = pad.left + (i + 0.5) * xStep;
+        const y = h - pad.bottom - powers[i] * yScale;
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      for (let i = 0; i < revealedCount; i++) {
+        const x = pad.left + (i + 0.5) * xStep;
+        const y = h - pad.bottom - powers[i] * yScale;
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fillStyle = chapterColor;
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        // X label
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.font = "9px 'Fira Code',monospace";
+        ctx.textAlign = 'center';
+        ctx.fillText(String(i + 1), x, h - pad.bottom + 12);
+      }
+    }
+
+    // Setup
+    function computePowers() {
+      powers = [];
+      const maxSteps = 20;
+      for (let x = 1; x <= maxSteps; x++) {
+        powers.push(modPow(a, x, N));
+      }
+      period = null;
+      for (let r = 1; r <= powers.length; r++) {
+        if (modPow(a, r, N) === 1) { period = r; break; }
+      }
+    }
+
+    function buildTable() {
+      tableEl.textContent = '';
+      const hdr = document.createElement('tr');
+      ['x', a + '^x mod ' + N].forEach(t => {
+        const th = document.createElement('th');
+        th.style.cssText = "text-align:center;padding:3px 6px;color:var(--text-muted);border-bottom:1px solid var(--border);font-size:11px;";
+        th.textContent = t;
+        hdr.appendChild(th);
+      });
+      tableEl.appendChild(hdr);
+    }
+
+    function revealRow(idx) {
+      const tr = document.createElement('tr');
+      [idx + 1, powers[idx]].forEach((v, ci) => {
+        const td = document.createElement('td');
+        td.style.cssText = 'text-align:center;padding:3px 6px;color:var(--text);border-bottom:1px solid var(--border);' + (ci === 1 ? 'font-weight:700;' : '');
+        td.textContent = String(v);
+        if (ci === 1 && period && (idx + 1) % period === 0) {
+          td.style.color = '#58CC02';
+        }
+        tr.appendChild(td);
+      });
+      tableEl.appendChild(tr);
+      tableScroll.scrollTop = tableScroll.scrollHeight;
+    }
+
+    function buildPeriodBtns() {
+      periodBtns.textContent = '';
+      for (let r = 1; r <= 12; r++) {
+        const b = makeBtn(String(r), 'btn experiment-block-btn');
+        b.style.cssText += 'min-width:36px;padding:6px 8px;font-size:13px;';
+        b.addEventListener('click', () => checkPeriod(r));
+        periodBtns.appendChild(b);
+      }
+    }
+
+    function checkPeriod(guess) {
+      if (guessedCorrect) return;
+      if (guess !== period) {
+        periodFeedback.textContent = 'Not quite — look at the pattern!';
+        periodFeedback.style.color = '#FF4B4B';
+        setTimeout(() => { if (!guessedCorrect) periodFeedback.textContent = ''; }, 1500);
+        return;
+      }
+      guessedCorrect = true;
+      periodFeedback.textContent = '✓  r = ' + period;
+      periodFeedback.style.color = '#58CC02';
+
+      if (period % 2 !== 0) {
+        factorDiv.textContent = 'Period is odd — try a different base!';
+        factorDiv.style.color = '#FF9600';
+        return;
+      }
+      const halfPow = modPow(a, period / 2, N);
+      if (halfPow === N - 1) {
+        factorDiv.textContent = 'a^(r/2) ≡ −1 mod N — try a different base!';
+        factorDiv.style.color = '#FF9600';
+        return;
+      }
+      const f1 = gcd(halfPow + 1, N);
+      const f2 = gcd(Math.abs(halfPow - 1), N);
+      if (f1 <= 1 || f1 >= N || f2 <= 1 || f2 >= N) {
+        factorDiv.textContent = 'Trivial factors — try a different base!';
+        factorDiv.style.color = '#FF9600';
+        return;
+      }
+      // Build factor display using DOM (no innerHTML)
+      factorDiv.textContent = '';
+      const prefix = document.createTextNode('gcd(' + a + '^' + (period / 2) + '±1, ' + N + ') → ');
+      const resultSpan = document.createElement('span');
+      resultSpan.style.cssText = 'color:#58CC02;font-size:16px;';
+      resultSpan.textContent = N + ' = ' + Math.min(f1, f2) + ' × ' + Math.max(f1, f2);
+      factorDiv.append(prefix, resultSpan);
+      qftDiv.style.opacity = '1';
+      factorizations++;
+      counterDiv.textContent = 'Numbers factored: ' + factorizations;
+      renderGraph();
+      if (!completed) { completed = true; onComplete({ factorizations }); }
+    }
+
+    function setupProblem() {
+      if (animTimer) { clearInterval(animTimer); animTimer = null; }
+      revealedCount = 0;
+      guessedCorrect = false;
+      periodFeedback.textContent = '';
+      factorDiv.textContent = '';
+      qftDiv.style.opacity = '0';
+      computePowers();
+      buildTable();
+      buildPeriodBtns();
+      formulaDiv.textContent = 'f(x) = ' + a + '^x mod ' + N;
+      fillBtn.disabled = false;
+      fillBtn.textContent = '▶  Fill Table';
+      renderGraph();
+    }
+
+    function buildNButtons() {
+      nBtnWrap.textContent = '';
+      [15, 21, 35].forEach(n => {
+        const b = makeBtn(String(n), 'btn experiment-block-btn');
+        b.style.cssText += 'min-width:42px;padding:6px 10px;font-size:14px;font-weight:700;';
+        b.style.background = n === N ? chapterColor : 'var(--surface)';
+        b.style.color = n === N ? '#fff' : 'var(--text)';
+        b.addEventListener('click', () => { N = n; a = getValidBases(n)[0]; buildNButtons(); buildAButtons(); setupProblem(); });
+        nBtnWrap.appendChild(b);
+      });
+    }
+
+    function buildAButtons() {
+      aBtnWrap.textContent = '';
+      const bases = getValidBases(N);
+      bases.slice(0, 6).forEach(base => {
+        const b = makeBtn(String(base), 'btn experiment-block-btn');
+        b.style.cssText += 'min-width:36px;padding:6px 8px;font-size:13px;';
+        b.style.background = base === a ? chapterColor : 'var(--surface)';
+        b.style.color = base === a ? '#fff' : 'var(--text)';
+        b.addEventListener('click', () => { a = base; buildAButtons(); setupProblem(); });
+        aBtnWrap.appendChild(b);
+      });
+    }
+
+    fillBtn.addEventListener('click', () => {
+      if (animTimer) return;
+      if (revealedCount >= powers.length) return;
+      fillBtn.disabled = true;
+      fillBtn.textContent = 'Filling...';
+      const target = period ? Math.min(period * 2 + 2, powers.length) : Math.min(12, powers.length);
+      animTimer = setInterval(() => {
+        if (revealedCount >= target) {
+          clearInterval(animTimer);
+          animTimer = null;
+          fillBtn.disabled = false;
+          fillBtn.textContent = '▶  Fill More';
+          return;
+        }
+        revealRow(revealedCount);
+        revealedCount++;
+        renderGraph();
+      }, 220);
+    });
+
+    newBtn.addEventListener('click', () => {
+      const bases = getValidBases(N);
+      const others = bases.filter(b => b !== a);
+      a = others.length > 0 ? others[Math.floor(Math.random() * others.length)] : bases[0];
+      buildAButtons();
+      setupProblem();
+    });
+
+    buildNButtons();
+    buildAButtons();
+    setupProblem();
+
+    const gro = new ResizeObserver(() => renderGraph());
+    gro.observe(graphWrap);
+
+    return () => {
+      if (animTimer) clearInterval(animTimer);
+      gro.disconnect();
+    };
+  },
+};
+
+
+// ── Chapter 20: Hardware Explorer ────────────────────────────────────────────
+// Every quantum hardware approach has tradeoffs — there is no "best" technology.
+// Explore 5 real platforms via radar charts, details, and side-by-side comparison.
+
+const experiment20 = {
+  title: 'Hardware Explorer',
+  subtitle: 'Compare real quantum technologies',
+  icon: '🖥️',
+
+  mount(container, { chapterColor, chapterColorDk, onComplete }) {
+    let completed = false;
+    let selectedTech = 0;
+    let compareTech = null;
+    let compareMode = false;
+    const techsViewed = new Set([0]);
+
+    const TECHS = [
+      {
+        name: 'Superconducting', icon: '🧊', color: '#1CB0F6',
+        stats: [0.85, 0.75, 0.25, 0.5, 0.1],
+        companies: 'Google, IBM, Rigetti',
+        record: '1,121 qubits (IBM Condor)',
+        pros: 'Fast gates (~20ns), mature fabrication, largest qubit counts',
+        cons: 'Needs 15mK cooling, short coherence (~100μs), crosstalk',
+        desc: ['Most qubits', 'High fidelity', 'Short-lived', 'Nearest-neighbor', 'Ultra-cold'],
+      },
+      {
+        name: 'Trapped Ion', icon: '⚛️', color: '#58CC02',
+        stats: [0.25, 0.95, 0.9, 0.95, 0.5],
+        companies: 'IonQ, Quantinuum, AQT',
+        record: '56 qubits (Quantinuum H2)',
+        pros: 'Highest fidelity (99.9%), all-to-all connectivity, long coherence',
+        cons: 'Slow gates (~ms), hard to scale beyond ~50 qubits',
+        desc: ['Few qubits', 'Best fidelity', 'Long-lived', 'All-to-all', 'Room-temp trap'],
+      },
+      {
+        name: 'Photonic', icon: '💡', color: '#FF9600',
+        stats: [0.45, 0.55, 0.95, 0.35, 0.95],
+        companies: 'Xanadu, PsiQuantum, Quandela',
+        record: '216 squeezed modes (Borealis)',
+        pros: 'Room temperature, natural for quantum networking, low noise',
+        cons: 'Probabilistic gates, photon loss, hard to store',
+        desc: ['Medium count', 'Moderate', 'No decoherence', 'Limited', 'Room temp'],
+      },
+      {
+        name: 'Neutral Atom', icon: '🔵', color: '#CE82FF',
+        stats: [0.7, 0.7, 0.6, 0.7, 0.4],
+        companies: 'QuEra, Pasqal, Atom Computing',
+        record: '1,225 atoms (Atom Computing)',
+        pros: 'Scalable arrays, reconfigurable connectivity, mid-circuit measurement',
+        cons: 'Atom loss during operation, slower gate speeds',
+        desc: ['Many atoms', 'Good fidelity', 'Moderate', 'Reconfigurable', 'Laser-cooled'],
+      },
+      {
+        name: 'Topological', icon: '🪢', color: '#FF4B4B',
+        stats: [0.05, 0.4, 0.5, 0.3, 0.15],
+        companies: 'Microsoft',
+        record: 'First topological qubit (2025)',
+        pros: 'Inherently error-protected (theoretical), braiding-based gates',
+        cons: 'Earliest stage, very few qubits demonstrated, unproven at scale',
+        desc: ['Fewest', 'Unproven', 'Protected', 'TBD', 'Ultra-cold'],
+      },
+    ];
+
+    const AXES = ['Qubits', 'Fidelity', 'Coherence', 'Connect.', 'Temp'];
+
+    container.style.cssText += 'display:flex;flex-direction:column;gap:6px;padding:12px;';
+
+    // Title
+    const titleDiv = document.createElement('div');
+    titleDiv.style.cssText = "font-size:15px;font-weight:800;color:var(--text);text-align:center;font-family:'Nunito',sans-serif;";
+    titleDiv.textContent = 'Quantum Hardware Technologies';
+
+    // Tech strip
+    const techStrip = document.createElement('div');
+    techStrip.style.cssText = 'display:flex;gap:6px;justify-content:center;flex-wrap:wrap;';
+
+    const techBtns = TECHS.map((tech, idx) => {
+      const b = makeBtn(tech.icon + ' ' + tech.name, 'btn experiment-block-btn');
+      b.style.cssText += 'padding:7px 10px;font-size:12px;font-weight:700;border-radius:8px;white-space:nowrap;';
+      b.addEventListener('click', () => {
+        if (compareMode && selectedTech !== idx) {
+          compareTech = idx;
+          techsViewed.add(idx);
+          if (techsViewed.size >= 3 && !completed) { completed = true; onComplete({ techsViewed: techsViewed.size }); }
+          updateAll();
+        } else {
+          selectedTech = idx;
+          compareTech = null;
+          techsViewed.add(idx);
+          if (techsViewed.size >= 3 && !completed) { completed = true; onComplete({ techsViewed: techsViewed.size }); }
+          updateAll();
+        }
+      });
+      techStrip.appendChild(b);
+      return b;
+    });
+
+    // Main area
+    const mainArea = document.createElement('div');
+    mainArea.style.cssText = 'display:flex;gap:8px;flex:1;min-height:0;';
+
+    // Radar panel
+    const radarPanel = document.createElement('div');
+    radarPanel.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;min-width:0;';
+    const radarWrap = document.createElement('div');
+    radarWrap.style.cssText = 'width:100%;flex:1;min-height:120px;position:relative;';
+    const radarCanvas = document.createElement('canvas');
+    radarCanvas.style.cssText = 'width:100%;height:100%;display:block;';
+    radarWrap.appendChild(radarCanvas);
+    radarPanel.appendChild(radarWrap);
+
+    // Details panel
+    const detailsPanel = document.createElement('div');
+    detailsPanel.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:6px;background:var(--surface);border-radius:12px;border:1px solid var(--border);padding:10px;overflow-y:auto;';
+
+    mainArea.append(radarPanel, detailsPanel);
+
+    // Compare row
+    const compareRow = document.createElement('div');
+    compareRow.style.cssText = 'display:flex;gap:8px;justify-content:center;align-items:center;';
+    const compareBtn = makeBtn('Compare', 'btn experiment-block-btn');
+    compareBtn.style.cssText += 'padding:8px 14px;font-size:13px;font-weight:700;';
+    const matchupBtn = makeBtn('🎲 Random Matchup', 'btn experiment-block-btn');
+    matchupBtn.style.cssText += 'padding:8px 14px;font-size:13px;';
+    const compareInfo = document.createElement('div');
+    compareInfo.style.cssText = "font-size:12px;color:var(--text-muted);font-family:'Nunito',sans-serif;font-style:italic;";
+    compareRow.append(compareBtn, matchupBtn, compareInfo);
+
+    container.append(titleDiv, techStrip, mainArea, compareRow);
+
+    // Initialize RadarChart
+    const radar = new RadarChart(radarCanvas, { axes: AXES, color: TECHS[0].color });
+
+    function renderDetails() {
+      detailsPanel.textContent = '';
+      const tech = TECHS[selectedTech];
+
+      const nameDiv = document.createElement('div');
+      nameDiv.style.cssText = 'font-size:16px;font-weight:800;color:' + tech.color + ";font-family:'Nunito',sans-serif;";
+      nameDiv.textContent = tech.icon + ' ' + tech.name;
+      detailsPanel.appendChild(nameDiv);
+
+      // Stats bars
+      AXES.forEach((axis, i) => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:6px;';
+        const label = document.createElement('div');
+        label.style.cssText = "font-size:11px;color:var(--text-muted);font-family:'Fira Code',monospace;min-width:62px;";
+        label.textContent = axis;
+        const barOuter = document.createElement('div');
+        barOuter.style.cssText = 'flex:1;height:10px;background:var(--bg);border-radius:5px;overflow:hidden;';
+        const barInner = document.createElement('div');
+        barInner.style.cssText = 'height:100%;width:' + (tech.stats[i] * 100) + '%;background:' + tech.color + ';border-radius:5px;transition:width 0.3s ease;';
+        barOuter.appendChild(barInner);
+        const descEl = document.createElement('div');
+        descEl.style.cssText = "font-size:10px;color:var(--text-muted);font-family:'Fira Code',monospace;min-width:75px;text-align:right;";
+        descEl.textContent = tech.desc[i];
+        row.append(label, barOuter, descEl);
+        detailsPanel.appendChild(row);
+      });
+
+      // Info rows helper
+      function addInfoRow(icon, lbl, text) {
+        const d = document.createElement('div');
+        d.style.cssText = "font-size:12px;color:var(--text);font-family:'Nunito',sans-serif;line-height:1.4;";
+        const iconSpan = document.createElement('span');
+        iconSpan.style.opacity = '0.6';
+        iconSpan.textContent = icon + ' ';
+        const strong = document.createElement('strong');
+        strong.textContent = lbl + ': ';
+        d.append(iconSpan, strong, document.createTextNode(text));
+        detailsPanel.appendChild(d);
+      }
+      addInfoRow('🏢', 'Companies', tech.companies);
+      addInfoRow('🏆', 'Record', tech.record);
+      addInfoRow('✅', 'Strengths', tech.pros);
+      addInfoRow('⚠️', 'Challenges', tech.cons);
+
+      // If comparing, show second tech
+      if (compareTech !== null) {
+        const tech2 = TECHS[compareTech];
+        const sep = document.createElement('div');
+        sep.style.cssText = 'border-top:1px solid var(--border);margin:4px 0;';
+        detailsPanel.appendChild(sep);
+
+        const name2 = document.createElement('div');
+        name2.style.cssText = 'font-size:14px;font-weight:800;color:' + tech2.color + ";font-family:'Nunito',sans-serif;";
+        name2.textContent = tech2.icon + ' ' + tech2.name;
+        detailsPanel.appendChild(name2);
+
+        addInfoRow('🏢', 'Companies', tech2.companies);
+        addInfoRow('🏆', 'Record', tech2.record);
+        addInfoRow('✅', 'Strengths', tech2.pros);
+        addInfoRow('⚠️', 'Challenges', tech2.cons);
+      }
+    }
+
+    function updateAll() {
+      const tech = TECHS[selectedTech];
+      techBtns.forEach((b, i) => {
+        const isSel = i === selectedTech;
+        const isComp = i === compareTech;
+        b.style.background = isSel ? tech.color : isComp ? TECHS[i].color : 'var(--surface)';
+        b.style.color = (isSel || isComp) ? '#fff' : 'var(--text)';
+        b.style.borderColor = isComp ? TECHS[i].color : 'var(--border)';
+      });
+      radar.setColor(tech.color);
+      radar.setData(tech.stats);
+      if (compareTech !== null) {
+        radar.setOverlay(TECHS[compareTech].stats, TECHS[compareTech].color);
+      } else {
+        radar.clearOverlay();
+      }
+      compareBtn.style.background = compareMode ? chapterColor : 'var(--surface)';
+      compareBtn.style.color = compareMode ? '#fff' : 'var(--text)';
+      compareInfo.textContent = compareMode && compareTech === null ? 'Tap another technology to compare' : '';
+      renderDetails();
+    }
+
+    compareBtn.addEventListener('click', () => {
+      compareMode = !compareMode;
+      if (!compareMode) { compareTech = null; }
+      updateAll();
+    });
+
+    matchupBtn.addEventListener('click', () => {
+      const idx1 = Math.floor(Math.random() * TECHS.length);
+      let idx2 = Math.floor(Math.random() * (TECHS.length - 1));
+      if (idx2 >= idx1) idx2++;
+      selectedTech = idx1;
+      compareTech = idx2;
+      compareMode = true;
+      techsViewed.add(idx1);
+      techsViewed.add(idx2);
+      if (techsViewed.size >= 3 && !completed) { completed = true; onComplete({ techsViewed: techsViewed.size }); }
+      updateAll();
+    });
+
+    updateAll();
+
+    return () => { radar.destroy(); };
+  },
+};
+
+
 // ── Export ─────────────────────────────────────────────────────────────────────
 
 export const EXPERIMENTS = {
@@ -4452,4 +5282,7 @@ export const EXPERIMENTS = {
   15: experiment15,
   16: experiment16,
   17: experiment17,
+  18: experiment18,
+  19: experiment19,
+  20: experiment20,
 };

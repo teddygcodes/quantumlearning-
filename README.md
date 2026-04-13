@@ -58,7 +58,7 @@ An interactive, Duolingo-style quantum computing course built for iPad with Appl
 - **Optional AI work review** — vision-based feedback on handwritten work via Claude API
 - **Progress tracking** — localStorage persistence, sequential chapter unlocking, lesson progress resume
 - **Quiz gates** — pass the quiz to unlock the next chapter
-- **Chapter Experiments** — sandbox-style interactive labs that unlock after completing each chapter. No scoring, no rounds — pure exploration with live feedback. 17 experiments built so far:
+- **20 Chapter Experiments** — sandbox-style interactive labs that unlock after completing each chapter. No scoring, no rounds — pure exploration with live feedback:
   - Ch 1: Equation Balancer — solve and balance algebraic equations
   - Ch 2: Vector Playground — drag vectors, see addition and magnitude in real time
   - Ch 3: Normalization Machine — stretch and normalize vectors with physics beam
@@ -76,6 +76,9 @@ An interactive, Duolingo-style quantum computing course built for iPad with Appl
   - Ch 15: Teleportation Simulator — step through the quantum teleportation protocol with Alice/Bob split screen, 3-qubit state vector, classical bit animation, correction gate picker
   - Ch 16: Oracle Detective — classical vs quantum side-by-side, query oracle inputs one by one or solve in one shot with Deutsch-Jozsa, 1/2/3-bit scale selector
   - Ch 17: Quantum Search Race — visualize Grover's amplitude amplification with step-by-step Oracle/Diffusion/Measure, race mode vs classical search, N=4/8/16
+  - Ch 18: Noisy Quantum Lab — noise slider with side-by-side histograms comparing uncorrected vs 3-qubit bit-flip code, watch error correction fight noise and fail at the threshold
+  - Ch 19: Period Finder — pick N and base a, watch modular exponentiation table fill in, see the repeating pattern on a graph, tap the period, extract factors via GCD
+  - Ch 20: Hardware Explorer — radar chart comparison of 5 real quantum hardware technologies, stat bars, company details, compare mode with overlay
 
 ## Getting Started
 
@@ -106,7 +109,7 @@ static/
   problems.js           86 problem generators + answer checker (10 answer types)
   chapters.js           20 chapters with progression arrays and lesson structure
   experiments.js        Interactive experiment definitions per chapter (mount/cleanup pattern)
-  experiment-ui.js      Shared experiment components (GridCanvas, BlochSphere, HistogramRenderer, CircuitSimulator, ClockFace, StepSequencer)
+  experiment-ui.js      Shared experiment components (GridCanvas, BlochSphere, HistogramRenderer, CircuitSimulator, ClockFace, StepSequencer, RadarChart)
   keyboard.js           Custom answer keyboard (context-aware per answer type)
   canvas.js             Apple Pencil drawing engine with palm rejection
   style.css             Duolingo-inspired dark theme design system
